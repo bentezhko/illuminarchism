@@ -216,6 +216,27 @@
             color: var(--rubric-red);
         }
 
+        /* Instructions overlay for drawing */
+        #draw-hint {
+            position: absolute;
+            bottom: 6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(43, 33, 24, 0.8);
+            color: var(--parchment-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-family: sans-serif;
+            font-size: 0.8rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        #draw-hint.visible {
+            opacity: 1;
+        }
+
         /* --- Canvas Layer --- */
         #map-canvas {
             position: absolute;
@@ -268,6 +289,8 @@
                 <strong>Dissolved:</strong> <span id="info-end"></span>
             </div>
         </div>
+
+        <div id="draw-hint">Click to place points. Double-click to finish.</div>
 
         <div id="temporal-controls" class="pointer-events-auto">
             <div id="year-display">1000 AD</div>
@@ -498,6 +521,46 @@
                 ctx.restore();
             }
 
+            // New Method: Renders the polygon currently being drawn
+            drawDraft(points, cursor, transform) {
+                if (!points || points.length === 0) return;
+
+                const ctx = this.ctx;
+                const t = transform;
+
+                ctx.save();
+                ctx.translate(t.x, t.y);
+                ctx.scale(t.k, t.k);
+
+                // Draw the solidified path so far
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                
+                // Draw "elastic" line to cursor if active
+                if (cursor) {
+                    ctx.lineTo(cursor.x, cursor.y);
+                }
+
+                ctx.strokeStyle = '#8a3324'; // Rubric Red for drafting
+                ctx.lineWidth = 2 / t.k;
+                ctx.setLineDash([5 / t.k, 5 / t.k]); // Dashed line
+                ctx.stroke();
+                ctx.setLineDash([]); // Reset
+
+                // Draw vertices
+                ctx.fillStyle = '#8a3324';
+                points.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4 / t.k, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                ctx.restore();
+            }
+
             tracePath(points) {
                 if (points.length === 0) return;
                 this.ctx.moveTo(points[0].x, points[0].y);
@@ -563,6 +626,7 @@
                 // Zoom
                 canvas.addEventListener('wheel', (e) => {
                     e.preventDefault();
+                    // ... existing zoom logic ...
                     const delta = -Math.sign(e.deltaY);
                     const scaleMult = 1 + (delta * 0.1);
                     const t = this.renderer.transform;
@@ -582,18 +646,22 @@
 
                 // Mouse Down
                 canvas.addEventListener('mousedown', (e) => {
-                    this.isDragging = true;
-                    this.lastX = e.clientX;
-                    this.lastY = e.clientY;
-                    
                     // Interaction depends on active tool
                     if (this.app.activeTool === 'pan') {
+                        this.isDragging = true;
+                        this.lastX = e.clientX;
+                        this.lastY = e.clientY;
                         canvas.style.cursor = 'grabbing';
                     } else if (this.app.activeTool === 'inspect' && this.app.hoveredEntityId) {
                         this.app.selectEntity(this.app.hoveredEntityId);
+                    } else if (this.app.activeTool === 'draw') {
+                        const worldPos = this.renderer.toWorld(e.offsetX, e.offsetY);
+                        this.app.addDraftPoint(worldPos);
+                    } else if (this.app.activeTool === 'erase' && this.app.hoveredEntityId) {
+                        this.app.deleteEntity(this.app.hoveredEntityId);
                     }
                     
-                    this.app.closeInfoPanel();
+                    if (this.app.activeTool !== 'inspect') this.app.closeInfoPanel();
                 });
 
                 // Mouse Move (Pan & Hover)
@@ -610,12 +678,19 @@
                         return;
                     }
 
-                    // Hover Logic (Only for Inspect Tool)
-                    if (this.app.activeTool === 'inspect') {
+                    const worldPos = this.renderer.toWorld(e.offsetX, e.offsetY);
+
+                    // Draw Tool Logic
+                    if (this.app.activeTool === 'draw') {
+                        this.app.updateDraftCursor(worldPos);
+                        return;
+                    }
+
+                    // Hover Logic (Inspect & Erase)
+                    if (this.app.activeTool === 'inspect' || this.app.activeTool === 'erase') {
                         const now = Date.now();
                         if (now - this.hoverThrottle > 30) {
                             this.hoverThrottle = now;
-                            const worldPos = this.renderer.toWorld(e.offsetX, e.offsetY);
                             this.app.checkHover(worldPos);
                         }
                     }
@@ -626,6 +701,22 @@
                     this.isDragging = false;
                     if(this.app.activeTool === 'pan') {
                         canvas.style.cursor = 'grab';
+                    }
+                });
+
+                // Double Click (Finish Drawing)
+                canvas.addEventListener('dblclick', (e) => {
+                    if (this.app.activeTool === 'draw') {
+                        e.preventDefault();
+                        this.app.commitDraft();
+                    }
+                });
+
+                // Keyboard Shortcuts
+                window.addEventListener('keydown', (e) => {
+                    if (this.app.activeTool === 'draw') {
+                        if (e.key === 'Enter') this.app.commitDraft();
+                        if (e.key === 'Escape') this.app.cancelDraft();
                     }
                 });
             }
@@ -641,6 +732,10 @@
                 this.hoveredEntityId = null;
                 this.selectedEntityId = null;
                 this.currentYear = 1000;
+                
+                // Drawing State
+                this.draftPoints = [];
+                this.draftCursor = null;
                 
                 // State: 'pan', 'inspect', 'draw', 'erase'
                 this.activeTool = 'pan'; 
@@ -706,7 +801,13 @@
             setTool(toolName) {
                 this.activeTool = toolName;
                 this.hoveredEntityId = null; // Clear hover state on switch
+                this.cancelDraft(); // Clear any pending drawings
                 
+                // UI Updates
+                const hint = document.getElementById('draw-hint');
+                if (toolName === 'draw') hint.classList.add('visible');
+                else hint.classList.remove('visible');
+
                 // Cursor Management
                 const canvas = this.renderer.canvas;
                 switch(toolName) {
@@ -720,11 +821,75 @@
                         canvas.style.cursor = 'crosshair';
                         break;
                     case 'erase':
-                        canvas.style.cursor = 'not-allowed';
+                        canvas.style.cursor = 'not-allowed'; // Indicates destructive action
                         break;
                 }
                 this.render();
             }
+
+            // --- Drawing Methods ---
+
+            addDraftPoint(point) {
+                // Prevent duplicate points from dblclick firing twice
+                const last = this.draftPoints[this.draftPoints.length - 1];
+                if (last && Math.abs(last.x - point.x) < 2 && Math.abs(last.y - point.y) < 2) return;
+
+                this.draftPoints.push(point);
+                this.render();
+            }
+
+            updateDraftCursor(point) {
+                this.draftCursor = point;
+                this.render();
+            }
+
+            commitDraft() {
+                if (this.draftPoints.length < 3) {
+                    // Need at least a triangle
+                    return; 
+                }
+
+                // Create new entity
+                const id = 'custom_' + Date.now();
+                // Random color generator for variety
+                const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a']; 
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                const newEnt = new HistoricalEntity(id, "New Realm", 'polity', color);
+                
+                // Add geometry at current year
+                newEnt.addKeyframe(this.currentYear, [...this.draftPoints]);
+                
+                // For demonstration, extend validity +/- 200 years so it survives scrolling slightly
+                newEnt.validRange.start = this.currentYear - 200;
+                newEnt.validRange.end = this.currentYear + 200;
+
+                this.entities.push(newEnt);
+                
+                // Reset
+                this.draftPoints = [];
+                this.draftCursor = null;
+                this.updateEntities();
+                this.render();
+                
+                // Optional: Switch back to inspect to view it? 
+                // keeping tool active allows multiple draws.
+            }
+
+            cancelDraft() {
+                this.draftPoints = [];
+                this.draftCursor = null;
+                this.render();
+            }
+
+            deleteEntity(id) {
+                this.entities = this.entities.filter(e => e.id !== id);
+                this.hoveredEntityId = null;
+                this.updateEntities();
+                this.render();
+            }
+
+            // --- Existing Methods ---
 
             updateEntities() {
                 let activeCount = 0;
@@ -742,8 +907,8 @@
             checkHover(worldPos) {
                 let foundId = null;
                 
-                // Only inspect works for hovering right now
-                if (this.activeTool !== 'inspect') return;
+                // Supports hovering for both Inspect and Erase tools
+                if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
 
                 for (let i = this.entities.length - 1; i >= 0; i--) {
                     const ent = this.entities[i];
@@ -757,8 +922,15 @@
 
                 if (foundId !== this.hoveredEntityId) {
                     this.hoveredEntityId = foundId;
-                    // Change cursor if we found something to inspect
-                    this.renderer.canvas.style.cursor = foundId ? 'pointer' : 'default';
+                    
+                    // Cursor logic
+                    if (this.activeTool === 'erase') {
+                        // Red X or similar could go here, staying with not-allowed for now
+                        this.renderer.canvas.style.cursor = foundId ? 'pointer' : 'not-allowed';
+                    } else {
+                        this.renderer.canvas.style.cursor = foundId ? 'pointer' : 'default';
+                    }
+                    
                     this.render();
                 }
             }
@@ -784,6 +956,11 @@
 
             render() {
                 this.renderer.draw(this.entities, this.hoveredEntityId, this.activeTool);
+                
+                // Draw draft if valid
+                if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
+                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform);
+                }
             }
         }
 
