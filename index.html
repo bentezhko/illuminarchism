@@ -20,6 +20,7 @@
             --rubric-red: #8a3324;
             --gold-leaf: #c5a059;
             --lapis-lazuli: #264e86;
+            --verdigris: #43b3ae; /* For Rivers */
             
             --ui-shadow: 0 4px 6px rgba(43, 33, 24, 0.2);
             --border-width: 2px;
@@ -78,6 +79,7 @@
             background: rgba(243, 233, 210, 0.95); padding: 0.5rem;
             border: var(--border-width) solid var(--ink-primary);
             border-radius: 4px; box-shadow: var(--ui-shadow);
+            align-items: center;
         }
 
         .tool-btn {
@@ -97,6 +99,15 @@
             color: var(--parchment-bg); padding: 0.25rem 0.5rem;
             font-size: 0.8rem; font-family: 'IM Fell English', serif;
             white-space: nowrap; border-radius: 2px; pointer-events: none;
+            z-index: 20;
+        }
+
+        /* Type Selector (New) */
+        #draw-type-select {
+            margin-top: 0.5rem; padding: 0.2rem;
+            font-family: 'Cinzel', serif; font-size: 0.8rem;
+            background: var(--parchment-bg); border: 1px solid var(--ink-faded);
+            width: 100%; text-align: center;
         }
 
         /* Info Panel */
@@ -108,15 +119,20 @@
             display: none;
         }
         
-        #info-panel h2 {
-            font-family: 'Cinzel', serif; font-size: 1.4rem; margin-top: 0;
-            border-bottom: 1px solid var(--ink-faded); padding-bottom: 0.5rem;
-            color: var(--rubric-red);
+        /* Editable Inputs in Panel */
+        .info-input {
+            width: 100%; background: transparent; border: none;
+            border-bottom: 1px dashed var(--ink-faded);
+            font-family: 'Cinzel', serif; font-size: 1.2rem;
+            color: var(--rubric-red); margin-bottom: 0.5rem;
+            outline: none;
         }
+        .info-input:focus { border-bottom: 1px solid var(--rubric-red); }
 
         .info-row {
             display: flex; justify-content: space-between; font-size: 0.9rem;
             margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(92, 77, 60, 0.3);
+            align-items: center;
         }
 
         #keyframe-list {
@@ -173,7 +189,6 @@
             padding: 0.2rem 0.5rem; border-radius: 4px;
         }
         
-        /* Hidden file input for loading */
         #file-input { display: none; }
     </style>
 </head>
@@ -192,17 +207,31 @@
         <div id="toolbar" class="pointer-events-auto">
             <button class="tool-btn active" data-tool="pan" title="Pan Hand">✋</button>
             <button class="tool-btn" data-tool="inspect" title="Inspect Region">🔍</button>
+            <div style="border-top: 1px solid var(--ink-faded); width: 100%; margin: 0.2rem 0;"></div>
+            <select id="draw-type-select" class="pointer-events-auto" title="Entity Type">
+                <option value="polity">Polity</option>
+                <option value="river">River</option>
+                <option value="city">City</option>
+            </select>
             <button class="tool-btn" data-tool="draw" title="Quill (Draw)">✎</button>
             <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
         </div>
 
         <div id="info-panel" class="pointer-events-auto">
-            <h2 id="info-title">Region Name</h2>
-            <div class="info-row"><span>Type:</span> <span id="info-type">Polity</span></div>
+            <!-- Editable Name -->
+            <input type="text" id="info-name-input" class="info-input" value="Region Name">
+            
+            <div class="info-row">
+                <span>Type:</span> 
+                <span id="info-type" style="font-weight:bold;">Polity</span>
+            </div>
             <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
             <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years (Keyframes):</div>
             <div id="keyframe-list"></div>
-            <button class="small-btn" id="btn-deselect">Close / Deselect</button>
+            <div style="display:flex; gap:0.5rem;">
+                <button class="small-btn" id="btn-update-meta">Update Data</button>
+                <button class="small-btn" id="btn-deselect">Close</button>
+            </div>
         </div>
 
         <div id="draw-hint"></div>
@@ -222,19 +251,18 @@
 
     <script>
         /**
-         * ILLUMINARCHISM ENGINE v0.4 - The Scribe's Archive & Watercolor Update
-         * 1. Persistence: Save/Load functionality via JSON serialization.
-         * 2. Watercolor Shader (Simulated): Multi-pass rendering with blending modes 
-         * and vertex jitter to mimic hand-painted ink pooling.
+         * ILLUMINARCHISM ENGINE v0.5 - The Topographer's Toolkit
+         * 1. Multi-Modal Entities: Polities (Polygons), Rivers (Polylines), Cities (Points).
+         * 2. Persistence: Save/Load functionality via JSON serialization.
+         * 3. Watercolor Shader: Multi-pass rendering with blending modes.
          */
 
-        // --- 1. Configuration & Utils ---
         const CONFIG = {
             ZOOM_SENSITIVITY: 0.001, MIN_ZOOM: 0.1, MAX_ZOOM: 5,
             BACKGROUND_COLOR: '#f3e9d2',
-            RESAMPLE_COUNT: 100, // Standardize shapes for morphing
-            WATERCOLOR_PASSES: 3, // How many wash layers to draw
-            WATERCOLOR_JITTER: 3  // Pixel variance for the wash
+            RESAMPLE_COUNT: 100, // Standardize shape vertex counts
+            WATERCOLOR_PASSES: 3, 
+            WATERCOLOR_JITTER: 3
         };
 
         const lerp = (start, end, t) => start * (1 - t) + end * t;
@@ -254,14 +282,30 @@
             return inside;
         }
 
+        // Distance from point to line segment (for selecting rivers)
+        function distanceToSegment(p, v, w) {
+            function sqr(x) { return x * x }
+            function dist2(v, w) { return sqr(v.x - w.x) + sqr(v.y - w.y) }
+            let l2 = dist2(v, w);
+            if (l2 === 0) return distance(p, v);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return distance(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
+        }
+
         /**
-         * Resamples a polygon to a specific number of vertices evenly spaced along perimeter.
+         * Resamples a polygon OR polyline to a specific number of vertices.
+         * @param {Array} points - Input vertices
+         * @param {number} targetCount - Desired vertex count
+         * @param {boolean} isClosed - True for polygons, False for polylines (rivers)
          */
-        function resamplePolygon(points, targetCount) {
-            if (!points || points.length < 3) return points;
+        function resampleGeometry(points, targetCount, isClosed = true) {
+            if (!points || points.length < 2) return points;
 
             let totalLength = 0;
-            for (let i = 0; i < points.length; i++) {
+            const segments = isClosed ? points.length : points.length - 1;
+            
+            for (let i = 0; i < segments; i++) {
                 totalLength += distance(points[i], points[(i + 1) % points.length]);
             }
 
@@ -275,17 +319,25 @@
 
             newPoints.push({ x: points[0].x, y: points[0].y });
 
-            for (let i = 1; i < targetCount; i++) {
+            // For open lines, we just walk to the end. For closed, we wrap.
+            const loopLimit = isClosed ? targetCount : targetCount - 1;
+
+            for (let i = 1; i < loopLimit; i++) {
                 currentDist += step;
                 
                 while (distTraveledOnSegment + step > segmentDist) {
                     const remainingOnSeg = segmentDist - distTraveledOnSegment;
                     currentDist -= remainingOnSeg; 
+                    
                     currentIdx = nextIdx;
-                    nextIdx = (nextIdx + 1) % points.length;
+                    nextIdx = (nextIdx + 1);
+                    if (isClosed) nextIdx = nextIdx % points.length;
+                    
+                    // Safety break for open lines
+                    if (!isClosed && nextIdx >= points.length) break;
+
                     segmentDist = distance(points[currentIdx], points[nextIdx]);
                     distTraveledOnSegment = 0;
-                    if (currentIdx === 0 && distTraveledOnSegment === 0 && i > 1) break; 
                 }
 
                 distTraveledOnSegment += step;
@@ -296,6 +348,12 @@
                     y: lerp(points[currentIdx].y, points[nextIdx].y, t)
                 });
             }
+            
+            // Ensure last point is included for open lines
+            if(!isClosed && newPoints.length < targetCount) {
+                newPoints.push({...points[points.length-1]});
+            }
+            
             return newPoints;
         }
 
@@ -305,17 +363,26 @@
             constructor(id, name, type, color) {
                 this.id = id;
                 this.name = name;
-                this.type = type; 
+                this.type = type; // 'polity', 'river', 'city'
                 this.color = color;
-                this.description = "A region defined by its changing borders.";
-                this.timeline = []; // Array of { year, geometry }
+                this.description = "A mapped entity.";
+                this.timeline = []; 
                 this.validRange = { start: -Infinity, end: Infinity };
                 this.currentGeometry = null;
             }
 
             addKeyframe(year, geometry) {
                 this.timeline = this.timeline.filter(k => k.year !== year);
-                const resampled = resamplePolygon(geometry, CONFIG.RESAMPLE_COUNT);
+                
+                let resampled;
+                // Cities (points) don't get resampled, they are just single coords
+                if (this.type === 'city') {
+                    resampled = geometry; // Should be [{x,y}]
+                } else {
+                    const isClosed = (this.type === 'polity');
+                    resampled = resampleGeometry(geometry, CONFIG.RESAMPLE_COUNT, isClosed);
+                }
+
                 this.timeline.push({ year, geometry: resampled });
                 this.timeline.sort((a, b) => a.year - b.year);
                 
@@ -341,9 +408,11 @@
                 if (!next) return prev.geometry;
                 if (prev === next) return prev.geometry;
 
+                // Interpolate
                 const t = (targetYear - prev.year) / (next.year - prev.year);
                 const morphed = [];
                 const count = Math.min(prev.geometry.length, next.geometry.length);
+                
                 for(let i = 0; i < count; i++) {
                     morphed.push({
                         x: lerp(prev.geometry[i].x, next.geometry[i].x, t),
@@ -353,7 +422,6 @@
                 return morphed;
             }
 
-            // Hydration helper: Creates a class instance from a plain JSON object
             static fromJSON(data) {
                 const ent = new HistoricalEntity(data.id, data.name, data.type, data.color);
                 Object.assign(ent, data);
@@ -391,7 +459,6 @@
                 const ctx = c.getContext('2d');
                 ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
                 ctx.fillRect(0,0,size,size);
-                // Simple Perlin-ish noise
                 const id = ctx.getImageData(0,0,size,size);
                 const d = id.data;
                 for(let i=0; i<d.length; i+=4) {
@@ -421,43 +488,41 @@
                 ctx.translate(t.x, t.y);
                 ctx.scale(t.k, t.k);
 
-                // Grid
                 this.drawGrid();
 
-                // Entities - Draw in passes to approximate watercolor layers
-                entities.forEach(ent => {
+                // Order matters: Rivers first (bottom), then Polities, then Cities (top)
+                const sorted = [...entities].sort((a,b) => {
+                    const order = { 'river': 0, 'polity': 1, 'city': 2 };
+                    return order[a.type] - order[b.type];
+                });
+
+                sorted.forEach(ent => {
                     if (!ent.currentGeometry) return;
                     const isHovered = ent.id === hoveredId;
                     const isSelected = ent.id === selectedId;
                     
-                    this.drawWatercolorEntity(ent, isHovered, isSelected, activeTool);
+                    if (ent.type === 'polity') this.drawPolity(ent, isHovered, isSelected, activeTool);
+                    else if (ent.type === 'river') this.drawRiver(ent, isHovered, isSelected);
+                    else if (ent.type === 'city') this.drawCity(ent, isHovered, isSelected);
                 });
                 
                 ctx.restore();
             }
 
-            drawWatercolorEntity(ent, isHovered, isSelected, activeTool) {
+            drawPolity(ent, isHovered, isSelected, activeTool) {
                 const ctx = this.ctx;
                 const pts = ent.currentGeometry;
-                if (!pts || pts.length === 0) return;
+                if (!pts.length) return;
 
-                // 1. Watercolor Wash (Multiple transparent passes with jitter)
-                ctx.globalCompositeOperation = 'multiply'; // Blend colors like ink/paint
-                
-                // Determine base color opacity
-                let baseAlpha = 0.15;
-                if (isHovered && activeTool === 'inspect') baseAlpha = 0.3;
-                if (isSelected) baseAlpha = 0.4;
-
+                // Wash
+                ctx.globalCompositeOperation = 'multiply';
+                let baseAlpha = (isSelected || (isHovered && activeTool === 'inspect')) ? 0.3 : 0.15;
                 ctx.fillStyle = this.hexToRgba(ent.color, baseAlpha);
 
                 for (let pass = 0; pass < CONFIG.WATERCOLOR_PASSES; pass++) {
                     ctx.beginPath();
-                    // First point
                     let startJitter = this.getJitter(pass);
                     ctx.moveTo(pts[0].x + startJitter.x, pts[0].y + startJitter.y);
-                    
-                    // Subsequent points
                     for(let i=1; i<pts.length; i++) {
                         let j = this.getJitter(pass);
                         ctx.lineTo(pts[i].x + j.x, pts[i].y + j.y);
@@ -466,33 +531,85 @@
                     ctx.fill();
                 }
 
-                // 2. Ink Stroke (Defined outline)
-                ctx.globalCompositeOperation = 'source-over'; // Draw ink on top
+                // Stroke
+                ctx.globalCompositeOperation = 'source-over';
                 ctx.beginPath();
-                this.tracePath(pts);
-                ctx.closePath();
-
+                this.tracePath(pts, true); // true = close path
+                
                 if (isSelected) {
-                    ctx.strokeStyle = '#8a3324'; // Red rubric selection
-                    ctx.lineWidth = 3 / this.transform.k;
-                    ctx.shadowColor = '#000';
-                    ctx.shadowBlur = 10;
+                    ctx.strokeStyle = '#8a3324'; ctx.lineWidth = 3/this.transform.k;
+                    ctx.shadowColor = '#000'; ctx.shadowBlur = 10;
                 } else {
-                    ctx.strokeStyle = '#2b2118'; // Iron gall ink
-                    ctx.lineWidth = 1.5 / this.transform.k;
+                    ctx.strokeStyle = '#2b2118'; ctx.lineWidth = 1.5/this.transform.k;
                     ctx.shadowBlur = 0;
                 }
-                ctx.lineJoin = 'round';
                 ctx.stroke();
 
-                // 3. Label
-                if (this.transform.k > 0.5) {
-                    this.drawLabel(ent, isSelected);
+                if (this.transform.k > 0.5) this.drawLabel(ent, isSelected);
+            }
+
+            drawRiver(ent, isHovered, isSelected) {
+                const ctx = this.ctx;
+                const pts = ent.currentGeometry;
+                if (!pts.length) return;
+
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.beginPath();
+                this.tracePath(pts, false); // Open path
+
+                ctx.strokeStyle = isSelected ? '#8a3324' : '#43b3ae'; 
+                ctx.lineWidth = (isSelected ? 4 : 2.5) / this.transform.k;
+                ctx.lineCap = 'round';
+                ctx.shadowBlur = isHovered ? 5 : 0;
+                ctx.shadowColor = ctx.strokeStyle;
+                ctx.stroke();
+                
+                // Inner highlight line for "water" effect
+                if (!isSelected) {
+                    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                    ctx.lineWidth = 1 / this.transform.k;
+                    ctx.stroke();
                 }
+                
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.shadowBlur = 0;
+            }
+
+            drawCity(ent, isHovered, isSelected) {
+                const ctx = this.ctx;
+                const pt = ent.currentGeometry[0];
+                if (!pt) return;
+
+                const size = 6 / this.transform.k;
+                
+                ctx.beginPath();
+                // Draw Diamond shape
+                ctx.moveTo(pt.x, pt.y - size);
+                ctx.lineTo(pt.x + size, pt.y);
+                ctx.lineTo(pt.x, pt.y + size);
+                ctx.lineTo(pt.x - size, pt.y);
+                ctx.closePath();
+
+                ctx.fillStyle = isSelected ? '#8a3324' : '#2b2118';
+                ctx.fill();
+                
+                // Ring for selection/hover
+                if (isSelected || isHovered) {
+                    ctx.beginPath();
+                    ctx.arc(pt.x, pt.y, size * 1.5, 0, Math.PI*2);
+                    ctx.strokeStyle = '#8a3324';
+                    ctx.lineWidth = 1 / this.transform.k;
+                    ctx.stroke();
+                }
+
+                // City Labels are always important
+                ctx.fillStyle = '#2b2118';
+                ctx.font = `bold ${12}px "Cinzel"`;
+                ctx.textAlign = 'left';
+                ctx.fillText(ent.name, pt.x + size * 1.5, pt.y + size/2);
             }
 
             getJitter(seed) {
-                // Pseudo-random jitter based on pass index
                 const amount = CONFIG.WATERCOLOR_JITTER / this.transform.k;
                 return {
                     x: (Math.random() - 0.5) * amount * (seed + 1),
@@ -514,34 +631,47 @@
                 this.ctx.shadowBlur = 0;
             }
 
-            drawDraft(points, cursor, transform) {
+            drawDraft(points, cursor, transform, type) {
                 if (!points || points.length === 0) return;
                 const ctx = this.ctx;
                 ctx.save();
                 ctx.translate(transform.x, transform.y);
                 ctx.scale(transform.k, transform.k);
                 
-                ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                for(let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-                if(cursor) ctx.lineTo(cursor.x, cursor.y);
-                
-                ctx.strokeStyle = '#8a3324';
-                ctx.lineWidth = 2/transform.k;
-                ctx.setLineDash([5/transform.k, 5/transform.k]);
-                ctx.stroke();
-                
+                // Points
                 points.forEach(p => {
-                    ctx.beginPath(); ctx.arc(p.x, p.y, 4/transform.k, 0, Math.PI*2);
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 3/transform.k, 0, Math.PI*2);
                     ctx.fillStyle='#8a3324'; ctx.fill();
                 });
+
+                if (type === 'city') {
+                    // Preview marker
+                    const p = points[0];
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y - 5); ctx.lineTo(p.x + 5, p.y);
+                    ctx.lineTo(p.x, p.y + 5); ctx.lineTo(p.x - 5, p.y);
+                    ctx.fillStyle = '#8a3324'; ctx.fill();
+                } else {
+                    // Lines
+                    ctx.beginPath();
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for(let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+                    if(cursor) ctx.lineTo(cursor.x, cursor.y);
+                    
+                    ctx.strokeStyle = '#8a3324';
+                    ctx.lineWidth = 2/transform.k;
+                    ctx.setLineDash([5/transform.k, 5/transform.k]);
+                    ctx.stroke();
+                }
+                
                 ctx.restore();
             }
 
-            tracePath(pts) {
+            tracePath(pts, close) {
                 if(!pts.length) return;
                 this.ctx.moveTo(pts[0].x, pts[0].y);
                 for(let i=1; i<pts.length; i++) this.ctx.lineTo(pts[i].x, pts[i].y);
+                if(close) this.ctx.closePath();
             }
 
             drawGrid() {
@@ -597,10 +727,18 @@
                         this.app.selectEntity(this.app.hoveredEntityId);
                     } else if (this.app.activeTool === 'draw') {
                         const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
-                        this.app.addDraftPoint(wp);
+                        
+                        // Special handling for City: Click once to place
+                        if (this.app.drawType === 'city') {
+                            this.app.addDraftPoint(wp);
+                            this.app.commitDraft();
+                        } else {
+                            this.app.addDraftPoint(wp);
+                        }
                     } else if (this.app.activeTool === 'erase' && this.app.hoveredEntityId) {
                         this.app.deleteEntity(this.app.hoveredEntityId);
                     }
+                    
                     if (this.app.activeTool !== 'inspect' && this.app.activeTool !== 'draw') this.app.deselect();
                 });
 
@@ -631,7 +769,7 @@
                 });
 
                 c.addEventListener('dblclick', (e) => {
-                    if (this.app.activeTool === 'draw') {
+                    if (this.app.activeTool === 'draw' && this.app.drawType !== 'city') {
                         e.preventDefault();
                         this.app.commitDraft();
                     }
@@ -657,7 +795,8 @@
                 this.currentYear = 1000;
                 this.draftPoints = [];
                 this.draftCursor = null;
-                this.activeTool = 'pan'; 
+                this.activeTool = 'pan';
+                this.drawType = 'polity';
 
                 this.initData();
                 this.initUI();
@@ -666,11 +805,21 @@
             }
 
             initData() {
-                // Basic initial data
+                // Initial Polity
                 const blue = new HistoricalEntity('blue_kg', 'Regnum Caeruleum', 'polity', '#264e86');
                 blue.addKeyframe(800, [{x:-100,y:-100}, {x:100,y:-100}, {x:100,y:100}, {x:-100,y:100}]);
                 blue.addKeyframe(1200, [{x:-200,y:-150}, {x:250,y:-120}, {x:200,y:200}, {x:-180,y:180}]);
                 this.entities.push(blue);
+
+                // Example River
+                const river = new HistoricalEntity('river_alpha', 'Fluvius Magnus', 'river', '#43b3ae');
+                river.addKeyframe(800, [{x:-300, y:-200}, {x:-150, y:-50}, {x:0, y:0}, {x:150, y:50}, {x:300, y:200}]);
+                this.entities.push(river);
+                
+                // Example City
+                const city = new HistoricalEntity('city_capital', 'Urbs Aeterna', 'city', '#000000');
+                city.addKeyframe(800, [{x:0, y:0}]);
+                this.entities.push(city);
             }
 
             initUI() {
@@ -684,6 +833,7 @@
                     this.render();
                 });
 
+                // Tool Buttons
                 document.querySelectorAll('.tool-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         document.querySelectorAll('.tool-btn').forEach(t => t.classList.remove('active'));
@@ -692,57 +842,50 @@
                     });
                 });
 
-                document.getElementById('btn-deselect').addEventListener('click', () => this.deselect());
+                // Type Select
+                const typeSelect = document.getElementById('draw-type-select');
+                typeSelect.addEventListener('change', (e) => {
+                    this.drawType = e.target.value;
+                    if(this.activeTool === 'draw') this.setTool('draw'); // Update hint
+                });
 
-                // Persistence Handlers
+                // Info Panel
+                document.getElementById('btn-deselect').addEventListener('click', () => this.deselect());
+                document.getElementById('btn-update-meta').addEventListener('click', () => this.updateSelectedMetadata());
+
+                // Persistence
                 document.getElementById('btn-save').addEventListener('click', () => this.saveAtlas());
                 const fileInput = document.getElementById('file-input');
                 document.getElementById('btn-load').addEventListener('click', () => fileInput.click());
                 fileInput.addEventListener('change', (e) => this.loadAtlas(e));
             }
 
-            // --- Persistence Methods ---
-
             saveAtlas() {
-                // Serialize entities to JSON
                 const data = JSON.stringify(this.entities, null, 2);
                 const blob = new Blob([data], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
-                
-                // Create temp link to download
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = `atlas_backup_${new Date().toISOString().slice(0,10)}.atlas`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                a.href = url; a.download = `atlas_backup_${new Date().toISOString().slice(0,10)}.atlas`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }
 
             loadAtlas(event) {
                 const file = event.target.files[0];
                 if (!file) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
                         const rawData = JSON.parse(e.target.result);
-                        // Hydrate plain objects back into HistoricalEntity instances
                         this.entities = rawData.map(obj => HistoricalEntity.fromJSON(obj));
                         this.updateEntities();
                         this.render();
-                        alert('Atlas loaded successfully from the archives.');
-                    } catch (err) {
-                        console.error(err);
-                        alert('Failed to parse the atlas file. The archives are corrupted.');
-                    }
+                        alert('Atlas loaded successfully.');
+                    } catch (err) { console.error(err); alert('Failed to parse atlas file.'); }
                 };
                 reader.readAsText(file);
-                // Reset input
                 event.target.value = '';
             }
-
-            // --- Tool & Draw Logic ---
 
             setTool(name) {
                 this.activeTool = name;
@@ -753,17 +896,21 @@
                     hint.classList.add('visible');
                     if (this.selectedEntityId) {
                         const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                        hint.textContent = `EDITING: ${ent.name}. Draw new borders for year ${this.currentYear}.`;
+                        hint.textContent = `EDITING: ${ent.name}. Redraw geometry for ${this.currentYear}.`;
+                        // Force draw type to match entity being edited
+                        this.drawType = ent.type;
+                        document.getElementById('draw-type-select').value = ent.type;
                     } else {
-                        hint.textContent = "Click to place points. Double-click to create NEW region.";
+                        if (this.drawType === 'city') hint.textContent = "Click once to place City.";
+                        else hint.textContent = `Click to draw ${this.drawType}. Double-click to finish.`;
                     }
                 } else {
                     hint.classList.remove('visible');
                 }
 
                 const c = this.renderer.canvas;
+                c.style.cursor = 'default';
                 if(name==='pan') c.style.cursor='grab';
-                else if(name==='inspect') c.style.cursor='default';
                 else if(name==='draw') c.style.cursor='crosshair';
                 else if(name==='erase') c.style.cursor='not-allowed';
                 
@@ -772,6 +919,7 @@
 
             addDraftPoint(p) {
                 const last = this.draftPoints[this.draftPoints.length - 1];
+                // Debounce close points
                 if (last && Math.abs(last.x - p.x) < 2 && Math.abs(last.y - p.y) < 2) return;
                 this.draftPoints.push(p);
                 this.render();
@@ -780,23 +928,35 @@
             updateDraftCursor(p) { this.draftCursor = p; this.render(); }
 
             commitDraft() {
-                if (this.draftPoints.length < 3) return;
+                if (this.draftPoints.length === 0) return;
+                // For polygons/lines we need > 2 points usually, but for cities 1 is enough
+                if (this.drawType !== 'city' && this.draftPoints.length < 2) return;
 
                 if (this.selectedEntityId) {
+                    // Edit Existing
                     const ent = this.entities.find(e => e.id === this.selectedEntityId);
                     if (ent) {
                         ent.addKeyframe(this.currentYear, [...this.draftPoints]);
                         this.updateInfoPanel(ent);
                     }
                 } else {
-                    const id = 'custom_' + Date.now();
+                    // Create New
+                    const id = 'ent_' + Date.now();
                     const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
                     const color = colors[Math.floor(Math.random() * colors.length)];
-                    const newEnt = new HistoricalEntity(id, "New Realm", 'polity', color);
+                    
+                    let name = "New Territory";
+                    if (this.drawType === 'city') name = "New Settlement";
+                    if (this.drawType === 'river') name = "New River";
+
+                    const newEnt = new HistoricalEntity(id, name, this.drawType, color);
                     
                     newEnt.addKeyframe(this.currentYear, [...this.draftPoints]);
+                    
+                    // Default lifespan
                     newEnt.validRange.start = this.currentYear - 200;
                     newEnt.validRange.end = this.currentYear + 200;
+                    
                     this.entities.push(newEnt);
                     this.selectEntity(id);
                 }
@@ -805,6 +965,8 @@
                 this.draftCursor = null;
                 this.updateEntities();
                 this.render();
+                
+                // Keep drawing tool active
                 if(this.activeTool === 'draw') this.setTool('draw');
             }
 
@@ -831,13 +993,25 @@
                 if (ent) {
                     const p = document.getElementById('info-panel');
                     p.style.display = 'block';
-                    document.getElementById('info-title').textContent = ent.name;
+                    
+                    // Fill inputs
+                    document.getElementById('info-name-input').value = ent.name;
                     document.getElementById('info-type').textContent = ent.type;
                     document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
+                    
                     this.updateInfoPanel(ent);
                     if (this.activeTool === 'draw') this.setTool('draw');
                 }
                 this.render();
+            }
+
+            updateSelectedMetadata() {
+                if (!this.selectedEntityId) return;
+                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                if (ent) {
+                    ent.name = document.getElementById('info-name-input').value;
+                    this.render();
+                }
             }
 
             updateInfoPanel(ent) {
@@ -854,11 +1028,46 @@
             checkHover(wp) {
                 if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
                 let fid = null;
+                
+                // Simple hit detection logic
+                // Check cities first (points)
                 for (let i = this.entities.length - 1; i >= 0; i--) {
                     const e = this.entities[i];
                     if (!e.currentGeometry) continue;
-                    if (isPointInPolygon(wp, e.currentGeometry)) { fid = e.id; break; }
+                    
+                    if (e.type === 'city') {
+                        if (distance(wp, e.currentGeometry[0]) < 10/this.renderer.transform.k) {
+                            fid = e.id; break;
+                        }
+                    }
                 }
+
+                // If no city, check polygons
+                if (!fid) {
+                    for (let i = this.entities.length - 1; i >= 0; i--) {
+                        const e = this.entities[i];
+                        if (!e.currentGeometry || e.type !== 'polity') continue;
+                        if (isPointInPolygon(wp, e.currentGeometry)) { fid = e.id; break; }
+                    }
+                }
+                
+                // If no polygon, check rivers (line segments)
+                if (!fid) {
+                     for (let i = this.entities.length - 1; i >= 0; i--) {
+                        const e = this.entities[i];
+                        if (!e.currentGeometry || e.type !== 'river') continue;
+                        
+                        // Check distance to any segment
+                        const pts = e.currentGeometry;
+                        for(let j=0; j<pts.length-1; j++) {
+                            if(distanceToSegment(wp, pts[j], pts[j+1]) < 5/this.renderer.transform.k) {
+                                fid = e.id; break;
+                            }
+                        }
+                        if(fid) break;
+                    }
+                }
+
                 if (fid !== this.hoveredEntityId) {
                     this.hoveredEntityId = fid;
                     this.renderer.canvas.style.cursor = (this.activeTool==='erase') ? (fid?'pointer':'not-allowed') : (fid?'pointer':'default');
@@ -873,13 +1082,13 @@
                     if (ent.currentGeometry) cnt++;
                 });
                 const d = document.querySelector('.debug-info');
-                if(d) d.textContent = `Year: ${this.currentYear} | Active: ${cnt} | Selected: ${this.selectedEntityId ? 'Yes' : 'No'}`;
+                if(d) d.textContent = `Year: ${this.currentYear} | Active: ${cnt}`;
             }
 
             render() {
                 this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool);
                 if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform);
+                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
                 }
             }
         }
