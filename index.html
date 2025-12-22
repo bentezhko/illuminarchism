@@ -59,6 +59,18 @@
         }
         h1 span { color: var(--rubric-red); }
 
+        .file-controls {
+            display: flex; gap: 1rem;
+        }
+
+        .btn-text {
+            background: var(--parchment-dark); border: 1px solid var(--ink-faded);
+            color: var(--ink-primary); padding: 0.5rem 1rem;
+            font-family: 'Cinzel', serif; font-weight: bold; cursor: pointer;
+            transition: all 0.2s; box-shadow: var(--ui-shadow);
+        }
+        .btn-text:hover { background: var(--gold-leaf); color: white; border-color: var(--ink-primary); }
+
         /* Toolbar */
         #toolbar {
             position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
@@ -160,6 +172,9 @@
             color: var(--ink-faded); background: rgba(255,255,255,0.3);
             padding: 0.2rem 0.5rem; border-radius: 4px;
         }
+        
+        /* Hidden file input for loading */
+        #file-input { display: none; }
     </style>
 </head>
 <body>
@@ -167,8 +182,10 @@
     <div id="ui-layer">
         <header class="pointer-events-auto">
             <h1>Illumin<span>archism</span></h1>
-            <div style="font-size: 0.9rem; font-style: italic;">
-                Proprietary Medieval Cartographic Engine v0.3
+            <div class="file-controls">
+                <button class="btn-text" id="btn-save" title="Download .atlas JSON">💾 Save Atlas</button>
+                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">📂 Load Atlas</button>
+                <input type="file" id="file-input" accept=".json,.atlas">
             </div>
         </header>
 
@@ -197,7 +214,7 @@
         </div>
         
         <div class="debug-info pointer-events-auto">
-            Render: Canvas 2D | Mode: Interactive | Entities: Loading...
+            Render: Watercolor/Ink | Mode: Interactive | Entities: Loading...
         </div>
     </div>
 
@@ -205,16 +222,19 @@
 
     <script>
         /**
-         * ILLUMINARCHISM ENGINE v0.3 - The Chronicler's Update
-         * 1. Resampling: Geometries are normalized to fixed vertex counts for smooth morphing.
-         * 2. Keyframing: Drawing on a selected entity adds a temporal state, not a new object.
+         * ILLUMINARCHISM ENGINE v0.4 - The Scribe's Archive & Watercolor Update
+         * 1. Persistence: Save/Load functionality via JSON serialization.
+         * 2. Watercolor Shader (Simulated): Multi-pass rendering with blending modes 
+         * and vertex jitter to mimic hand-painted ink pooling.
          */
 
         // --- 1. Configuration & Utils ---
         const CONFIG = {
             ZOOM_SENSITIVITY: 0.001, MIN_ZOOM: 0.1, MAX_ZOOM: 5,
             BACKGROUND_COLOR: '#f3e9d2',
-            RESAMPLE_COUNT: 100 // Standardize all shapes to 100 points
+            RESAMPLE_COUNT: 100, // Standardize shapes for morphing
+            WATERCOLOR_PASSES: 3, // How many wash layers to draw
+            WATERCOLOR_JITTER: 3  // Pixel variance for the wash
         };
 
         const lerp = (start, end, t) => start * (1 - t) + end * t;
@@ -236,12 +256,10 @@
 
         /**
          * Resamples a polygon to a specific number of vertices evenly spaced along perimeter.
-         * Crucial for morphing square -> triangle -> complex shape without artifacts.
          */
         function resamplePolygon(points, targetCount) {
             if (!points || points.length < 3) return points;
 
-            // 1. Calculate total perimeter
             let totalLength = 0;
             for (let i = 0; i < points.length; i++) {
                 totalLength += distance(points[i], points[(i + 1) % points.length]);
@@ -255,25 +273,18 @@
             let segmentDist = distance(points[0], points[1]);
             let distTraveledOnSegment = 0;
 
-            // Start at first point
             newPoints.push({ x: points[0].x, y: points[0].y });
 
-            // Walk the perimeter
             for (let i = 1; i < targetCount; i++) {
                 currentDist += step;
                 
-                // Move to next segment if needed
                 while (distTraveledOnSegment + step > segmentDist) {
-                    // We need to jump to next segment
                     const remainingOnSeg = segmentDist - distTraveledOnSegment;
-                    currentDist -= remainingOnSeg; // Effectively handled this chunk
-                    // Reset logic for next segment
+                    currentDist -= remainingOnSeg; 
                     currentIdx = nextIdx;
                     nextIdx = (nextIdx + 1) % points.length;
                     segmentDist = distance(points[currentIdx], points[nextIdx]);
                     distTraveledOnSegment = 0;
-                    
-                    // Edge case: if we wrapped around completely (shouldn't happen with math right)
                     if (currentIdx === 0 && distTraveledOnSegment === 0 && i > 1) break; 
                 }
 
@@ -303,16 +314,11 @@
             }
 
             addKeyframe(year, geometry) {
-                // Remove existing keyframe for this year if it exists (overwrite)
                 this.timeline = this.timeline.filter(k => k.year !== year);
-                
-                // Resample geometry for consistent morphing
                 const resampled = resamplePolygon(geometry, CONFIG.RESAMPLE_COUNT);
-                
                 this.timeline.push({ year, geometry: resampled });
                 this.timeline.sort((a, b) => a.year - b.year);
                 
-                // Auto-update range
                 if(this.timeline.length > 0) {
                     this.validRange.start = Math.min(this.timeline[0].year - 100, this.validRange.start);
                     this.validRange.end = Math.max(this.timeline[this.timeline.length-1].year + 100, this.validRange.end);
@@ -320,15 +326,11 @@
             }
 
             getGeometryAtYear(targetYear) {
-                // Existence check
                 if (targetYear < this.validRange.start || targetYear > this.validRange.end || this.timeline.length === 0) {
                     return null;
                 }
-
-                // Single keyframe case
                 if (this.timeline.length === 1) return this.timeline[0].geometry;
 
-                // Find surrounding frames
                 let prev = null, next = null;
                 for (let frame of this.timeline) {
                     if (frame.year <= targetYear) prev = frame;
@@ -339,11 +341,8 @@
                 if (!next) return prev.geometry;
                 if (prev === next) return prev.geometry;
 
-                // Interpolate
                 const t = (targetYear - prev.year) / (next.year - prev.year);
                 const morphed = [];
-                
-                // Assuming resampling guaranteed matching lengths
                 const count = Math.min(prev.geometry.length, next.geometry.length);
                 for(let i = 0; i < count; i++) {
                     morphed.push({
@@ -352,6 +351,13 @@
                     });
                 }
                 return morphed;
+            }
+
+            // Hydration helper: Creates a class instance from a plain JSON object
+            static fromJSON(data) {
+                const ent = new HistoricalEntity(data.id, data.name, data.type, data.color);
+                Object.assign(ent, data);
+                return ent;
             }
         }
 
@@ -385,6 +391,7 @@
                 const ctx = c.getContext('2d');
                 ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
                 ctx.fillRect(0,0,size,size);
+                // Simple Perlin-ish noise
                 const id = ctx.getImageData(0,0,size,size);
                 const d = id.data;
                 for(let i=0; i<d.length; i+=4) {
@@ -398,12 +405,18 @@
             }
 
             toWorld(sx, sy) { return { x: (sx - this.transform.x)/this.transform.k, y: (sy - this.transform.y)/this.transform.k }; }
-            clear() { this.ctx.fillStyle = this.noisePattern || CONFIG.BACKGROUND_COLOR; this.ctx.fillRect(0, 0, this.width, this.height); }
+            
+            clear() { 
+                this.ctx.globalCompositeOperation = 'source-over';
+                this.ctx.fillStyle = this.noisePattern || CONFIG.BACKGROUND_COLOR; 
+                this.ctx.fillRect(0, 0, this.width, this.height); 
+            }
 
             draw(entities, hoveredId, selectedId, activeTool) {
                 this.clear();
                 const ctx = this.ctx;
                 const t = this.transform;
+                
                 ctx.save();
                 ctx.translate(t.x, t.y);
                 ctx.scale(t.k, t.k);
@@ -411,49 +424,94 @@
                 // Grid
                 this.drawGrid();
 
-                // Entities
+                // Entities - Draw in passes to approximate watercolor layers
                 entities.forEach(ent => {
                     if (!ent.currentGeometry) return;
                     const isHovered = ent.id === hoveredId;
                     const isSelected = ent.id === selectedId;
-
-                    ctx.beginPath();
-                    this.tracePath(ent.currentGeometry);
-                    ctx.closePath();
-
-                    if (isSelected) {
-                        ctx.fillStyle = this.hexToRgba(ent.color, 0.6);
-                        ctx.strokeStyle = '#8a3324'; // Red selection border
-                        ctx.lineWidth = 4/t.k;
-                        ctx.shadowColor = '#000';
-                        ctx.shadowBlur = 10;
-                    } else if (isHovered && activeTool === 'inspect') {
-                        ctx.fillStyle = this.hexToRgba(ent.color, 0.4);
-                        ctx.strokeStyle = '#2b2118';
-                        ctx.lineWidth = 3/t.k;
-                    } else {
-                        ctx.fillStyle = this.hexToRgba(ent.color, 0.2);
-                        ctx.strokeStyle = '#2b2118';
-                        ctx.lineWidth = 1.5/t.k;
-                        ctx.shadowBlur = 0;
-                    }
-
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Label (centroid)
-                    if (t.k > 0.5) {
-                        let sx=0, sy=0;
-                        ent.currentGeometry.forEach(p => { sx+=p.x; sy+=p.y; });
-                        ctx.fillStyle = isSelected ? '#fff' : '#8a3324';
-                        if(isSelected) ctx.shadowBlur = 4;
-                        ctx.font = '14px "Cinzel"';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(ent.name, sx/ent.currentGeometry.length, sy/ent.currentGeometry.length);
-                        ctx.shadowBlur = 0; // reset
-                    }
+                    
+                    this.drawWatercolorEntity(ent, isHovered, isSelected, activeTool);
                 });
+                
                 ctx.restore();
+            }
+
+            drawWatercolorEntity(ent, isHovered, isSelected, activeTool) {
+                const ctx = this.ctx;
+                const pts = ent.currentGeometry;
+                if (!pts || pts.length === 0) return;
+
+                // 1. Watercolor Wash (Multiple transparent passes with jitter)
+                ctx.globalCompositeOperation = 'multiply'; // Blend colors like ink/paint
+                
+                // Determine base color opacity
+                let baseAlpha = 0.15;
+                if (isHovered && activeTool === 'inspect') baseAlpha = 0.3;
+                if (isSelected) baseAlpha = 0.4;
+
+                ctx.fillStyle = this.hexToRgba(ent.color, baseAlpha);
+
+                for (let pass = 0; pass < CONFIG.WATERCOLOR_PASSES; pass++) {
+                    ctx.beginPath();
+                    // First point
+                    let startJitter = this.getJitter(pass);
+                    ctx.moveTo(pts[0].x + startJitter.x, pts[0].y + startJitter.y);
+                    
+                    // Subsequent points
+                    for(let i=1; i<pts.length; i++) {
+                        let j = this.getJitter(pass);
+                        ctx.lineTo(pts[i].x + j.x, pts[i].y + j.y);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                // 2. Ink Stroke (Defined outline)
+                ctx.globalCompositeOperation = 'source-over'; // Draw ink on top
+                ctx.beginPath();
+                this.tracePath(pts);
+                ctx.closePath();
+
+                if (isSelected) {
+                    ctx.strokeStyle = '#8a3324'; // Red rubric selection
+                    ctx.lineWidth = 3 / this.transform.k;
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 10;
+                } else {
+                    ctx.strokeStyle = '#2b2118'; // Iron gall ink
+                    ctx.lineWidth = 1.5 / this.transform.k;
+                    ctx.shadowBlur = 0;
+                }
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+
+                // 3. Label
+                if (this.transform.k > 0.5) {
+                    this.drawLabel(ent, isSelected);
+                }
+            }
+
+            getJitter(seed) {
+                // Pseudo-random jitter based on pass index
+                const amount = CONFIG.WATERCOLOR_JITTER / this.transform.k;
+                return {
+                    x: (Math.random() - 0.5) * amount * (seed + 1),
+                    y: (Math.random() - 0.5) * amount * (seed + 1)
+                };
+            }
+
+            drawLabel(ent, isSelected) {
+                let sx=0, sy=0;
+                ent.currentGeometry.forEach(p => { sx+=p.x; sy+=p.y; });
+                const cx = sx/ent.currentGeometry.length;
+                const cy = sy/ent.currentGeometry.length;
+
+                this.ctx.fillStyle = isSelected ? '#fff' : '#8a3324';
+                if(isSelected) this.ctx.shadowBlur = 4;
+                this.ctx.font = '14px "Cinzel"';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(ent.name, cx, cy);
+                this.ctx.shadowBlur = 0;
             }
 
             drawDraft(points, cursor, transform) {
@@ -608,6 +666,7 @@
             }
 
             initData() {
+                // Basic initial data
                 const blue = new HistoricalEntity('blue_kg', 'Regnum Caeruleum', 'polity', '#264e86');
                 blue.addKeyframe(800, [{x:-100,y:-100}, {x:100,y:-100}, {x:100,y:100}, {x:-100,y:100}]);
                 blue.addKeyframe(1200, [{x:-200,y:-150}, {x:250,y:-120}, {x:200,y:200}, {x:-180,y:180}]);
@@ -634,17 +693,64 @@
                 });
 
                 document.getElementById('btn-deselect').addEventListener('click', () => this.deselect());
+
+                // Persistence Handlers
+                document.getElementById('btn-save').addEventListener('click', () => this.saveAtlas());
+                const fileInput = document.getElementById('file-input');
+                document.getElementById('btn-load').addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', (e) => this.loadAtlas(e));
             }
+
+            // --- Persistence Methods ---
+
+            saveAtlas() {
+                // Serialize entities to JSON
+                const data = JSON.stringify(this.entities, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                // Create temp link to download
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `atlas_backup_${new Date().toISOString().slice(0,10)}.atlas`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+
+            loadAtlas(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const rawData = JSON.parse(e.target.result);
+                        // Hydrate plain objects back into HistoricalEntity instances
+                        this.entities = rawData.map(obj => HistoricalEntity.fromJSON(obj));
+                        this.updateEntities();
+                        this.render();
+                        alert('Atlas loaded successfully from the archives.');
+                    } catch (err) {
+                        console.error(err);
+                        alert('Failed to parse the atlas file. The archives are corrupted.');
+                    }
+                };
+                reader.readAsText(file);
+                // Reset input
+                event.target.value = '';
+            }
+
+            // --- Tool & Draw Logic ---
 
             setTool(name) {
                 this.activeTool = name;
                 this.cancelDraft();
                 
-                // Dynamic Hint Update
                 const hint = document.getElementById('draw-hint');
                 if (name === 'draw') {
                     hint.classList.add('visible');
-                    // Check if we are editing an existing entity
                     if (this.selectedEntityId) {
                         const ent = this.entities.find(e => e.id === this.selectedEntityId);
                         hint.textContent = `EDITING: ${ent.name}. Draw new borders for year ${this.currentYear}.`;
@@ -655,7 +761,6 @@
                     hint.classList.remove('visible');
                 }
 
-                // Cursor
                 const c = this.renderer.canvas;
                 if(name==='pan') c.style.cursor='grab';
                 else if(name==='inspect') c.style.cursor='default';
@@ -678,26 +783,21 @@
                 if (this.draftPoints.length < 3) return;
 
                 if (this.selectedEntityId) {
-                    // --- KEYFRAME MODE: Edit Existing ---
                     const ent = this.entities.find(e => e.id === this.selectedEntityId);
                     if (ent) {
                         ent.addKeyframe(this.currentYear, [...this.draftPoints]);
-                        this.updateInfoPanel(ent); // Refresh keyframe list
+                        this.updateInfoPanel(ent);
                     }
                 } else {
-                    // --- CREATE MODE: New Entity ---
                     const id = 'custom_' + Date.now();
-                    const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a'];
+                    const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
                     const color = colors[Math.floor(Math.random() * colors.length)];
                     const newEnt = new HistoricalEntity(id, "New Realm", 'polity', color);
                     
                     newEnt.addKeyframe(this.currentYear, [...this.draftPoints]);
-                    // Set valid range loosely around creation
                     newEnt.validRange.start = this.currentYear - 200;
                     newEnt.validRange.end = this.currentYear + 200;
                     this.entities.push(newEnt);
-                    
-                    // Auto-select the new entity
                     this.selectEntity(id);
                 }
 
@@ -705,8 +805,6 @@
                 this.draftCursor = null;
                 this.updateEntities();
                 this.render();
-                
-                // Refresh hint if tool is still active
                 if(this.activeTool === 'draw') this.setTool('draw');
             }
 
@@ -723,7 +821,6 @@
             deselect() {
                 this.selectedEntityId = null;
                 document.getElementById('info-panel').style.display = 'none';
-                // Refresh hint logic
                 if (this.activeTool === 'draw') this.setTool('draw');
                 this.render();
             }
@@ -737,10 +834,7 @@
                     document.getElementById('info-title').textContent = ent.name;
                     document.getElementById('info-type').textContent = ent.type;
                     document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
-                    
                     this.updateInfoPanel(ent);
-                    
-                    // If in draw mode, update text to show we are editing
                     if (this.activeTool === 'draw') this.setTool('draw');
                 }
                 this.render();
