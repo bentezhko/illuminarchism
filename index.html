@@ -17,251 +17,149 @@
             --parchment-dark: #e0d0b0;
             --ink-primary: #2b2118;
             --ink-faded: #5c4d3c;
-            --rubric-red: #8a3324; /* For highlighting headers/capitals */
-            --gold-leaf: #c5a059;  /* For borders/accents */
-            --lapis-lazuli: #264e86; /* For royal regions */
+            --rubric-red: #8a3324;
+            --gold-leaf: #c5a059;
+            --lapis-lazuli: #264e86;
             
             --ui-shadow: 0 4px 6px rgba(43, 33, 24, 0.2);
             --border-width: 2px;
         }
 
-        * {
-            box-sizing: border-box;
-            user-select: none; /* Prevent selection while panning map */
-        }
+        * { box-sizing: border-box; user-select: none; }
 
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
             background-color: var(--parchment-bg);
             font-family: 'IM Fell English', serif;
             color: var(--ink-primary);
         }
 
-        /* --- UI Overlay Layer --- */
+        /* --- UI Overlay --- */
         #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* Let clicks pass through to canvas */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
             z-index: 10;
         }
 
-        .pointer-events-auto {
-            pointer-events: auto;
-        }
+        .pointer-events-auto { pointer-events: auto; }
 
-        /* Header / Title Block */
+        /* Header */
         header {
             padding: 1rem 2rem;
             background: linear-gradient(to bottom, var(--parchment-bg) 80%, transparent);
             border-bottom: 1px solid var(--gold-leaf);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
         }
 
         h1 {
-            font-family: 'Cinzel', serif;
-            font-weight: 700;
-            margin: 0;
-            font-size: 2rem;
-            color: var(--ink-primary);
-            text-shadow: 1px 1px 0px var(--parchment-dark);
+            font-family: 'Cinzel', serif; font-weight: 700; margin: 0; font-size: 2rem;
+            color: var(--ink-primary); text-shadow: 1px 1px 0px var(--parchment-dark);
             letter-spacing: 2px;
         }
+        h1 span { color: var(--rubric-red); }
 
-        h1 span {
-            color: var(--rubric-red);
-        }
-
-        /* Toolbar (Left) */
+        /* Toolbar */
         #toolbar {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            background: rgba(243, 233, 210, 0.95);
-            padding: 0.5rem;
+            position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 0.5rem;
+            background: rgba(243, 233, 210, 0.95); padding: 0.5rem;
             border: var(--border-width) solid var(--ink-primary);
-            border-radius: 4px;
-            box-shadow: var(--ui-shadow);
+            border-radius: 4px; box-shadow: var(--ui-shadow);
         }
 
         .tool-btn {
-            width: 44px;
-            height: 44px;
-            background: var(--parchment-dark);
-            border: 1px solid var(--ink-faded);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Cinzel', serif;
-            font-weight: bold;
-            transition: all 0.2s ease;
-            font-size: 1.4rem;
-            color: var(--ink-primary);
-            position: relative;
+            width: 44px; height: 44px;
+            background: var(--parchment-dark); border: 1px solid var(--ink-faded);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-family: 'Cinzel', serif; font-weight: bold; font-size: 1.4rem;
+            color: var(--ink-primary); transition: all 0.2s ease; position: relative;
         }
 
-        .tool-btn:hover {
-            background: var(--gold-leaf);
-            color: white;
-            border-color: var(--ink-primary);
-        }
-
-        .tool-btn.active {
-            background: var(--rubric-red);
-            color: white;
-            border-color: var(--ink-primary);
-            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.4);
-        }
+        .tool-btn:hover { background: var(--gold-leaf); color: white; border-color: var(--ink-primary); }
+        .tool-btn.active { background: var(--rubric-red); color: white; border-color: var(--ink-primary); box-shadow: inset 2px 2px 4px rgba(0,0,0,0.4); }
         
-        /* Tooltip hack */
         .tool-btn:hover::after {
-            content: attr(title);
-            position: absolute;
-            left: 110%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: var(--ink-primary);
-            color: var(--parchment-bg);
-            padding: 0.25rem 0.5rem;
-            font-size: 0.8rem;
-            font-family: 'IM Fell English', serif;
-            white-space: nowrap;
-            border-radius: 2px;
-            pointer-events: none;
-            opacity: 1;
+            content: attr(title); position: absolute; left: 110%; top: 50%;
+            transform: translateY(-50%); background: var(--ink-primary);
+            color: var(--parchment-bg); padding: 0.25rem 0.5rem;
+            font-size: 0.8rem; font-family: 'IM Fell English', serif;
+            white-space: nowrap; border-radius: 2px; pointer-events: none;
         }
 
-        /* Temporal Controls (Bottom) */
-        #temporal-controls {
-            width: 100%;
-            padding: 1rem 2rem;
-            background: linear-gradient(to top, var(--parchment-bg) 80%, transparent);
-            border-top: 1px solid var(--gold-leaf);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        #year-display {
-            font-family: 'Cinzel', serif;
-            font-size: 2rem;
-            font-weight: bold;
-            color: var(--rubric-red);
-        }
-
-        /* Custom Range Slider */
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 80%;
-            max-width: 800px;
-            background: transparent;
-        }
-
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 24px;
-            width: 24px;
-            border-radius: 50%;
-            background: var(--rubric-red);
-            border: 2px solid var(--ink-primary);
-            cursor: pointer;
-            margin-top: -10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        }
-
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: var(--ink-faded);
-            border-radius: 2px;
-        }
-
-        /* Info Panel (Right - New) */
+        /* Info Panel */
         #info-panel {
-            position: absolute;
-            right: 1rem;
-            top: 6rem;
-            width: 280px;
+            position: absolute; right: 1rem; top: 6rem; width: 280px;
             background: rgba(243, 233, 210, 0.95);
             border: var(--border-width) solid var(--ink-primary);
-            padding: 1rem;
-            box-shadow: var(--ui-shadow);
-            display: none; /* Hidden by default */
+            padding: 1rem; box-shadow: var(--ui-shadow);
+            display: none;
         }
         
         #info-panel h2 {
-            font-family: 'Cinzel', serif;
-            font-size: 1.4rem;
-            margin-top: 0;
-            border-bottom: 1px solid var(--ink-faded);
-            padding-bottom: 0.5rem;
+            font-family: 'Cinzel', serif; font-size: 1.4rem; margin-top: 0;
+            border-bottom: 1px solid var(--ink-faded); padding-bottom: 0.5rem;
             color: var(--rubric-red);
         }
 
-        /* Instructions overlay for drawing */
+        .info-row {
+            display: flex; justify-content: space-between; font-size: 0.9rem;
+            margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(92, 77, 60, 0.3);
+        }
+
+        #keyframe-list {
+            max-height: 100px; overflow-y: auto; font-size: 0.8rem;
+            background: rgba(255,255,255,0.3); padding: 0.5rem; margin-top: 0.5rem;
+        }
+
+        button.small-btn {
+            background: var(--ink-primary); color: var(--parchment-bg); border: none;
+            padding: 0.2rem 0.5rem; font-family: 'Cinzel', serif; cursor: pointer;
+            font-size: 0.7rem; margin-top: 0.5rem;
+        }
+        button.small-btn:hover { background: var(--rubric-red); }
+
+        /* Drawing Hint */
         #draw-hint {
-            position: absolute;
-            bottom: 6rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(43, 33, 24, 0.8);
-            color: var(--parchment-bg);
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-family: sans-serif;
-            font-size: 0.8rem;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
+            position: absolute; bottom: 6rem; left: 50%; transform: translateX(-50%);
+            background: rgba(43, 33, 24, 0.9); color: var(--parchment-bg);
+            padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid var(--gold-leaf);
+            font-family: 'Cinzel', serif; font-size: 0.9rem;
+            pointer-events: none; opacity: 0; transition: opacity 0.3s; text-align: center;
         }
-        
-        #draw-hint.visible {
-            opacity: 1;
+        #draw-hint.visible { opacity: 1; }
+
+        /* Temporal Controls */
+        #temporal-controls {
+            width: 100%; padding: 1rem 2rem;
+            background: linear-gradient(to top, var(--parchment-bg) 80%, transparent);
+            border-top: 1px solid var(--gold-leaf);
+            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
         }
 
-        /* --- Canvas Layer --- */
-        #map-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-            cursor: grab;
+        #year-display {
+            font-family: 'Cinzel', serif; font-size: 2rem; font-weight: bold;
+            color: var(--rubric-red);
         }
 
-        #map-canvas:active {
-            cursor: grabbing;
+        input[type=range] { -webkit-appearance: none; width: 80%; max-width: 800px; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%;
+            background: var(--rubric-red); border: 2px solid var(--ink-primary);
+            cursor: pointer; margin-top: -10px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: var(--ink-faded); border-radius: 2px;
         }
 
-        /* Utility classes */
+        #map-canvas { position: absolute; top: 0; left: 0; z-index: 1; cursor: grab; }
+        #map-canvas:active { cursor: grabbing; }
+
         .debug-info {
-            position: absolute;
-            bottom: 1rem;
-            right: 1rem;
-            font-size: 0.7rem;
-            color: var(--ink-faded);
-            background: rgba(255,255,255,0.3);
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
+            position: absolute; bottom: 1rem; right: 1rem; font-size: 0.7rem;
+            color: var(--ink-faded); background: rgba(255,255,255,0.3);
+            padding: 0.2rem 0.5rem; border-radius: 4px;
         }
-
     </style>
 </head>
 <body>
@@ -283,20 +181,19 @@
 
         <div id="info-panel" class="pointer-events-auto">
             <h2 id="info-title">Region Name</h2>
-            <p id="info-desc">Historical description goes here.</p>
-            <div style="font-size: 0.8rem; color: var(--ink-faded); border-top: 1px solid rgba(0,0,0,0.1); padding-top: 0.5rem;">
-                <strong>Established:</strong> <span id="info-start"></span><br>
-                <strong>Dissolved:</strong> <span id="info-end"></span>
-            </div>
+            <div class="info-row"><span>Type:</span> <span id="info-type">Polity</span></div>
+            <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
+            <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years (Keyframes):</div>
+            <div id="keyframe-list"></div>
+            <button class="small-btn" id="btn-deselect">Close / Deselect</button>
         </div>
 
-        <div id="draw-hint">Click to place points. Double-click to finish.</div>
+        <div id="draw-hint"></div>
 
         <div id="temporal-controls" class="pointer-events-auto">
             <div id="year-display">1000 AD</div>
-            <!-- Range: 800 to 1300 for this demo -->
             <input type="range" id="time-slider" min="800" max="1300" value="1000" step="1">
-            <div style="font-size: 0.8rem; color: var(--ink-faded);">Drag the timeline to shift the borders</div>
+            <div style="font-size: 0.8rem; color: var(--ink-faded);">Drag slider to traverse history</div>
         </div>
         
         <div class="debug-info pointer-events-auto">
@@ -308,41 +205,87 @@
 
     <script>
         /**
-         * ILLUMINARCHISM ENGINE v0.3
-         * * Core Features:
-         * 1. Vector Morphing: Linear interpolation between historical keyframes.
-         * 2. Procedural Rendering: Ink simulation and parchment texture.
-         * 3. Entity Component System: Data driven regions.
-         * 4. Interaction: Tool state management (Pan/Inspect/Draw).
+         * ILLUMINARCHISM ENGINE v0.3 - The Chronicler's Update
+         * 1. Resampling: Geometries are normalized to fixed vertex counts for smooth morphing.
+         * 2. Keyframing: Drawing on a selected entity adds a temporal state, not a new object.
          */
 
         // --- 1. Configuration & Utils ---
         const CONFIG = {
-            ZOOM_SENSITIVITY: 0.001,
-            MIN_ZOOM: 0.1,
-            MAX_ZOOM: 5,
+            ZOOM_SENSITIVITY: 0.001, MIN_ZOOM: 0.1, MAX_ZOOM: 5,
             BACKGROUND_COLOR: '#f3e9d2',
-            INK_JITTER: 1.5, // How "wobbly" the lines are
-            DEBUG: true
+            RESAMPLE_COUNT: 100 // Standardize all shapes to 100 points
         };
 
-        // Linear Interpolation
         const lerp = (start, end, t) => start * (1 - t) + end * t;
 
-        // Point in Polygon (Ray Casting algorithm)
+        function distance(p1, p2) {
+            return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        }
+
+        // Ray Casting Point-in-Polygon
         function isPointInPolygon(point, vs) {
-            // point = {x, y}, vs = array of points [{x, y}, ...]
-            let x = point.x, y = point.y;
-            let inside = false;
+            let x = point.x, y = point.y, inside = false;
             for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-                let xi = vs[i].x, yi = vs[i].y;
-                let xj = vs[j].x, yj = vs[j].y;
-                
-                let intersect = ((yi > y) !== (yj > y)) &&
-                    (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                let xi = vs[i].x, yi = vs[i].y, xj = vs[j].x, yj = vs[j].y;
+                let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
                 if (intersect) inside = !inside;
             }
             return inside;
+        }
+
+        /**
+         * Resamples a polygon to a specific number of vertices evenly spaced along perimeter.
+         * Crucial for morphing square -> triangle -> complex shape without artifacts.
+         */
+        function resamplePolygon(points, targetCount) {
+            if (!points || points.length < 3) return points;
+
+            // 1. Calculate total perimeter
+            let totalLength = 0;
+            for (let i = 0; i < points.length; i++) {
+                totalLength += distance(points[i], points[(i + 1) % points.length]);
+            }
+
+            const step = totalLength / targetCount;
+            const newPoints = [];
+            let currentDist = 0;
+            let currentIdx = 0;
+            let nextIdx = 1;
+            let segmentDist = distance(points[0], points[1]);
+            let distTraveledOnSegment = 0;
+
+            // Start at first point
+            newPoints.push({ x: points[0].x, y: points[0].y });
+
+            // Walk the perimeter
+            for (let i = 1; i < targetCount; i++) {
+                currentDist += step;
+                
+                // Move to next segment if needed
+                while (distTraveledOnSegment + step > segmentDist) {
+                    // We need to jump to next segment
+                    const remainingOnSeg = segmentDist - distTraveledOnSegment;
+                    currentDist -= remainingOnSeg; // Effectively handled this chunk
+                    // Reset logic for next segment
+                    currentIdx = nextIdx;
+                    nextIdx = (nextIdx + 1) % points.length;
+                    segmentDist = distance(points[currentIdx], points[nextIdx]);
+                    distTraveledOnSegment = 0;
+                    
+                    // Edge case: if we wrapped around completely (shouldn't happen with math right)
+                    if (currentIdx === 0 && distTraveledOnSegment === 0 && i > 1) break; 
+                }
+
+                distTraveledOnSegment += step;
+                const t = distTraveledOnSegment / segmentDist;
+                
+                newPoints.push({
+                    x: lerp(points[currentIdx].x, points[nextIdx].x, t),
+                    y: lerp(points[currentIdx].y, points[nextIdx].y, t)
+                });
+            }
+            return newPoints;
         }
 
         // --- 2. Data Structures ---
@@ -351,33 +294,41 @@
             constructor(id, name, type, color) {
                 this.id = id;
                 this.name = name;
-                this.type = type; // 'polity', 'river', 'city'
+                this.type = type; 
                 this.color = color;
-                this.description = "A distinct historical region.";
-                
-                // Timeline: Array of Keyframes
-                // { year: 1000, geometry: [{x,y}, ...] }
-                this.timeline = []; 
+                this.description = "A region defined by its changing borders.";
+                this.timeline = []; // Array of { year, geometry }
                 this.validRange = { start: -Infinity, end: Infinity };
                 this.currentGeometry = null;
             }
 
             addKeyframe(year, geometry) {
-                this.timeline.push({ year, geometry });
+                // Remove existing keyframe for this year if it exists (overwrite)
+                this.timeline = this.timeline.filter(k => k.year !== year);
+                
+                // Resample geometry for consistent morphing
+                const resampled = resamplePolygon(geometry, CONFIG.RESAMPLE_COUNT);
+                
+                this.timeline.push({ year, geometry: resampled });
                 this.timeline.sort((a, b) => a.year - b.year);
-                // Update range based on data
-                this.validRange.start = Math.min(this.validRange.start, year);
-                this.validRange.end = Math.max(this.validRange.end, year);
+                
+                // Auto-update range
+                if(this.timeline.length > 0) {
+                    this.validRange.start = Math.min(this.timeline[0].year - 100, this.validRange.start);
+                    this.validRange.end = Math.max(this.timeline[this.timeline.length-1].year + 100, this.validRange.end);
+                }
             }
 
-            // The core "Running Reality" logic
             getGeometryAtYear(targetYear) {
-                // 1. Check existence
-                if (targetYear < this.validRange.start || targetYear > this.validRange.end) {
-                    return null; // Entity doesn't exist
+                // Existence check
+                if (targetYear < this.validRange.start || targetYear > this.validRange.end || this.timeline.length === 0) {
+                    return null;
                 }
 
-                // 2. Find surrounding keyframes
+                // Single keyframe case
+                if (this.timeline.length === 1) return this.timeline[0].geometry;
+
+                // Find surrounding frames
                 let prev = null, next = null;
                 for (let frame of this.timeline) {
                     if (frame.year <= targetYear) prev = frame;
@@ -388,37 +339,31 @@
                 if (!next) return prev.geometry;
                 if (prev === next) return prev.geometry;
 
-                // 3. Interpolate (Morph)
-                // Note: This requires congruent topology (same # of points). 
-                // Advanced versions would use Ear Clipping if counts differ.
+                // Interpolate
                 const t = (targetYear - prev.year) / (next.year - prev.year);
-                const morphedPoly = [];
+                const morphed = [];
                 
+                // Assuming resampling guaranteed matching lengths
                 const count = Math.min(prev.geometry.length, next.geometry.length);
                 for(let i = 0; i < count; i++) {
-                    morphedPoly.push({
+                    morphed.push({
                         x: lerp(prev.geometry[i].x, next.geometry[i].x, t),
                         y: lerp(prev.geometry[i].y, next.geometry[i].y, t)
                     });
                 }
-                return morphedPoly;
+                return morphed;
             }
         }
 
-        // --- 3. The Renderer (The "Illuminator") ---
+        // --- 3. Renderer ---
         class MedievalRenderer {
             constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
                 this.ctx = this.canvas.getContext('2d'); 
                 this.width = window.innerWidth;
                 this.height = window.innerHeight;
-                
-                // Coordinate System
                 this.transform = { x: this.width/2, y: this.height/2, k: 1 };
-                
-                // Texture cache
                 this.noisePattern = null;
-
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
                 this.createParchmentTexture();
@@ -429,181 +374,134 @@
                 this.height = window.innerHeight;
                 this.canvas.width = this.width;
                 this.canvas.height = this.height;
-                this.createParchmentTexture(); // Recreate pattern
-                // Trigger render via app if available
+                this.createParchmentTexture();
                 if(window.illuminarchismApp) window.illuminarchismApp.render();
             }
 
             createParchmentTexture() {
-                // Procedural noise for that "old paper" feel
                 const size = 256;
-                const canvas = document.createElement('canvas');
-                canvas.width = size;
-                canvas.height = size;
-                const ctx = canvas.getContext('2d');
-                
+                const c = document.createElement('canvas');
+                c.width = size; c.height = size;
+                const ctx = c.getContext('2d');
                 ctx.fillStyle = CONFIG.BACKGROUND_COLOR;
                 ctx.fillRect(0,0,size,size);
-                
-                // Add noise
-                const imageData = ctx.getImageData(0,0,size,size);
-                const data = imageData.data;
-                for(let i=0; i < data.length; i+=4) {
-                    const noise = (Math.random() - 0.5) * 20;
-                    data[i] = Math.min(255, Math.max(0, data[i] + noise));
-                    data[i+1] = Math.min(255, Math.max(0, data[i+1] + noise));
-                    data[i+2] = Math.min(255, Math.max(0, data[i+2] + noise));
+                const id = ctx.getImageData(0,0,size,size);
+                const d = id.data;
+                for(let i=0; i<d.length; i+=4) {
+                    const n = (Math.random()-0.5)*20;
+                    d[i] = Math.min(255, Math.max(0, d[i]+n));
+                    d[i+1] = Math.min(255, Math.max(0, d[i+1]+n));
+                    d[i+2] = Math.min(255, Math.max(0, d[i+2]+n));
                 }
-                ctx.putImageData(imageData, 0, 0);
-                this.noisePattern = this.ctx.createPattern(canvas, 'repeat');
+                ctx.putImageData(id, 0, 0);
+                this.noisePattern = this.ctx.createPattern(c, 'repeat');
             }
 
-            toWorld(screenX, screenY) {
-                return {
-                    x: (screenX - this.transform.x) / this.transform.k,
-                    y: (screenY - this.transform.y) / this.transform.k
-                };
-            }
+            toWorld(sx, sy) { return { x: (sx - this.transform.x)/this.transform.k, y: (sy - this.transform.y)/this.transform.k }; }
+            clear() { this.ctx.fillStyle = this.noisePattern || CONFIG.BACKGROUND_COLOR; this.ctx.fillRect(0, 0, this.width, this.height); }
 
-            clear() {
-                // Use the procedural texture instead of flat color
-                this.ctx.fillStyle = this.noisePattern || CONFIG.BACKGROUND_COLOR;
-                this.ctx.fillRect(0, 0, this.width, this.height);
-            }
-
-            draw(entities, hoveredEntityId, activeTool) {
+            draw(entities, hoveredId, selectedId, activeTool) {
                 this.clear();
                 const ctx = this.ctx;
                 const t = this.transform;
-
                 ctx.save();
                 ctx.translate(t.x, t.y);
                 ctx.scale(t.k, t.k);
 
-                // Draw Grid (faint)
+                // Grid
                 this.drawGrid();
 
-                // Draw Entities
+                // Entities
                 entities.forEach(ent => {
                     if (!ent.currentGeometry) return;
+                    const isHovered = ent.id === hoveredId;
+                    const isSelected = ent.id === selectedId;
 
-                    const isHovered = ent.id === hoveredEntityId;
-                    
-                    // Fill
                     ctx.beginPath();
                     this.tracePath(ent.currentGeometry);
                     ctx.closePath();
-                    
-                    if (isHovered && activeTool === 'inspect') {
-                        ctx.fillStyle = this.hexToRgba(ent.color, 0.5); // Stronger Highlight
-                        ctx.shadowColor = ent.color;
-                        ctx.shadowBlur = 15;
+
+                    if (isSelected) {
+                        ctx.fillStyle = this.hexToRgba(ent.color, 0.6);
+                        ctx.strokeStyle = '#8a3324'; // Red selection border
+                        ctx.lineWidth = 4/t.k;
+                        ctx.shadowColor = '#000';
+                        ctx.shadowBlur = 10;
+                    } else if (isHovered && activeTool === 'inspect') {
+                        ctx.fillStyle = this.hexToRgba(ent.color, 0.4);
+                        ctx.strokeStyle = '#2b2118';
+                        ctx.lineWidth = 3/t.k;
                     } else {
-                        ctx.fillStyle = this.hexToRgba(ent.color, 0.2); // Normal
+                        ctx.fillStyle = this.hexToRgba(ent.color, 0.2);
+                        ctx.strokeStyle = '#2b2118';
+                        ctx.lineWidth = 1.5/t.k;
                         ctx.shadowBlur = 0;
                     }
-                    ctx.fill();
 
-                    // Stroke (Ink Style)
-                    ctx.strokeStyle = '#2b2118';
-                    ctx.lineWidth = isHovered ? 3 / t.k : 1.5 / t.k; 
-                    
-                    ctx.lineJoin = 'round';
-                    ctx.lineCap = 'round';
+                    ctx.fill();
                     ctx.stroke();
 
-                    // Label
-                    if (t.k > 0.5) { 
-                        this.drawLabel(ent);
+                    // Label (centroid)
+                    if (t.k > 0.5) {
+                        let sx=0, sy=0;
+                        ent.currentGeometry.forEach(p => { sx+=p.x; sy+=p.y; });
+                        ctx.fillStyle = isSelected ? '#fff' : '#8a3324';
+                        if(isSelected) ctx.shadowBlur = 4;
+                        ctx.font = '14px "Cinzel"';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(ent.name, sx/ent.currentGeometry.length, sy/ent.currentGeometry.length);
+                        ctx.shadowBlur = 0; // reset
                     }
                 });
-
                 ctx.restore();
             }
 
-            // New Method: Renders the polygon currently being drawn
             drawDraft(points, cursor, transform) {
                 if (!points || points.length === 0) return;
-
                 const ctx = this.ctx;
-                const t = transform;
-
                 ctx.save();
-                ctx.translate(t.x, t.y);
-                ctx.scale(t.k, t.k);
-
-                // Draw the solidified path so far
+                ctx.translate(transform.x, transform.y);
+                ctx.scale(transform.k, transform.k);
+                
                 ctx.beginPath();
                 ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) {
-                    ctx.lineTo(points[i].x, points[i].y);
-                }
+                for(let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+                if(cursor) ctx.lineTo(cursor.x, cursor.y);
                 
-                // Draw "elastic" line to cursor if active
-                if (cursor) {
-                    ctx.lineTo(cursor.x, cursor.y);
-                }
-
-                ctx.strokeStyle = '#8a3324'; // Rubric Red for drafting
-                ctx.lineWidth = 2 / t.k;
-                ctx.setLineDash([5 / t.k, 5 / t.k]); // Dashed line
+                ctx.strokeStyle = '#8a3324';
+                ctx.lineWidth = 2/transform.k;
+                ctx.setLineDash([5/transform.k, 5/transform.k]);
                 ctx.stroke();
-                ctx.setLineDash([]); // Reset
-
-                // Draw vertices
-                ctx.fillStyle = '#8a3324';
+                
                 points.forEach(p => {
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 4 / t.k, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 4/transform.k, 0, Math.PI*2);
+                    ctx.fillStyle='#8a3324'; ctx.fill();
                 });
-
                 ctx.restore();
             }
 
-            tracePath(points) {
-                if (points.length === 0) return;
-                this.ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) {
-                    this.ctx.lineTo(points[i].x, points[i].y);
-                }
-            }
-
-            drawLabel(entity) {
-                let sx = 0, sy = 0;
-                entity.currentGeometry.forEach(p => { sx += p.x; sy += p.y; });
-                const cx = sx / entity.currentGeometry.length;
-                const cy = sy / entity.currentGeometry.length;
-
-                this.ctx.fillStyle = '#8a3324'; // Rubric Red
-                this.ctx.font = '14px "Cinzel"';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText(entity.name, cx, cy);
+            tracePath(pts) {
+                if(!pts.length) return;
+                this.ctx.moveTo(pts[0].x, pts[0].y);
+                for(let i=1; i<pts.length; i++) this.ctx.lineTo(pts[i].x, pts[i].y);
             }
 
             drawGrid() {
                 const ctx = this.ctx;
-                const gridSize = 100;
-                const count = 30; // Render range
-
+                const sz = 100; const cnt = 30;
                 ctx.beginPath();
                 ctx.strokeStyle = 'rgba(138, 51, 36, 0.05)';
-                ctx.lineWidth = 1 / this.transform.k; // Keep hairlines thin
-
-                for(let i = -count; i <= count; i++) {
-                    ctx.moveTo(i * gridSize, -count * gridSize);
-                    ctx.lineTo(i * gridSize, count * gridSize);
-                    ctx.moveTo(-count * gridSize, i * gridSize);
-                    ctx.lineTo(count * gridSize, i * gridSize);
+                ctx.lineWidth = 1/this.transform.k;
+                for(let i=-cnt; i<=cnt; i++) {
+                    ctx.moveTo(i*sz, -cnt*sz); ctx.lineTo(i*sz, cnt*sz);
+                    ctx.moveTo(-cnt*sz, i*sz); ctx.lineTo(cnt*sz, i*sz);
                 }
                 ctx.stroke();
             }
 
-            hexToRgba(hex, alpha) {
-                const r = parseInt(hex.slice(1, 3), 16);
-                const g = parseInt(hex.slice(3, 5), 16);
-                const b = parseInt(hex.slice(5, 7), 16);
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            hexToRgba(hex, a) {
+                const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+                return `rgba(${r},${g},${b},${a})`;
             }
         }
 
@@ -613,106 +511,74 @@
                 this.app = app;
                 this.renderer = app.renderer;
                 this.isDragging = false;
-                this.lastX = 0;
-                this.lastY = 0;
-                this.hoverThrottle = 0;
-
-                this.initListeners();
+                this.lastX=0; this.lastY=0; this.hoverThrottle=0;
+                this.init();
             }
 
-            initListeners() {
-                const canvas = this.renderer.canvas;
-
-                // Zoom
-                canvas.addEventListener('wheel', (e) => {
+            init() {
+                const c = this.renderer.canvas;
+                c.addEventListener('wheel', (e) => {
                     e.preventDefault();
-                    // ... existing zoom logic ...
-                    const delta = -Math.sign(e.deltaY);
-                    const scaleMult = 1 + (delta * 0.1);
+                    const d = -Math.sign(e.deltaY);
+                    const s = 1 + (d*0.1);
                     const t = this.renderer.transform;
-                    
-                    const mouseX = e.offsetX;
-                    const mouseY = e.offsetY;
-                    const worldPos = this.renderer.toWorld(mouseX, mouseY);
-
-                    t.k *= scaleMult;
-                    t.k = Math.max(CONFIG.MIN_ZOOM, Math.min(CONFIG.MAX_ZOOM, t.k));
-
-                    t.x = mouseX - (worldPos.x * t.k);
-                    t.y = mouseY - (worldPos.y * t.k);
-
+                    const mx = e.offsetX, my = e.offsetY;
+                    const wp = this.renderer.toWorld(mx, my);
+                    t.k = Math.max(CONFIG.MIN_ZOOM, Math.min(CONFIG.MAX_ZOOM, t.k * s));
+                    t.x = mx - (wp.x * t.k);
+                    t.y = my - (wp.y * t.k);
                     this.app.render();
                 });
 
-                // Mouse Down
-                canvas.addEventListener('mousedown', (e) => {
-                    // Interaction depends on active tool
+                c.addEventListener('mousedown', (e) => {
                     if (this.app.activeTool === 'pan') {
                         this.isDragging = true;
-                        this.lastX = e.clientX;
-                        this.lastY = e.clientY;
-                        canvas.style.cursor = 'grabbing';
+                        this.lastX = e.clientX; this.lastY = e.clientY;
+                        c.style.cursor = 'grabbing';
                     } else if (this.app.activeTool === 'inspect' && this.app.hoveredEntityId) {
                         this.app.selectEntity(this.app.hoveredEntityId);
                     } else if (this.app.activeTool === 'draw') {
-                        const worldPos = this.renderer.toWorld(e.offsetX, e.offsetY);
-                        this.app.addDraftPoint(worldPos);
+                        const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
+                        this.app.addDraftPoint(wp);
                     } else if (this.app.activeTool === 'erase' && this.app.hoveredEntityId) {
                         this.app.deleteEntity(this.app.hoveredEntityId);
                     }
-                    
-                    if (this.app.activeTool !== 'inspect') this.app.closeInfoPanel();
+                    if (this.app.activeTool !== 'inspect' && this.app.activeTool !== 'draw') this.app.deselect();
                 });
 
-                // Mouse Move (Pan & Hover)
                 window.addEventListener('mousemove', (e) => {
-                    // Pan Logic
                     if (this.isDragging && this.app.activeTool === 'pan') {
                         const dx = e.clientX - this.lastX;
                         const dy = e.clientY - this.lastY;
-                        this.lastX = e.clientX;
-                        this.lastY = e.clientY;
+                        this.lastX = e.clientX; this.lastY = e.clientY;
                         this.renderer.transform.x += dx;
                         this.renderer.transform.y += dy;
                         this.app.render();
                         return;
                     }
-
-                    const worldPos = this.renderer.toWorld(e.offsetX, e.offsetY);
-
-                    // Draw Tool Logic
-                    if (this.app.activeTool === 'draw') {
-                        this.app.updateDraftCursor(worldPos);
-                        return;
-                    }
-
-                    // Hover Logic (Inspect & Erase)
+                    const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
+                    if (this.app.activeTool === 'draw') { this.app.updateDraftCursor(wp); return; }
                     if (this.app.activeTool === 'inspect' || this.app.activeTool === 'erase') {
                         const now = Date.now();
                         if (now - this.hoverThrottle > 30) {
                             this.hoverThrottle = now;
-                            this.app.checkHover(worldPos);
+                            this.app.checkHover(wp);
                         }
                     }
                 });
 
-                // Mouse Up
                 window.addEventListener('mouseup', () => {
                     this.isDragging = false;
-                    if(this.app.activeTool === 'pan') {
-                        canvas.style.cursor = 'grab';
-                    }
+                    if(this.app.activeTool === 'pan') c.style.cursor = 'grab';
                 });
 
-                // Double Click (Finish Drawing)
-                canvas.addEventListener('dblclick', (e) => {
+                c.addEventListener('dblclick', (e) => {
                     if (this.app.activeTool === 'draw') {
                         e.preventDefault();
                         this.app.commitDraft();
                     }
                 });
 
-                // Keyboard Shortcuts
                 window.addEventListener('keydown', (e) => {
                     if (this.app.activeTool === 'draw') {
                         if (e.key === 'Enter') this.app.commitDraft();
@@ -722,22 +588,17 @@
             }
         }
 
-        // --- 5. Main Application Logic ---
+        // --- 5. App Logic ---
         class IlluminarchismApp {
             constructor() {
                 this.renderer = new MedievalRenderer('map-canvas');
                 this.input = new InputController(this);
-                
                 this.entities = [];
                 this.hoveredEntityId = null;
                 this.selectedEntityId = null;
                 this.currentYear = 1000;
-                
-                // Drawing State
                 this.draftPoints = [];
                 this.draftCursor = null;
-                
-                // State: 'pan', 'inspect', 'draw', 'erase'
                 this.activeTool = 'pan'; 
 
                 this.initData();
@@ -747,35 +608,16 @@
             }
 
             initData() {
-                // -- Mock Historical Data --
-                const blueKingdom = new HistoricalEntity('blue_kg', 'Regnum Caeruleum', 'polity', '#264e86');
-                blueKingdom.addKeyframe(800, [
-                    {x: -100, y: -100}, {x: 100, y: -100}, {x: 100, y: 100}, {x: -100, y: 100}
-                ]);
-                blueKingdom.addKeyframe(1200, [
-                    {x: -200, y: -150}, {x: 250, y: -120}, {x: 200, y: 200}, {x: -180, y: 180}
-                ]);
-                blueKingdom.addKeyframe(1300, [
-                    {x: -50, y: -50}, {x: 50, y: -50}, {x: 50, y: 50}, {x: -50, y: 50}
-                ]);
-                blueKingdom.description = "An ancient maritime power known for its deep blue dyes. Its borders expanded aggressively during the Middle Period.";
-                this.entities.push(blueKingdom);
-
-                const goldDuchy = new HistoricalEntity('gold_du', 'Ducatus Aureus', 'polity', '#c5a059');
-                goldDuchy.addKeyframe(900, [
-                    {x: -300, y: -50}, {x: -200, y: -50}, {x: -200, y: 50}, {x: -300, y: 50}
-                ]);
-                goldDuchy.addKeyframe(1100, [
-                    {x: 300, y: -50}, {x: 400, y: -50}, {x: 400, y: 50}, {x: 300, y: 50}
-                ]);
-                goldDuchy.description = "A migratory merchant republic constantly seeking new markets. Note the complete relocation between 900 and 1100 AD.";
-                this.entities.push(goldDuchy);
+                const blue = new HistoricalEntity('blue_kg', 'Regnum Caeruleum', 'polity', '#264e86');
+                blue.addKeyframe(800, [{x:-100,y:-100}, {x:100,y:-100}, {x:100,y:100}, {x:-100,y:100}]);
+                blue.addKeyframe(1200, [{x:-200,y:-150}, {x:250,y:-120}, {x:200,y:200}, {x:-180,y:180}]);
+                this.entities.push(blue);
             }
 
             initUI() {
                 const slider = document.getElementById('time-slider');
                 const display = document.getElementById('year-display');
-
+                
                 slider.addEventListener('input', (e) => {
                     this.currentYear = parseInt(e.target.value);
                     display.textContent = `${this.currentYear} AD`;
@@ -783,192 +625,172 @@
                     this.render();
                 });
 
-                // Tool Switching Logic
-                const tools = document.querySelectorAll('.tool-btn');
-                tools.forEach(btn => {
+                document.querySelectorAll('.tool-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        // Reset all
-                        tools.forEach(t => t.classList.remove('active'));
-                        // Set active
-                        const target = e.currentTarget; // use currentTarget to handle icon clicks
-                        target.classList.add('active');
-                        
-                        this.setTool(target.dataset.tool);
+                        document.querySelectorAll('.tool-btn').forEach(t => t.classList.remove('active'));
+                        e.currentTarget.classList.add('active');
+                        this.setTool(e.currentTarget.dataset.tool);
                     });
                 });
+
+                document.getElementById('btn-deselect').addEventListener('click', () => this.deselect());
             }
 
-            setTool(toolName) {
-                this.activeTool = toolName;
-                this.hoveredEntityId = null; // Clear hover state on switch
-                this.cancelDraft(); // Clear any pending drawings
+            setTool(name) {
+                this.activeTool = name;
+                this.cancelDraft();
                 
-                // UI Updates
+                // Dynamic Hint Update
                 const hint = document.getElementById('draw-hint');
-                if (toolName === 'draw') hint.classList.add('visible');
-                else hint.classList.remove('visible');
-
-                // Cursor Management
-                const canvas = this.renderer.canvas;
-                switch(toolName) {
-                    case 'pan':
-                        canvas.style.cursor = 'grab';
-                        break;
-                    case 'inspect':
-                        canvas.style.cursor = 'default';
-                        break;
-                    case 'draw':
-                        canvas.style.cursor = 'crosshair';
-                        break;
-                    case 'erase':
-                        canvas.style.cursor = 'not-allowed'; // Indicates destructive action
-                        break;
+                if (name === 'draw') {
+                    hint.classList.add('visible');
+                    // Check if we are editing an existing entity
+                    if (this.selectedEntityId) {
+                        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                        hint.textContent = `EDITING: ${ent.name}. Draw new borders for year ${this.currentYear}.`;
+                    } else {
+                        hint.textContent = "Click to place points. Double-click to create NEW region.";
+                    }
+                } else {
+                    hint.classList.remove('visible');
                 }
+
+                // Cursor
+                const c = this.renderer.canvas;
+                if(name==='pan') c.style.cursor='grab';
+                else if(name==='inspect') c.style.cursor='default';
+                else if(name==='draw') c.style.cursor='crosshair';
+                else if(name==='erase') c.style.cursor='not-allowed';
+                
                 this.render();
             }
 
-            // --- Drawing Methods ---
-
-            addDraftPoint(point) {
-                // Prevent duplicate points from dblclick firing twice
+            addDraftPoint(p) {
                 const last = this.draftPoints[this.draftPoints.length - 1];
-                if (last && Math.abs(last.x - point.x) < 2 && Math.abs(last.y - point.y) < 2) return;
-
-                this.draftPoints.push(point);
+                if (last && Math.abs(last.x - p.x) < 2 && Math.abs(last.y - p.y) < 2) return;
+                this.draftPoints.push(p);
                 this.render();
             }
 
-            updateDraftCursor(point) {
-                this.draftCursor = point;
-                this.render();
-            }
+            updateDraftCursor(p) { this.draftCursor = p; this.render(); }
 
             commitDraft() {
-                if (this.draftPoints.length < 3) {
-                    // Need at least a triangle
-                    return; 
+                if (this.draftPoints.length < 3) return;
+
+                if (this.selectedEntityId) {
+                    // --- KEYFRAME MODE: Edit Existing ---
+                    const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                    if (ent) {
+                        ent.addKeyframe(this.currentYear, [...this.draftPoints]);
+                        this.updateInfoPanel(ent); // Refresh keyframe list
+                    }
+                } else {
+                    // --- CREATE MODE: New Entity ---
+                    const id = 'custom_' + Date.now();
+                    const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a'];
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    const newEnt = new HistoricalEntity(id, "New Realm", 'polity', color);
+                    
+                    newEnt.addKeyframe(this.currentYear, [...this.draftPoints]);
+                    // Set valid range loosely around creation
+                    newEnt.validRange.start = this.currentYear - 200;
+                    newEnt.validRange.end = this.currentYear + 200;
+                    this.entities.push(newEnt);
+                    
+                    // Auto-select the new entity
+                    this.selectEntity(id);
                 }
 
-                // Create new entity
-                const id = 'custom_' + Date.now();
-                // Random color generator for variety
-                const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a']; 
-                const color = colors[Math.floor(Math.random() * colors.length)];
-                
-                const newEnt = new HistoricalEntity(id, "New Realm", 'polity', color);
-                
-                // Add geometry at current year
-                newEnt.addKeyframe(this.currentYear, [...this.draftPoints]);
-                
-                // For demonstration, extend validity +/- 200 years so it survives scrolling slightly
-                newEnt.validRange.start = this.currentYear - 200;
-                newEnt.validRange.end = this.currentYear + 200;
-
-                this.entities.push(newEnt);
-                
-                // Reset
                 this.draftPoints = [];
                 this.draftCursor = null;
                 this.updateEntities();
                 this.render();
                 
-                // Optional: Switch back to inspect to view it? 
-                // keeping tool active allows multiple draws.
+                // Refresh hint if tool is still active
+                if(this.activeTool === 'draw') this.setTool('draw');
             }
 
-            cancelDraft() {
-                this.draftPoints = [];
-                this.draftCursor = null;
-                this.render();
-            }
+            cancelDraft() { this.draftPoints=[]; this.draftCursor=null; this.render(); }
 
             deleteEntity(id) {
                 this.entities = this.entities.filter(e => e.id !== id);
+                if(this.selectedEntityId === id) this.deselect();
                 this.hoveredEntityId = null;
                 this.updateEntities();
                 this.render();
             }
 
-            // --- Existing Methods ---
-
-            updateEntities() {
-                let activeCount = 0;
-                this.entities.forEach(ent => {
-                    ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
-                    if (ent.currentGeometry) activeCount++;
-                });
-
-                const debugEl = document.querySelector('.debug-info');
-                if(debugEl) {
-                    debugEl.textContent = `Year: ${this.currentYear} | Tool: ${this.activeTool.toUpperCase()} | Active Polities: ${activeCount}`;
-                }
-            }
-
-            checkHover(worldPos) {
-                let foundId = null;
-                
-                // Supports hovering for both Inspect and Erase tools
-                if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
-
-                for (let i = this.entities.length - 1; i >= 0; i--) {
-                    const ent = this.entities[i];
-                    if (!ent.currentGeometry) continue;
-                    
-                    if (isPointInPolygon(worldPos, ent.currentGeometry)) {
-                        foundId = ent.id;
-                        break;
-                    }
-                }
-
-                if (foundId !== this.hoveredEntityId) {
-                    this.hoveredEntityId = foundId;
-                    
-                    // Cursor logic
-                    if (this.activeTool === 'erase') {
-                        // Red X or similar could go here, staying with not-allowed for now
-                        this.renderer.canvas.style.cursor = foundId ? 'pointer' : 'not-allowed';
-                    } else {
-                        this.renderer.canvas.style.cursor = foundId ? 'pointer' : 'default';
-                    }
-                    
-                    this.render();
-                }
+            deselect() {
+                this.selectedEntityId = null;
+                document.getElementById('info-panel').style.display = 'none';
+                // Refresh hint logic
+                if (this.activeTool === 'draw') this.setTool('draw');
+                this.render();
             }
 
             selectEntity(id) {
                 this.selectedEntityId = id;
                 const ent = this.entities.find(e => e.id === id);
                 if (ent) {
-                    // Populate Info Panel
                     const p = document.getElementById('info-panel');
                     p.style.display = 'block';
                     document.getElementById('info-title').textContent = ent.name;
-                    document.getElementById('info-desc').textContent = ent.description;
-                    document.getElementById('info-start').textContent = ent.validRange.start + " AD";
-                    document.getElementById('info-end').textContent = ent.validRange.end + " AD";
+                    document.getElementById('info-type').textContent = ent.type;
+                    document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
+                    
+                    this.updateInfoPanel(ent);
+                    
+                    // If in draw mode, update text to show we are editing
+                    if (this.activeTool === 'draw') this.setTool('draw');
+                }
+                this.render();
+            }
+
+            updateInfoPanel(ent) {
+                const list = document.getElementById('keyframe-list');
+                list.innerHTML = '';
+                ent.timeline.forEach(kf => {
+                    const div = document.createElement('div');
+                    div.textContent = `• ${kf.year} AD`;
+                    div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
+                    list.appendChild(div);
+                });
+            }
+
+            checkHover(wp) {
+                if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
+                let fid = null;
+                for (let i = this.entities.length - 1; i >= 0; i--) {
+                    const e = this.entities[i];
+                    if (!e.currentGeometry) continue;
+                    if (isPointInPolygon(wp, e.currentGeometry)) { fid = e.id; break; }
+                }
+                if (fid !== this.hoveredEntityId) {
+                    this.hoveredEntityId = fid;
+                    this.renderer.canvas.style.cursor = (this.activeTool==='erase') ? (fid?'pointer':'not-allowed') : (fid?'pointer':'default');
+                    this.render();
                 }
             }
 
-            closeInfoPanel() {
-                document.getElementById('info-panel').style.display = 'none';
-                this.selectedEntityId = null;
+            updateEntities() {
+                let cnt = 0;
+                this.entities.forEach(ent => {
+                    ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
+                    if (ent.currentGeometry) cnt++;
+                });
+                const d = document.querySelector('.debug-info');
+                if(d) d.textContent = `Year: ${this.currentYear} | Active: ${cnt} | Selected: ${this.selectedEntityId ? 'Yes' : 'No'}`;
             }
 
             render() {
-                this.renderer.draw(this.entities, this.hoveredEntityId, this.activeTool);
-                
-                // Draw draft if valid
+                this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool);
                 if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
                     this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform);
                 }
             }
         }
 
-        // --- Bootstrap ---
-        window.onload = () => {
-            window.illuminarchismApp = new IlluminarchismApp();
-        };
-
+        window.onload = () => { window.illuminarchismApp = new IlluminarchismApp(); };
     </script>
 </body>
 </html>
