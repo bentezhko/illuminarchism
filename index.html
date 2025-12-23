@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Illuminarchism | The Living Atlas</title>
+    <title>Illuminarchism | The Feudal Atlas</title>
     
     <!-- Google Fonts for Medieval Aesthetic -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -102,6 +102,16 @@
             font-family: 'Cinzel', serif; font-size: 0.8rem;
             background: var(--parchment-bg); border: 1px solid var(--ink-faded);
             width: 100%; text-align: center;
+        }
+        
+        #draw-mode-checkbox {
+            margin-top: 0.5rem;
+            font-family: 'Cinzel', serif;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
         }
 
         /* Layers Panel */
@@ -233,6 +243,9 @@
                 <option value="river">River</option>
                 <option value="city">City</option>
             </select>
+            <label id="draw-mode-checkbox" title="Link new drawing to selected entity?">
+                <input type="checkbox" id="chk-annex"> Vassal/Annex
+            </label>
             <button class="tool-btn" data-tool="draw" title="Quill (Draw)">✎</button>
             <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
         </div>
@@ -257,6 +270,9 @@
                 <input type="color" id="info-color-input" title="Change Color">
             </div>
             <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
+             <div class="info-row" id="info-parent-row" style="display:none;">
+                 <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
+            </div>
             
             <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years:</div>
             <div id="keyframe-list"></div>
@@ -287,10 +303,10 @@
 
     <script>
         /**
-         * ILLUMINARCHISM ENGINE v0.7 - The Geometric Stabilizer
-         * 1. Smart Vertex Alignment: Prevents "flipping" by rotating polygon indices to match previous keyframe.
-         * 2. Winding Normalization: Enforces Clockwise winding for all polygons.
-         * 3. River Stability: Detects and flips reversed river segments.
+         * ILLUMINARCHISM ENGINE v0.10 - The Feudal Hierarchy
+         * 1. Simplified Geometry: Back to single polygons. No more exploding geometry arrays.
+         * 2. Hierarchy Logic: Parent-Child relationships handle complex states (Empires, Islands).
+         * 3. Stable Morphing: Each island/region is a separate object, so it morphs cleanly without pulling apart.
          */
 
         const CONFIG = {
@@ -307,11 +323,7 @@
         function distance(p1, p2) {
             return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
         }
-
-        // Squared distance helper for performance
-        function distSq(p1, p2) {
-            return Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2);
-        }
+        function distSq(p1, p2) { return Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2); }
 
         function isPointInPolygon(point, vs) {
             let x = point.x, y = point.y, inside = false;
@@ -335,7 +347,6 @@
 
         // --- Geometric Helpers ---
 
-        // Calculate signed area to determine winding order
         function getSignedArea(points) {
             let area = 0;
             for (let i = 0; i < points.length; i++) {
@@ -345,24 +356,25 @@
             return area / 2.0;
         }
 
-        // Ensure Polygon is Clockwise
+        function getCentroid(points) {
+            let cx = 0, cy = 0;
+            if(points.length === 0) return {x:0, y:0};
+            for(let p of points) { cx += p.x; cy += p.y; }
+            return { x: cx / points.length, y: cy / points.length };
+        }
+
         function enforceClockwise(points) {
             if (getSignedArea(points) < 0) {
-                return points.reverse(); // Was CCW, make CW
+                return points.reverse(); 
             }
             return points;
         }
 
-        // Optimal Alignment: Shift indices of poly2 to match poly1
-        // Used for closed shapes (Polities)
         function alignPolygonClosed(poly1, poly2) {
             if (poly1.length !== poly2.length) return poly2;
-            
             let minTotalDist = Infinity;
             let bestOffset = 0;
             const N = poly1.length;
-
-            // Brute force check all N rotations (N=100, so 10k ops, very fast)
             for (let offset = 0; offset < N; offset++) {
                 let currentDist = 0;
                 for (let i = 0; i < N; i++) {
@@ -373,8 +385,6 @@
                     bestOffset = offset;
                 }
             }
-
-            // Create new rotated array
             const aligned = [];
             for (let i = 0; i < N; i++) {
                 aligned.push(poly2[(i + bestOffset) % N]);
@@ -382,53 +392,39 @@
             return aligned;
         }
 
-        // Optimal Alignment: Check Reverse for open shapes
-        // Used for open shapes (Rivers)
         function alignPolylineOpen(poly1, poly2) {
-            // Check distance as-is
             let distNormal = 0;
-            for(let i=0; i<Math.min(poly1.length, poly2.length); i++) {
-                distNormal += distSq(poly1[i], poly2[i]);
-            }
-
-            // Check distance reversed
+            for(let i=0; i<Math.min(poly1.length, poly2.length); i++) distNormal += distSq(poly1[i], poly2[i]);
             let distReversed = 0;
             const len = poly2.length;
-            for(let i=0; i<Math.min(poly1.length, poly2.length); i++) {
-                distReversed += distSq(poly1[i], poly2[len - 1 - i]);
-            }
-
-            if (distReversed < distNormal) {
-                return [...poly2].reverse();
-            }
+            for(let i=0; i<Math.min(poly1.length, poly2.length); i++) distReversed += distSq(poly1[i], poly2[len - 1 - i]);
+            if (distReversed < distNormal) return [...poly2].reverse();
             return poly2;
         }
 
         function resampleGeometry(points, targetCount, isClosed = true) {
             if (!points || points.length < 2) return points;
-            
-            // Standardize winding for closed shapes before resampling
             let sourcePoints = isClosed ? enforceClockwise([...points]) : points;
-
             let totalLength = 0;
             const segments = isClosed ? sourcePoints.length : sourcePoints.length - 1;
-            
             for (let i = 0; i < segments; i++) {
                 totalLength += distance(sourcePoints[i], sourcePoints[(i + 1) % sourcePoints.length]);
             }
-
             const step = totalLength / targetCount;
             const newPoints = [];
             let currentDist = 0, currentIdx = 0, nextIdx = 1;
             let segmentDist = distance(sourcePoints[0], sourcePoints[1]);
             let distTraveledOnSegment = 0;
-
             newPoints.push({ x: sourcePoints[0].x, y: sourcePoints[0].y });
-
             const loopLimit = isClosed ? targetCount : targetCount - 1;
-
             for (let i = 1; i < loopLimit; i++) {
                 currentDist += step;
+                if(segmentDist === 0) {
+                     currentIdx = nextIdx;
+                     nextIdx = (nextIdx + 1) % sourcePoints.length;
+                     segmentDist = distance(sourcePoints[currentIdx], sourcePoints[nextIdx]);
+                     continue; 
+                }
                 while (distTraveledOnSegment + step > segmentDist) {
                     const remainingOnSeg = segmentDist - distTraveledOnSegment;
                     currentDist -= remainingOnSeg; 
@@ -438,30 +434,31 @@
                     if (!isClosed && nextIdx >= sourcePoints.length) break;
                     segmentDist = distance(sourcePoints[currentIdx], sourcePoints[nextIdx]);
                     distTraveledOnSegment = 0;
+                    if(segmentDist === 0) break;
                 }
                 distTraveledOnSegment += step;
                 const t = distTraveledOnSegment / segmentDist;
-                newPoints.push({
-                    x: lerp(sourcePoints[currentIdx].x, sourcePoints[nextIdx].x, t),
-                    y: lerp(sourcePoints[currentIdx].y, sourcePoints[nextIdx].y, t)
-                });
+                const x = lerp(sourcePoints[currentIdx].x, sourcePoints[nextIdx].x, t) || sourcePoints[currentIdx].x;
+                const y = lerp(sourcePoints[currentIdx].y, sourcePoints[nextIdx].y, t) || sourcePoints[currentIdx].y;
+                newPoints.push({x, y});
             }
             if(!isClosed && newPoints.length < targetCount) newPoints.push({...sourcePoints[sourcePoints.length-1]});
-            
             return newPoints;
         }
 
         // --- 2. Data Structures ---
         class HistoricalEntity {
-            constructor(id, name, type, color) {
+            constructor(id, name, type, color, parentId = null) {
                 this.id = id;
                 this.name = name;
                 this.type = type; 
                 this.color = color;
+                this.parentId = parentId; // The glue of the hierarchy
                 this.description = "A mapped entity.";
                 this.timeline = []; 
                 this.validRange = { start: -Infinity, end: Infinity };
-                this.currentGeometry = null;
+                // Back to basics: Single geometry array
+                this.currentGeometry = null; 
             }
 
             addKeyframe(year, geometry) {
@@ -495,30 +492,33 @@
                 if (!next) return prev.geometry;
                 if (prev === next) return prev.geometry;
 
-                // --- STABILIZER LOGIC ---
-                // Before interpolating, ensure 'next' is aligned to 'prev'
+                // --- STABILIZED SINGLE POLYGON MORPHING ---
                 let targetGeo = next.geometry;
                 if (this.type === 'polity') {
                     targetGeo = alignPolygonClosed(prev.geometry, next.geometry);
                 } else if (this.type === 'river') {
                     targetGeo = alignPolylineOpen(prev.geometry, next.geometry);
                 }
-                // ------------------------
 
                 const t = (targetYear - prev.year) / (next.year - prev.year);
                 const morphed = [];
                 const count = Math.min(prev.geometry.length, targetGeo.length);
+                const c1 = getCentroid(prev.geometry);
+                const c2 = getCentroid(targetGeo);
+                const curC = { x: lerp(c1.x, c2.x, t), y: lerp(c1.y, c2.y, t) };
+
                 for(let i = 0; i < count; i++) {
-                    morphed.push({
-                        x: lerp(prev.geometry[i].x, targetGeo[i].x, t),
-                        y: lerp(prev.geometry[i].y, targetGeo[i].y, t)
-                    });
+                    const off1 = { x: prev.geometry[i].x - c1.x, y: prev.geometry[i].y - c1.y };
+                    const off2 = { x: targetGeo[i].x - c2.x, y: targetGeo[i].y - c2.y };
+                    const curOffX = lerp(off1.x, off2.x, t);
+                    const curOffY = lerp(off1.y, off2.y, t);
+                    morphed.push({ x: curC.x + curOffX, y: curC.y + curOffY });
                 }
                 return morphed;
             }
 
             static fromJSON(data) {
-                const ent = new HistoricalEntity(data.id, data.name, data.type, data.color);
+                const ent = new HistoricalEntity(data.id, data.name, data.type, data.color, data.parentId);
                 Object.assign(ent, data);
                 return ent;
             }
@@ -590,14 +590,24 @@
                     return order[a.type] - order[b.type];
                 });
 
+                // Find family tree of selection
+                let familyIds = new Set();
+                if(selectedId) {
+                    familyIds.add(selectedId);
+                    entities.forEach(e => { if(e.parentId === selectedId) familyIds.add(e.id); });
+                    const selected = entities.find(e => e.id === selectedId);
+                    if(selected && selected.parentId) familyIds.add(selected.parentId);
+                }
+
                 sorted.forEach(ent => {
                     if (!ent.currentGeometry) return;
                     if (!layerVisibility[ent.type]) return; 
 
                     const isHovered = ent.id === hoveredId;
                     const isSelected = ent.id === selectedId;
+                    const isFamily = familyIds.has(ent.id);
                     
-                    if (ent.type === 'polity') this.drawPolity(ent, isHovered, isSelected, activeTool);
+                    if (ent.type === 'polity') this.drawPolity(ent, isHovered, isSelected, isFamily, activeTool);
                     else if (ent.type === 'river') this.drawRiver(ent, isHovered, isSelected);
                     else if (ent.type === 'city') this.drawCity(ent, isHovered, isSelected);
                 });
@@ -605,13 +615,18 @@
                 ctx.restore();
             }
 
-            drawPolity(ent, isHovered, isSelected, activeTool) {
+            drawPolity(ent, isHovered, isSelected, isFamily, activeTool) {
                 const ctx = this.ctx;
                 const pts = ent.currentGeometry;
                 if (!pts.length) return;
 
                 ctx.globalCompositeOperation = 'multiply';
-                let baseAlpha = (isSelected || (isHovered && activeTool === 'inspect')) ? 0.3 : 0.15;
+                
+                // Highlight logic: Selected is darkest, Family is medium, others faint
+                let baseAlpha = 0.15;
+                if (isSelected || (isHovered && activeTool === 'inspect')) baseAlpha = 0.4;
+                else if (isFamily) baseAlpha = 0.25;
+
                 ctx.fillStyle = this.hexToRgba(ent.color, baseAlpha);
 
                 for (let pass = 0; pass < CONFIG.WATERCOLOR_PASSES; pass++) {
@@ -633,6 +648,8 @@
                 if (isSelected) {
                     ctx.strokeStyle = '#8a3324'; ctx.lineWidth = 3/this.transform.k;
                     ctx.shadowColor = '#000'; ctx.shadowBlur = 10;
+                } else if (isFamily) {
+                     ctx.strokeStyle = '#8a3324'; ctx.lineWidth = 2/this.transform.k;
                 } else {
                     ctx.strokeStyle = '#2b2118'; ctx.lineWidth = 1.5/this.transform.k;
                     ctx.shadowBlur = 0;
@@ -878,7 +895,6 @@
                 this.activeTool = 'pan';
                 this.drawType = 'polity';
                 
-                // New State
                 this.isPlaying = false;
                 this.playInterval = null;
                 this.layerVisibility = { polity: true, river: true, city: true };
@@ -890,10 +906,18 @@
             }
 
             initData() {
+                // Main Land (Kingdom)
                 const blue = new HistoricalEntity('blue_kg', 'Regnum Caeruleum', 'polity', '#264e86');
                 blue.addKeyframe(800, [{x:-100,y:-100}, {x:100,y:-100}, {x:100,y:100}, {x:-100,y:100}]);
                 blue.addKeyframe(1200, [{x:-200,y:-150}, {x:250,y:-120}, {x:200,y:200}, {x:-180,y:180}]);
                 this.entities.push(blue);
+
+                // Child Territory (e.g., Overseas colony or island vassal)
+                // This entity is SEPARATE but linked via parentId
+                const colony = new HistoricalEntity('blue_colony', 'Insula Caerulea', 'polity', '#264e86', 'blue_kg');
+                colony.addKeyframe(800, [{x:300, y:300}, {x:350, y:300}, {x:350, y:350}, {x:300, y:350}]);
+                colony.addKeyframe(1200, [{x:300, y:300}, {x:400, y:300}, {x:400, y:400}, {x:300, y:400}]); // It grows too
+                this.entities.push(colony);
 
                 const river = new HistoricalEntity('river_alpha', 'Fluvius Magnus', 'river', '#43b3ae');
                 river.addKeyframe(800, [{x:-300, y:-200}, {x:-150, y:-50}, {x:0, y:0}, {x:150, y:50}, {x:300, y:200}]);
@@ -915,7 +939,6 @@
                     this.render();
                 });
 
-                // Play Button Logic
                 const playBtn = document.getElementById('btn-play');
                 playBtn.addEventListener('click', () => this.togglePlay(playBtn, slider, display));
 
@@ -933,7 +956,11 @@
                     if(this.activeTool === 'draw') this.setTool('draw');
                 });
 
-                // Layer Toggles
+                // Annex mode checkbox
+                document.getElementById('chk-annex').addEventListener('change', (e) => {
+                     this.setTool('draw'); // Refresh hint text
+                });
+
                 document.getElementById('layer-polity').addEventListener('change', (e) => { this.layerVisibility.polity = e.target.checked; this.render(); });
                 document.getElementById('layer-river').addEventListener('change', (e) => { this.layerVisibility.river = e.target.checked; this.render(); });
                 document.getElementById('layer-city').addEventListener('change', (e) => { this.layerVisibility.city = e.target.checked; this.render(); });
@@ -956,7 +983,7 @@
                     this.isPlaying = true;
                     btn.textContent = '⏸';
                     this.playInterval = setInterval(() => {
-                        let y = parseInt(slider.value) + 2; // Speed: 2 years per tick
+                        let y = parseInt(slider.value) + 2; 
                         if (y > parseInt(slider.max)) y = parseInt(slider.min);
                         slider.value = y;
                         this.currentYear = y;
@@ -999,16 +1026,19 @@
                 this.cancelDraft();
                 
                 const hint = document.getElementById('draw-hint');
+                const isAnnex = document.getElementById('chk-annex').checked;
+
                 if (name === 'draw') {
                     hint.classList.add('visible');
-                    if (this.selectedEntityId) {
+                    if (this.selectedEntityId && isAnnex) {
                         const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                        hint.textContent = `EDITING: ${ent.name}. Redraw geometry for ${this.currentYear}.`;
-                        this.drawType = ent.type;
-                        document.getElementById('draw-type-select').value = ent.type;
+                        hint.textContent = `VASSAL MODE: Create NEW territory loyal to ${ent.name}.`;
+                    } else if (this.selectedEntityId) {
+                         const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                        hint.textContent = `EDITING: Redrawing geometry for ${ent.name} in ${this.currentYear}.`;
                     } else {
                         if (this.drawType === 'city') hint.textContent = "Click once to place City.";
-                        else hint.textContent = `Click to draw ${this.drawType}. Double-click to finish.`;
+                        else hint.textContent = `Click to draw new ${this.drawType}. Double-click to finish.`;
                     }
                 } else {
                     hint.classList.remove('visible');
@@ -1036,13 +1066,28 @@
                 if (this.draftPoints.length === 0) return;
                 if (this.drawType !== 'city' && this.draftPoints.length < 2) return;
 
+                const isAnnex = document.getElementById('chk-annex').checked;
+
                 if (this.selectedEntityId) {
                     const ent = this.entities.find(e => e.id === this.selectedEntityId);
                     if (ent) {
-                        ent.addKeyframe(this.currentYear, [...this.draftPoints]);
-                        this.updateInfoPanel(ent);
+                        if (isAnnex) {
+                            // VASSAL MODE: Create NEW entity linked to this one
+                            const id = 'vassal_' + Date.now();
+                            const newEnt = new HistoricalEntity(id, ent.name + " (Vassal)", this.drawType, ent.color, ent.id);
+                            newEnt.addKeyframe(this.currentYear, [...this.draftPoints]);
+                            newEnt.validRange.start = this.currentYear;
+                            newEnt.validRange.end = this.currentYear + 200;
+                            this.entities.push(newEnt);
+                            this.selectEntity(id); // Select the new vassal
+                        } else {
+                            // EDIT MODE: Update existing geometry
+                            ent.addKeyframe(this.currentYear, [...this.draftPoints]);
+                            this.updateInfoPanel(ent);
+                        }
                     }
                 } else {
+                    // NEW INDEPENDENT ENTITY
                     const id = 'ent_' + Date.now();
                     const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
                     const color = colors[Math.floor(Math.random() * colors.length)];
@@ -1091,8 +1136,18 @@
                     p.style.display = 'block';
                     document.getElementById('info-name-input').value = ent.name;
                     document.getElementById('info-type').textContent = ent.type;
-                    document.getElementById('info-color-input').value = ent.color; // Set picker
+                    document.getElementById('info-color-input').value = ent.color; 
                     document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
+                    
+                    const parentRow = document.getElementById('info-parent-row');
+                    if(ent.parentId) {
+                        const parent = this.entities.find(e => e.id === ent.parentId) || {name: 'Unknown'};
+                        document.getElementById('info-parent').textContent = parent.name;
+                        parentRow.style.display = 'flex';
+                    } else {
+                        parentRow.style.display = 'none';
+                    }
+
                     this.updateInfoPanel(ent);
                     if (this.activeTool === 'draw') this.setTool('draw');
                 }
@@ -1124,30 +1179,17 @@
                 if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
                 let fid = null;
                 
-                // Filter by visible layers only
                 const visibleEntities = this.entities.filter(e => this.layerVisibility[e.type]);
 
-                // Check cities first
                 for (let i = visibleEntities.length - 1; i >= 0; i--) {
                     const e = visibleEntities[i];
-                    if (!e.currentGeometry || e.type !== 'city') continue;
-                    if (distance(wp, e.currentGeometry[0]) < 10/this.renderer.transform.k) { fid = e.id; break; }
-                }
-
-                // Check polygons
-                if (!fid) {
-                    for (let i = visibleEntities.length - 1; i >= 0; i--) {
-                        const e = visibleEntities[i];
-                        if (!e.currentGeometry || e.type !== 'polity') continue;
+                    if (!e.currentGeometry) continue;
+                    
+                    if (e.type === 'city') {
+                        if (distance(wp, e.currentGeometry[0]) < 10/this.renderer.transform.k) { fid = e.id; break; }
+                    } else if (e.type === 'polity') {
                         if (isPointInPolygon(wp, e.currentGeometry)) { fid = e.id; break; }
-                    }
-                }
-                
-                // Check rivers
-                if (!fid) {
-                     for (let i = visibleEntities.length - 1; i >= 0; i--) {
-                        const e = visibleEntities[i];
-                        if (!e.currentGeometry || e.type !== 'river') continue;
+                    } else if (e.type === 'river') {
                         const pts = e.currentGeometry;
                         for(let j=0; j<pts.length-1; j++) {
                             if(distanceToSegment(wp, pts[j], pts[j+1]) < 5/this.renderer.transform.k) { fid = e.id; break; }
