@@ -287,10 +287,10 @@
 
     <script>
         /**
-         * ILLUMINARCHISM ENGINE v0.6 - The Chronometer & Palette
-         * 1. Automated Timeflow: Play/Pause functionality.
-         * 2. Style Editing: Color and Name updates in real-time.
-         * 3. Layer Visibility: Toggle entity types.
+         * ILLUMINARCHISM ENGINE v0.7 - The Geometric Stabilizer
+         * 1. Smart Vertex Alignment: Prevents "flipping" by rotating polygon indices to match previous keyframe.
+         * 2. Winding Normalization: Enforces Clockwise winding for all polygons.
+         * 3. River Stability: Detects and flips reversed river segments.
          */
 
         const CONFIG = {
@@ -299,13 +299,18 @@
             RESAMPLE_COUNT: 100, 
             WATERCOLOR_PASSES: 3, 
             WATERCOLOR_JITTER: 3,
-            ANIMATION_SPEED: 200 // ms per year
+            ANIMATION_SPEED: 200 
         };
 
         const lerp = (start, end, t) => start * (1 - t) + end * t;
 
         function distance(p1, p2) {
             return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        }
+
+        // Squared distance helper for performance
+        function distSq(p1, p2) {
+            return Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2);
         }
 
         function isPointInPolygon(point, vs) {
@@ -328,20 +333,100 @@
             return distance(p, { x: v.x + t * (w.x - v.x), y: v.y + t * (w.y - v.y) });
         }
 
+        // --- Geometric Helpers ---
+
+        // Calculate signed area to determine winding order
+        function getSignedArea(points) {
+            let area = 0;
+            for (let i = 0; i < points.length; i++) {
+                let j = (i + 1) % points.length;
+                area += (points[i].x * points[j].y) - (points[j].x * points[i].y);
+            }
+            return area / 2.0;
+        }
+
+        // Ensure Polygon is Clockwise
+        function enforceClockwise(points) {
+            if (getSignedArea(points) < 0) {
+                return points.reverse(); // Was CCW, make CW
+            }
+            return points;
+        }
+
+        // Optimal Alignment: Shift indices of poly2 to match poly1
+        // Used for closed shapes (Polities)
+        function alignPolygonClosed(poly1, poly2) {
+            if (poly1.length !== poly2.length) return poly2;
+            
+            let minTotalDist = Infinity;
+            let bestOffset = 0;
+            const N = poly1.length;
+
+            // Brute force check all N rotations (N=100, so 10k ops, very fast)
+            for (let offset = 0; offset < N; offset++) {
+                let currentDist = 0;
+                for (let i = 0; i < N; i++) {
+                    currentDist += distSq(poly1[i], poly2[(i + offset) % N]);
+                }
+                if (currentDist < minTotalDist) {
+                    minTotalDist = currentDist;
+                    bestOffset = offset;
+                }
+            }
+
+            // Create new rotated array
+            const aligned = [];
+            for (let i = 0; i < N; i++) {
+                aligned.push(poly2[(i + bestOffset) % N]);
+            }
+            return aligned;
+        }
+
+        // Optimal Alignment: Check Reverse for open shapes
+        // Used for open shapes (Rivers)
+        function alignPolylineOpen(poly1, poly2) {
+            // Check distance as-is
+            let distNormal = 0;
+            for(let i=0; i<Math.min(poly1.length, poly2.length); i++) {
+                distNormal += distSq(poly1[i], poly2[i]);
+            }
+
+            // Check distance reversed
+            let distReversed = 0;
+            const len = poly2.length;
+            for(let i=0; i<Math.min(poly1.length, poly2.length); i++) {
+                distReversed += distSq(poly1[i], poly2[len - 1 - i]);
+            }
+
+            if (distReversed < distNormal) {
+                return [...poly2].reverse();
+            }
+            return poly2;
+        }
+
         function resampleGeometry(points, targetCount, isClosed = true) {
             if (!points || points.length < 2) return points;
+            
+            // Standardize winding for closed shapes before resampling
+            let sourcePoints = isClosed ? enforceClockwise([...points]) : points;
+
             let totalLength = 0;
-            const segments = isClosed ? points.length : points.length - 1;
+            const segments = isClosed ? sourcePoints.length : sourcePoints.length - 1;
+            
             for (let i = 0; i < segments; i++) {
-                totalLength += distance(points[i], points[(i + 1) % points.length]);
+                totalLength += distance(sourcePoints[i], sourcePoints[(i + 1) % sourcePoints.length]);
             }
+
             const step = totalLength / targetCount;
             const newPoints = [];
             let currentDist = 0, currentIdx = 0, nextIdx = 1;
-            let segmentDist = distance(points[0], points[1]);
+            let segmentDist = distance(sourcePoints[0], sourcePoints[1]);
             let distTraveledOnSegment = 0;
-            newPoints.push({ x: points[0].x, y: points[0].y });
+
+            newPoints.push({ x: sourcePoints[0].x, y: sourcePoints[0].y });
+
             const loopLimit = isClosed ? targetCount : targetCount - 1;
+
             for (let i = 1; i < loopLimit; i++) {
                 currentDist += step;
                 while (distTraveledOnSegment + step > segmentDist) {
@@ -349,19 +434,20 @@
                     currentDist -= remainingOnSeg; 
                     currentIdx = nextIdx;
                     nextIdx = (nextIdx + 1);
-                    if (isClosed) nextIdx = nextIdx % points.length;
-                    if (!isClosed && nextIdx >= points.length) break;
-                    segmentDist = distance(points[currentIdx], points[nextIdx]);
+                    if (isClosed) nextIdx = nextIdx % sourcePoints.length;
+                    if (!isClosed && nextIdx >= sourcePoints.length) break;
+                    segmentDist = distance(sourcePoints[currentIdx], sourcePoints[nextIdx]);
                     distTraveledOnSegment = 0;
                 }
                 distTraveledOnSegment += step;
                 const t = distTraveledOnSegment / segmentDist;
                 newPoints.push({
-                    x: lerp(points[currentIdx].x, points[nextIdx].x, t),
-                    y: lerp(points[currentIdx].y, points[nextIdx].y, t)
+                    x: lerp(sourcePoints[currentIdx].x, sourcePoints[nextIdx].x, t),
+                    y: lerp(sourcePoints[currentIdx].y, sourcePoints[nextIdx].y, t)
                 });
             }
-            if(!isClosed && newPoints.length < targetCount) newPoints.push({...points[points.length-1]});
+            if(!isClosed && newPoints.length < targetCount) newPoints.push({...sourcePoints[sourcePoints.length-1]});
+            
             return newPoints;
         }
 
@@ -398,21 +484,34 @@
             getGeometryAtYear(targetYear) {
                 if (targetYear < this.validRange.start || targetYear > this.validRange.end || this.timeline.length === 0) return null;
                 if (this.timeline.length === 1) return this.timeline[0].geometry;
+
                 let prev = null, next = null;
                 for (let frame of this.timeline) {
                     if (frame.year <= targetYear) prev = frame;
                     if (frame.year >= targetYear && !next) next = frame;
                 }
+
                 if (!prev) return next.geometry;
                 if (!next) return prev.geometry;
                 if (prev === next) return prev.geometry;
+
+                // --- STABILIZER LOGIC ---
+                // Before interpolating, ensure 'next' is aligned to 'prev'
+                let targetGeo = next.geometry;
+                if (this.type === 'polity') {
+                    targetGeo = alignPolygonClosed(prev.geometry, next.geometry);
+                } else if (this.type === 'river') {
+                    targetGeo = alignPolylineOpen(prev.geometry, next.geometry);
+                }
+                // ------------------------
+
                 const t = (targetYear - prev.year) / (next.year - prev.year);
                 const morphed = [];
-                const count = Math.min(prev.geometry.length, next.geometry.length);
+                const count = Math.min(prev.geometry.length, targetGeo.length);
                 for(let i = 0; i < count; i++) {
                     morphed.push({
-                        x: lerp(prev.geometry[i].x, next.geometry[i].x, t),
-                        y: lerp(prev.geometry[i].y, next.geometry[i].y, t)
+                        x: lerp(prev.geometry[i].x, targetGeo[i].x, t),
+                        y: lerp(prev.geometry[i].y, targetGeo[i].y, t)
                     });
                 }
                 return morphed;
@@ -493,7 +592,7 @@
 
                 sorted.forEach(ent => {
                     if (!ent.currentGeometry) return;
-                    if (!layerVisibility[ent.type]) return; // Layer Visibility Check
+                    if (!layerVisibility[ent.type]) return; 
 
                     const isHovered = ent.id === hoveredId;
                     const isSelected = ent.id === selectedId;
