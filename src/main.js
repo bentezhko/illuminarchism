@@ -1,10 +1,12 @@
 /**
  * Main Application Module
- * Orchestrates all components and manages application state
+ * Orchestrates WebGL renderer, atlas management, and user interaction
  */
 
-import InkRenderer from './renderer/InkRenderer.js';
-import HistoricalEntity, { EntityManager } from './core/Entity.js';
+import WebGLRenderer from './renderer/WebGLRenderer.js';
+import AtlasManager from './core/AtlasManager.js';
+import AtlasExporter from './io/AtlasExporter.js';
+import HistoricalEntity from './core/Entity.js';
 import GeoMath from './core/GeoMath.js';
 import InputController from './ui/InputController.js';
 import Toolbar from './ui/Toolbar.js';
@@ -14,8 +16,9 @@ import InfoPanel from './ui/InfoPanel.js';
 export default class IlluminarchismApp {
     constructor() {
         // Core components
-        this.renderer = new InkRenderer('map-canvas');
-        this.entityManager = new EntityManager();
+        this.canvas = this.createCanvas();
+        this.renderer = new WebGLRenderer(this.canvas);
+        this.atlasManager = new AtlasManager();
         
         // UI controllers
         this.toolbar = new Toolbar(this);
@@ -33,91 +36,168 @@ export default class IlluminarchismApp {
         this.activeTool = 'pan';
         this.drawType = 'polity';
         
-        // Playback state
+        // Layer visibility
+        this.layerVisibility = {};
+        
+        // Animation state
         this.isPlaying = false;
-        this.layerVisibility = {
-            polity: true,
-            river: true,
-            city: true
-        };
+        this.isDragging = false;
         
         // Initialize
-        this.initData();
         this.initUI();
-        this.updateEntities();
-        this.render();
+        this.loadInitialAtlases();
+        this.startRenderLoop();
         
-        // Make globally accessible for debugging
+        // Make globally accessible
         window.illuminarchismApp = this;
+        
+        console.log('✨ Illuminarchism initialized (WebGL mode)');
+    }
+    
+    createCanvas() {
+        const canvas = document.getElementById('map-canvas');
+        if (!canvas) {
+            throw new Error('Canvas element #map-canvas not found');
+        }
+        return canvas;
     }
     
     /**
-     * Initialize demo data
+     * Load initial atlas files
      */
-    initData() {
-        // Create sample kingdom
-        const kingdom = new HistoricalEntity(
-            crypto.randomUUID(),
-            'Regnum Caeruleum',
-            'polity',
-            '#264e86'
-        );
+    async loadInitialAtlases() {
+        // Try to load example atlases from /atlases/ directory
+        const defaultAtlases = [
+            // Add paths to your atlas files here
+            // 'atlases/political/holy_roman_empire_1200.json',
+            // 'atlases/calendars/gregorian_1582.json',
+        ];
         
-        kingdom.addKeyframe(800, [
-            {x: -100, y: -100},
-            {x: 100, y: -100},
-            {x: 100, y: 100},
-            {x: -100, y: 100}
-        ]);
+        if (defaultAtlases.length > 0) {
+            await this.atlasManager.loadMultiple(defaultAtlases);
+            this.syncEntities();
+        }
         
-        kingdom.addKeyframe(1200, [
-            {x: -200, y: -150},
-            {x: 250, y: -120},
-            {x: 200, y: 200},
-            {x: -180, y: 180}
-        ]);
-        
-        this.entities.push(kingdom);
-        this.entityManager.addEntity(kingdom);
+        // Update layer visibility toggles
+        this.updateLayerToggles();
+    }
+    
+    /**
+     * Sync entities from atlas manager
+     */
+    syncEntities() {
+        this.entities = this.atlasManager.entities;
+        this.updateEntities();
+        this.render();
     }
     
     /**
      * Initialize UI event handlers
      */
     initUI() {
-        // Save/Load buttons
+        // Save button
         const btnSave = document.getElementById('btn-save');
+        if (btnSave) {
+            btnSave.addEventListener('click', () => this.saveCurrentDrawing());
+        }
+        
+        // Load button
         const btnLoad = document.getElementById('btn-load');
         const fileInput = document.getElementById('file-input');
         
-        if (btnSave) {
-            btnSave.addEventListener('click', () => this.saveAtlas());
-        }
-        
-        if (btnLoad) {
-            btnLoad.addEventListener('click', () => {
-                if (fileInput) fileInput.click();
-            });
-        }
-        
-        if (fileInput) {
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) this.loadAtlas(file);
-            });
+        if (btnLoad && fileInput) {
+            btnLoad.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
         }
         
         // Roughen button
         const btnRoughen = document.querySelector('[data-tool="roughen"]');
         if (btnRoughen) {
-            btnRoughen.addEventListener('click', () => {
-                if (this.selectedEntityId) {
-                    this.roughenEntity(this.selectedEntityId);
-                } else {
-                    alert('Please select a realm first!');
-                }
+            btnRoughen.addEventListener('click', () => this.roughenSelected());
+        }
+        
+        // Ink effect sliders
+        const wobbleSlider = document.getElementById('sl-wobble');
+        if (wobbleSlider) {
+            wobbleSlider.addEventListener('input', (e) => {
+                this.renderer.settings.wobble = parseFloat(e.target.value);
             });
         }
+        
+        const bleedSlider = document.getElementById('sl-bleed');
+        if (bleedSlider) {
+            bleedSlider.addEventListener('input', (e) => {
+                this.renderer.settings.inkBleed = parseFloat(e.target.value) * 0.1;
+            });
+        }
+        
+        const paperSlider = document.getElementById('sl-paper');
+        if (paperSlider) {
+            paperSlider.addEventListener('input', (e) => {
+                this.renderer.settings.paperRoughness = parseFloat(e.target.value);
+            });
+        }
+        
+        // Window resize
+        window.addEventListener('resize', () => {
+            this.renderer.resize();
+            this.render();
+        });
+    }
+    
+    /**
+     * Handle atlas file upload
+     */
+    async handleFileUpload(event) {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+        
+        for (const file of files) {
+            await this.atlasManager.loadAtlasFromFile(file);
+        }
+        
+        this.syncEntities();
+        this.updateLayerToggles();
+        
+        // Reset file input
+        event.target.value = '';
+    }
+    
+    /**
+     * Save current drawing session
+     */
+    saveCurrentDrawing() {
+        if (this.entities.length === 0) {
+            alert('No entities to save!');
+            return;
+        }
+        
+        // Prompt for layer name
+        const layerName = prompt('Enter layer name (e.g., "political", "calendars", "traffic"):', 'custom');
+        if (!layerName) return;
+        
+        // Export entities that don't belong to loaded atlases
+        const customEntities = this.entities.filter(e => !e.atlasId);
+        
+        if (customEntities.length === 0) {
+            alert('No custom drawings to export!');
+            return;
+        }
+        
+        AtlasExporter.exportSession(customEntities, this.currentYear, layerName);
+        console.log(`✓ Exported ${customEntities.length} entities to ${layerName} layer`);
+    }
+    
+    /**
+     * Update layer visibility toggles in UI
+     */
+    updateLayerToggles() {
+        const layers = this.atlasManager.getLayerNames();
+        layers.forEach(layer => {
+            if (!(layer in this.layerVisibility)) {
+                this.layerVisibility[layer] = true;
+            }
+        });
     }
     
     /**
@@ -126,7 +206,6 @@ export default class IlluminarchismApp {
     setActiveTool(toolName) {
         this.activeTool = toolName;
         this.cancelDraft();
-        this.render();
     }
     
     /**
@@ -134,7 +213,6 @@ export default class IlluminarchismApp {
      */
     addDraftPoint(worldPos) {
         this.draftPoints.push(worldPos);
-        this.render();
     }
     
     /**
@@ -142,30 +220,25 @@ export default class IlluminarchismApp {
      */
     finishDraft() {
         if (this.draftPoints.length < 3) {
-            alert('Need at least 3 points to create a realm!');
+            alert('Need at least 3 points!');
             return;
         }
-        
-        const isClosed = this.activeTool === 'draw_poly';
-        const entityType = isClosed ? 'polity' : 'river';
         
         const colors = ['#264e86', '#8a3324', '#3a5f3a', '#c5a059', '#5c3c92'];
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
         
         const entity = new HistoricalEntity(
             crypto.randomUUID(),
-            'New Realm',
-            entityType,
+            'New Entity',
+            this.activeTool === 'draw_poly' ? 'polity' : 'river',
             randomColor
         );
         
         entity.addKeyframe(this.currentYear, [...this.draftPoints]);
         
         this.entities.push(entity);
-        this.entityManager.addEntity(entity);
-        
-        this.cancelDraft();
         this.selectEntity(entity.id);
+        this.cancelDraft();
     }
     
     /**
@@ -174,7 +247,6 @@ export default class IlluminarchismApp {
     cancelDraft() {
         this.draftPoints = [];
         this.draftCursor = null;
-        this.render();
     }
     
     /**
@@ -182,12 +254,8 @@ export default class IlluminarchismApp {
      */
     selectEntity(entityId) {
         this.selectedEntityId = entityId;
-        this.entityManager.selectEntity(entityId);
-        
         const entity = this.entities.find(e => e.id === entityId);
         this.infoPanel.update(entity);
-        
-        this.render();
     }
     
     /**
@@ -202,21 +270,23 @@ export default class IlluminarchismApp {
      */
     deleteEntity(entityId) {
         this.entities = this.entities.filter(e => e.id !== entityId);
-        this.entityManager.removeEntity(entityId);
         
         if (this.selectedEntityId === entityId) {
             this.selectedEntityId = null;
             this.infoPanel.hide();
         }
-        
-        this.render();
     }
     
     /**
      * Apply fractal roughening to entity borders
      */
-    roughenEntity(entityId) {
-        const entity = this.entities.find(e => e.id === entityId);
+    roughenSelected() {
+        if (!this.selectedEntityId) {
+            alert('Select an entity first!');
+            return;
+        }
+        
+        const entity = this.entities.find(e => e.id === this.selectedEntityId);
         if (!entity) return;
         
         const currentGeo = entity.getGeometryAtYear(this.currentYear);
@@ -224,15 +294,13 @@ export default class IlluminarchismApp {
         
         const roughened = GeoMath.roughenPolygon(currentGeo, 3, 20);
         entity.addKeyframe(this.currentYear, roughened);
-        
-        this.render();
     }
     
     /**
      * Update all entity geometries for current year
      */
     updateEntities() {
-        for (let entity of this.entities) {
+        for (const entity of this.entities) {
             const geometry = entity.getGeometryAtYear(this.currentYear);
             entity.setCurrentGeometry(geometry);
         }
@@ -241,98 +309,27 @@ export default class IlluminarchismApp {
     /**
      * Main render loop
      */
-    render() {
-        this.renderer.beginFrame();
-        
-        // Draw all entities
-        for (let entity of this.entities) {
-            if (!this.layerVisibility[entity.type]) continue;
-            
-            const isSelected = entity.id === this.selectedEntityId;
-            this.renderer.drawEntity(entity, this.currentYear, isSelected);
-        }
-        
-        // Draw draft
-        if (this.draftPoints.length > 0) {
-            const draftWithCursor = [...this.draftPoints];
-            if (this.draftCursor) {
-                draftWithCursor.push(this.draftCursor);
-            }
-            this.renderer.drawDraft(draftWithCursor);
-        }
-        
-        this.renderer.endFrame();
+    startRenderLoop() {
+        const loop = () => {
+            this.render();
+            requestAnimationFrame(loop);
+        };
+        loop();
     }
     
     /**
-     * Save atlas to JSON file
+     * Render frame
      */
-    saveAtlas() {
-        const data = {
-            version: '0.1',
-            year: this.currentYear,
-            entities: this.entities.map(e => ({
-                id: e.id,
-                name: e.name,
-                type: e.type,
-                color: e.color,
-                description: e.description,
-                parentId: e.parentId,
-                timeline: e.timeline
-            }))
-        };
-        
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-            type: 'application/json'
+    render() {
+        // Filter visible entities
+        const visibleEntities = this.entities.filter(e => {
+            if (e.layer && !this.layerVisibility[e.layer]) {
+                return false;
+            }
+            return true;
         });
         
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `illuminarchism_${Date.now()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-    
-    /**
-     * Load atlas from JSON file
-     */
-    async loadAtlas(file) {
-        try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            
-            this.entities = [];
-            this.entityManager = new EntityManager();
-            
-            for (let entityData of data.entities) {
-                const entity = new HistoricalEntity(
-                    entityData.id,
-                    entityData.name,
-                    entityData.type,
-                    entityData.color,
-                    entityData.parentId
-                );
-                
-                entity.description = entityData.description;
-                entity.timeline = entityData.timeline;
-                
-                this.entities.push(entity);
-                this.entityManager.addEntity(entity);
-            }
-            
-            if (data.year) {
-                this.currentYear = data.year;
-                this.timeline.setYear(data.year);
-            }
-            
-            this.updateEntities();
-            this.render();
-            
-        } catch (error) {
-            console.error('Failed to load atlas:', error);
-            alert('Failed to load atlas file!');
-        }
+        this.renderer.render(visibleEntities, this.currentYear);
     }
 }
 

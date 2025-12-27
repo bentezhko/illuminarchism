@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "id": "holy-roman-empire-1200",
+    "year": 1200,
+    "layer": "political",
+    "description": "Holy Roman Empire territory circa 1200 CE during High Middle Ages",
+    "author": "illuminarchism",
+    "created": "2025-12-27T13:00:00Z",
+    "version": "1.0"
+  },
+  "style": {
+    "color": "#c5a059",
+    "strokeWidth": 2,
+    "fillOpacity": 0.4,
+    "decorative": "medieval-border"
+  },
+  "entities": [
+    {
+      "id": "hre-core-1200",
+      "name": "Holy Roman Empire",
+      "type": "polity",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [5.0, 47.0],
+          [15.0, 47.0],
+          [15.0, 54.0],
+          [5.0, 54.0],
+          [5.0, 47.0]
+        ]]
+      },
+      "properties": {
+        "description": "Core territories of the Holy Roman Empire under Hohenstaufen dynasty",
+        "color": "#c5a059",
+        "capital": "Vienna"
+      }
+    }
+  ]
+}
