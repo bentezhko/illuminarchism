@@ -344,7 +344,7 @@
         <button class="btn-tool" data-tool="select" title="Select Entity">🔍</button>
         <hr>
         <button class="btn-tool" data-tool="draw" title="Draw (Double-click or Enter to finish)">🖊️</button>
-        <button class="btn-tool" data-tool="edit" title="Edit Points">⚒️</button>
+        <button class="btn-tool" data-tool="edit" title="Edit Points (Drag to move, Del to delete)">⚒️</button>
         <hr>
         <button class="btn-tool" id="btn-add-keyframe" title="Add Keyframe">🎬</button>
     </div>
@@ -429,21 +429,17 @@
     </div>
 
     <canvas id="canvas"></canvas>
-    <div class="debug-info">Year: 1000 AD | Active: 0 | Entities: 0</div>
+    <div class="debug-info">Year: 1000 AD | Active: 0 | Entities: 0 | Hint: Select entity first to edit</div>
 
     <script>
-        const CONFIG = { RESAMPLE_COUNT: 50 };
+        const CONFIG = { RESAMPLE_COUNT: 50, POINT_GRAB_RADIUS: 15 };
 
         // Year formatting helper
         function formatYear(year) {
             const rounded = Math.round(year);
-            if (rounded < 0) {
-                return `${Math.abs(rounded)} BC`;
-            } else if (rounded === 0) {
-                return '1 BC';
-            } else {
-                return `${rounded} AD`;
-            }
+            if (rounded < 0) return `${Math.abs(rounded)} BC`;
+            else if (rounded === 0) return '1 BC';
+            else return `${rounded} AD`;
         }
 
         // --- 1. Geometry Utilities ---
@@ -496,11 +492,8 @@
         // --- 2. Data Structures ---
         class HistoricalEntity {
             constructor(id, name, type, color, parentId = null) {
-                this.id = id;
-                this.name = name;
-                this.type = type; 
-                this.color = color;
-                this.parentId = parentId;
+                this.id = id; this.name = name; this.type = type; 
+                this.color = color; this.parentId = parentId;
                 this.description = "A mapped entity.";
                 this.timeline = []; 
                 this.validRange = { start: -Infinity, end: Infinity };
@@ -549,13 +542,16 @@
                 }
                 return interpolated;
             }
+
+            getKeyframeAtYear(year) {
+                return this.timeline.find(k => k.year === year);
+            }
         }
 
         // --- 3. Renderer ---
         class CanvasRenderer {
             constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
+                this.canvas = canvas; this.ctx = canvas.getContext('2d');
                 this.transform = { x: 0, y: 0, zoom: 1 };
                 this.resizeCanvas();
                 window.addEventListener('resize', () => this.resizeCanvas());
@@ -572,17 +568,11 @@
             }
 
             worldToScreen(wx, wy) {
-                return {
-                    x: wx * this.transform.zoom + this.transform.x,
-                    y: wy * this.transform.zoom + this.transform.y
-                };
+                return { x: wx * this.transform.zoom + this.transform.x, y: wy * this.transform.zoom + this.transform.y };
             }
 
             screenToWorld(sx, sy) {
-                return {
-                    x: (sx - this.transform.x) / this.transform.zoom,
-                    y: (sy - this.transform.y) / this.transform.zoom
-                };
+                return { x: (sx - this.transform.x) / this.transform.zoom, y: (sy - this.transform.y) / this.transform.zoom };
             }
 
             draw(entities, hoveredId, selectedId, activeTool, layerVisibility) {
@@ -595,11 +585,8 @@
                     if (!layerVisibility[ent.type]) continue;
                     if (!ent.currentGeometry || ent.currentGeometry.length < 1) continue;
 
-                    if (ent.type === 'city') {
-                        this.drawCity(ent, hoveredId, selectedId);
-                    } else {
-                        this.drawPolygon(ent, hoveredId, selectedId);
-                    }
+                    if (ent.type === 'city') this.drawCity(ent, hoveredId, selectedId);
+                    else this.drawPolygon(ent, hoveredId, selectedId);
                 }
 
                 this.ctx.restore();
@@ -620,8 +607,7 @@
                 this.ctx.moveTo(geo[0].x, geo[0].y);
                 for (let i = 1; i < geo.length; i++) this.ctx.lineTo(geo[i].x, geo[i].y);
                 this.ctx.closePath();
-                this.ctx.fill();
-                this.ctx.stroke();
+                this.ctx.fill(); this.ctx.stroke();
             }
 
             drawCity(ent, hoveredId, selectedId) {
@@ -644,23 +630,38 @@
                 this.ctx.translate(transform.x, transform.y);
                 this.ctx.scale(transform.zoom, transform.zoom);
 
-                this.ctx.strokeStyle = '#264e86';
-                this.ctx.lineWidth = 2;
-                this.ctx.setLineDash([5, 5]);
+                this.ctx.strokeStyle = '#264e86'; this.ctx.lineWidth = 2; this.ctx.setLineDash([5, 5]);
                 this.ctx.beginPath();
                 this.ctx.moveTo(points[0].x, points[0].y);
                 for (let i = 1; i < points.length; i++) this.ctx.lineTo(points[i].x, points[i].y);
                 if (cursor) this.ctx.lineTo(cursor.x, cursor.y);
-                this.ctx.stroke();
-                this.ctx.setLineDash([]);
+                this.ctx.stroke(); this.ctx.setLineDash([]);
 
                 for (let p of points) {
                     this.ctx.fillStyle = '#264e86';
-                    this.ctx.beginPath();
-                    this.ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-                    this.ctx.fill();
+                    this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); this.ctx.fill();
                 }
+                this.ctx.restore();
+            }
 
+            drawEditPoints(points, hoveredIdx, transform) {
+                if (!points || points.length === 0) return;
+                this.ctx.save();
+                this.ctx.translate(transform.x, transform.y);
+                this.ctx.scale(transform.zoom, transform.zoom);
+
+                for (let i = 0; i < points.length; i++) {
+                    const p = points[i];
+                    const isHovered = i === hoveredIdx;
+                    
+                    this.ctx.fillStyle = isHovered ? '#c5a059' : '#8a3324';
+                    this.ctx.strokeStyle = '#f3e9d2';
+                    this.ctx.lineWidth = 2;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, isHovered ? 8 : 6, 0, Math.PI * 2);
+                    this.ctx.fill(); this.ctx.stroke();
+                }
                 this.ctx.restore();
             }
         }
@@ -670,35 +671,27 @@
             constructor() {
                 this.canvas = document.getElementById('canvas');
                 this.renderer = new CanvasRenderer(this.canvas);
-                this.entities = [];
-                this.currentYear = 1000;
-                this.nextId = 1;
+                this.entities = []; this.currentYear = 1000; this.nextId = 1;
 
-                this.selectedEntityId = null;
-                this.hoveredEntityId = null;
-                this.activeTool = 'pan';
-                this.drawType = 'polity';
+                this.selectedEntityId = null; this.hoveredEntityId = null;
+                this.activeTool = 'pan'; this.drawType = 'polity';
 
-                this.draftPoints = [];
-                this.draftCursor = null;
-
+                this.draftPoints = []; this.draftCursor = null;
                 this.layerVisibility = { polity: true, 'sub-polity': true, city: true };
 
-                this.isPanning = false;
-                this.lastMouse = { x: 0, y: 0 };
+                this.isPanning = false; this.lastMouse = { x: 0, y: 0 };
+
+                // Edit mode state
+                this.editPoints = null;
+                this.editPointHoveredIdx = -1;
+                this.editPointDragIdx = -1;
 
                 // Timeline playback
-                this.isPlaying = false;
-                this.playbackSpeed = 1;
-                this.animationFrame = null;
-                this.lastFrameTime = 0;
+                this.isPlaying = false; this.playbackSpeed = 1;
+                this.animationFrame = null; this.lastFrameTime = 0;
 
-                this.setupUI();
-                this.setupCanvas();
-                this.setupKeyboard();
-                this.setupTimeline();
-                this.updateEntities();
-                this.render();
+                this.setupUI(); this.setupCanvas(); this.setupKeyboard(); this.setupTimeline();
+                this.updateEntities(); this.render();
             }
 
             setupTimeline() {
@@ -711,24 +704,17 @@
                 const toggleBtn = document.getElementById('timeline-toggle');
                 const popup = document.querySelector('.timeline-popup');
 
-                // Slider
                 slider.addEventListener('input', (e) => {
                     this.currentYear = parseInt(e.target.value);
-                    this.updateYearDisplay();
-                    this.updateEntities();
-                    this.render();
+                    this.updateYearDisplay(); this.updateEntities(); this.loadEditPoints(); this.render();
                 });
 
-                // Play/Pause
                 playBtn.addEventListener('click', () => this.togglePlayback());
-
-                // Navigation
                 firstBtn.addEventListener('click', () => this.goToYear(-10000));
                 prevBtn.addEventListener('click', () => this.stepYear(-50));
                 nextBtn.addEventListener('click', () => this.stepYear(50));
                 lastBtn.addEventListener('click', () => this.goToYear(2025));
 
-                // Speed controls
                 document.querySelectorAll('.speed-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
                         document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
@@ -737,7 +723,6 @@
                     });
                 });
 
-                // Toggle collapse
                 toggleBtn.addEventListener('click', () => {
                     popup.classList.toggle('collapsed');
                     toggleBtn.textContent = popup.classList.contains('collapsed') ? '▲' : '▼';
@@ -749,64 +734,38 @@
                 const playBtn = document.getElementById('btn-play');
                 
                 if (this.isPlaying) {
-                    playBtn.innerHTML = '⏸';
-                    playBtn.classList.add('playing');
+                    playBtn.innerHTML = '⏸'; playBtn.classList.add('playing');
                     playBtn.title = 'Pause (Space)';
-                    this.lastFrameTime = performance.now();
-                    this.animate();
+                    this.lastFrameTime = performance.now(); this.animate();
                 } else {
-                    playBtn.innerHTML = '▶';
-                    playBtn.classList.remove('playing');
+                    playBtn.innerHTML = '▶'; playBtn.classList.remove('playing');
                     playBtn.title = 'Play (Space)';
-                    if (this.animationFrame) {
-                        cancelAnimationFrame(this.animationFrame);
-                        this.animationFrame = null;
-                    }
+                    if (this.animationFrame) { cancelAnimationFrame(this.animationFrame); this.animationFrame = null; }
                 }
             }
 
             animate() {
                 if (!this.isPlaying) return;
-
                 const now = performance.now();
                 const delta = now - this.lastFrameTime;
-                
-                // Base speed: 50 years per second (faster for larger timeline)
-                const baseYearsPerSecond = 50;
-                const yearStep = (delta / 1000) * baseYearsPerSecond * this.playbackSpeed;
-                
+                const yearStep = (delta / 1000) * 50 * this.playbackSpeed;
                 this.currentYear += yearStep;
-                
-                // Loop at end
-                if (this.currentYear > 2025) {
-                    this.currentYear = -10000;
-                }
-                
+                if (this.currentYear > 2025) this.currentYear = -10000;
                 this.lastFrameTime = now;
                 
                 document.getElementById('timeline-slider').value = this.currentYear;
-                this.updateYearDisplay();
-                this.updateEntities();
-                this.render();
-                
+                this.updateYearDisplay(); this.updateEntities(); this.loadEditPoints(); this.render();
                 this.animationFrame = requestAnimationFrame(() => this.animate());
             }
 
             goToYear(year) {
                 this.currentYear = Math.max(-10000, Math.min(2025, year));
                 document.getElementById('timeline-slider').value = this.currentYear;
-                this.updateYearDisplay();
-                this.updateEntities();
-                this.render();
+                this.updateYearDisplay(); this.updateEntities(); this.loadEditPoints(); this.render();
             }
 
-            stepYear(delta) {
-                this.goToYear(this.currentYear + delta);
-            }
-
-            updateYearDisplay() {
-                document.getElementById('timeline-year').textContent = formatYear(this.currentYear);
-            }
+            stepYear(delta) { this.goToYear(this.currentYear + delta); }
+            updateYearDisplay() { document.getElementById('timeline-year').textContent = formatYear(this.currentYear); }
 
             setupUI() {
                 document.querySelectorAll('.btn-tool').forEach(btn => {
@@ -814,30 +773,30 @@
                         document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         this.activeTool = btn.dataset.tool;
-                        if (this.activeTool !== 'draw') this.draftPoints = [];
+                        if (this.activeTool === 'edit') {
+                            this.loadEditPoints();
+                        } else {
+                            this.editPoints = null;
+                            if (this.activeTool !== 'draw') this.draftPoints = [];
+                        }
                         this.render();
                     });
                 });
 
                 ['polity', 'sub-polity', 'city'].forEach(type => {
                     document.getElementById('toggle-' + type).addEventListener('change', (e) => {
-                        this.layerVisibility[type] = e.target.checked;
-                        this.render();
+                        this.layerVisibility[type] = e.target.checked; this.render();
                     });
                 });
 
-                document.getElementById('entity-type').addEventListener('change', (e) => {
-                    this.drawType = e.target.value;
-                });
+                document.getElementById('entity-type').addEventListener('change', (e) => { this.drawType = e.target.value; });
 
                 document.getElementById('btn-add-keyframe').addEventListener('click', () => {
                     if (this.selectedEntityId && this.draftPoints.length > 0) {
                         const ent = this.entities.find(e => e.id === this.selectedEntityId);
                         if (ent) {
                             ent.addKeyframe(this.currentYear, [...this.draftPoints]);
-                            this.draftPoints = [];
-                            this.updateEntities();
-                            this.render();
+                            this.draftPoints = []; this.updateEntities(); this.render();
                         }
                     }
                 });
@@ -847,37 +806,54 @@
                 document.getElementById('file-input').addEventListener('change', (e) => this.loadData(e));
             }
 
+            loadEditPoints() {
+                if (this.activeTool !== 'edit' || !this.selectedEntityId) {
+                    this.editPoints = null; return;
+                }
+                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                if (!ent) { this.editPoints = null; return; }
+                
+                const keyframe = ent.getKeyframeAtYear(this.currentYear);
+                if (keyframe) {
+                    this.editPoints = keyframe.geometry.map(p => ({...p}));
+                } else {
+                    this.editPoints = null;
+                }
+            }
+
+            saveEditPoints() {
+                if (!this.editPoints || !this.selectedEntityId) return;
+                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                if (ent) {
+                    ent.addKeyframe(this.currentYear, [...this.editPoints]);
+                    this.updateEntities();
+                }
+            }
+
             setupKeyboard() {
                 document.addEventListener('keydown', (e) => {
-                    // Drawing shortcuts
                     if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-                        if (e.key === 'Enter') {
-                            if (this.draftPoints.length >= 2) {
-                                this.finishDrawing();
-                            }
+                        if (e.key === 'Enter' && this.draftPoints.length >= 2) this.finishDrawing();
+                        else if (e.key === 'Escape') this.cancelDrawing();
+                        return;
+                    }
+
+                    if (this.activeTool === 'edit' && this.editPoints) {
+                        if (e.key === 'Delete' && this.editPointHoveredIdx >= 0 && this.editPoints.length > 3) {
+                            this.editPoints.splice(this.editPointHoveredIdx, 1);
+                            this.editPointHoveredIdx = -1;
+                            this.saveEditPoints(); this.render();
                         } else if (e.key === 'Escape') {
-                            this.cancelDrawing();
+                            this.loadEditPoints(); this.render();
                         }
                         return;
                     }
 
-                    // Timeline shortcuts
-                    if (e.key === ' ') {
-                        e.preventDefault();
-                        this.togglePlayback();
-                    } else if (e.key === 'ArrowLeft') {
-                        e.preventDefault();
-                        this.stepYear(-50);
-                    } else if (e.key === 'ArrowRight') {
-                        e.preventDefault();
-                        this.stepYear(50);
-                    } else if (e.key === 'Home') {
-                        e.preventDefault();
-                        this.goToYear(-10000);
-                    } else if (e.key === 'End') {
-                        e.preventDefault();
-                        this.goToYear(2025);
-                    }
+                    if (e.key === ' ') { e.preventDefault(); this.togglePlayback(); }
+                    else if (e.key === 'ArrowLeft') { e.preventDefault(); this.stepYear(-50); }
+                    else if (e.key === 'ArrowRight') { e.preventDefault(); this.stepYear(50); }
+                    else if (e.key === 'Home') { e.preventDefault(); this.goToYear(-10000); }
+                    else if (e.key === 'End') { e.preventDefault(); this.goToYear(2025); }
                 });
             }
 
@@ -889,24 +865,17 @@
                 
                 this.canvas.addEventListener('dblclick', (e) => {
                     e.preventDefault();
-                    if (this.activeTool === 'draw' && this.draftPoints.length >= 2) {
-                        this.finishDrawing();
-                    }
+                    if (this.activeTool === 'draw' && this.draftPoints.length >= 2) this.finishDrawing();
                 });
 
                 this.canvas.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
-                    if (this.activeTool === 'draw' && this.draftPoints.length >= 2) {
-                        this.finishDrawing();
-                    }
+                    if (this.activeTool === 'draw' && this.draftPoints.length >= 2) this.finishDrawing();
                 });
             }
 
             finishDrawing() {
-                if (this.draftPoints.length < 2) {
-                    alert('Need at least 2 points to create a shape');
-                    return;
-                }
+                if (this.draftPoints.length < 2) { alert('Need at least 2 points to create a shape'); return; }
                 
                 if (!this.selectedEntityId) {
                     const type = document.getElementById('entity-type').value;
@@ -923,25 +892,18 @@
                 const ent = this.entities.find(e => e.id === this.selectedEntityId);
                 if (ent) {
                     ent.addKeyframe(this.currentYear, [...this.draftPoints]);
-                    this.draftPoints = [];
-                    this.draftCursor = null;
+                    this.draftPoints = []; this.draftCursor = null;
                     
                     this.activeTool = 'select';
                     document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
                     document.querySelector('[data-tool="select"]').classList.add('active');
                     
-                    this.updateEntities();
-                    this.render();
-                    
+                    this.updateEntities(); this.render();
                     alert(`✓ Shape completed for ${ent.name} at ${formatYear(this.currentYear)}`);
                 }
             }
 
-            cancelDrawing() {
-                this.draftPoints = [];
-                this.draftCursor = null;
-                this.render();
-            }
+            cancelDrawing() { this.draftPoints = []; this.draftCursor = null; this.render(); }
 
             onMouseDown(e) {
                 if (e.button !== 0) return;
@@ -950,19 +912,24 @@
                 const world = this.renderer.screenToWorld(sx, sy);
 
                 if (this.activeTool === 'pan') {
-                    this.isPanning = true;
-                    this.lastMouse = { x: sx, y: sy };
+                    this.isPanning = true; this.lastMouse = { x: sx, y: sy };
                 } else if (this.activeTool === 'draw') {
-                    this.draftPoints.push(world);
-                    this.render();
+                    this.draftPoints.push(world); this.render();
                 } else if (this.activeTool === 'select') {
                     this.selectEntityAt(world);
+                } else if (this.activeTool === 'edit') {
+                    if (this.editPoints && this.editPointHoveredIdx >= 0) {
+                        this.editPointDragIdx = this.editPointHoveredIdx;
+                    } else {
+                        this.selectEntityAt(world);
+                    }
                 }
             }
 
             onMouseMove(e) {
                 const rect = this.canvas.getBoundingClientRect();
                 const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+                const world = this.renderer.screenToWorld(sx, sy);
 
                 if (this.isPanning && this.activeTool === 'pan') {
                     this.renderer.transform.x += sx - this.lastMouse.x;
@@ -970,13 +937,32 @@
                     this.lastMouse = { x: sx, y: sy };
                     this.render();
                 } else if (this.activeTool === 'draw') {
-                    this.draftCursor = this.renderer.screenToWorld(sx, sy);
-                    this.render();
+                    this.draftCursor = world; this.render();
+                } else if (this.activeTool === 'edit') {
+                    if (this.editPointDragIdx >= 0 && this.editPoints) {
+                        this.editPoints[this.editPointDragIdx] = world;
+                        this.saveEditPoints(); this.render();
+                    } else if (this.editPoints) {
+                        let found = -1;
+                        for (let i = 0; i < this.editPoints.length; i++) {
+                            const p = this.editPoints[i];
+                            const dist = Math.hypot(p.x - world.x, p.y - world.y);
+                            if (dist < CONFIG.POINT_GRAB_RADIUS / this.renderer.transform.zoom) {
+                                found = i; break;
+                            }
+                        }
+                        if (found !== this.editPointHoveredIdx) {
+                            this.editPointHoveredIdx = found;
+                            this.canvas.style.cursor = found >= 0 ? 'move' : 'crosshair';
+                            this.render();
+                        }
+                    }
                 }
             }
 
             onMouseUp(e) {
                 if (this.activeTool === 'pan') this.isPanning = false;
+                else if (this.activeTool === 'edit') this.editPointDragIdx = -1;
             }
 
             onWheel(e) {
@@ -1003,11 +989,12 @@
                     if (this.isPointInEntity(world, ent)) {
                         this.selectedEntityId = ent.id;
                         this.populatePanel(ent);
-                        this.render();
-                        return;
+                        if (this.activeTool === 'edit') this.loadEditPoints();
+                        this.render(); return;
                     }
                 }
                 this.selectedEntityId = null;
+                this.editPoints = null;
                 this.render();
             }
 
@@ -1035,17 +1022,11 @@
             }
 
             saveData() {
-                const data = JSON.stringify({ 
-                    entities: this.entities, 
-                    camera: this.renderer.transform, 
-                    year: this.currentYear 
-                }, null, 2);
+                const data = JSON.stringify({ entities: this.entities, camera: this.renderer.transform, year: this.currentYear }, null, 2);
                 const blob = new Blob([data], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = 'illuminarchism_atlas.json';
-                a.click();
+                a.href = url; a.download = 'illuminarchism_atlas.json'; a.click();
                 URL.revokeObjectURL(url);
             }
 
@@ -1063,8 +1044,7 @@
                         this.updateYearDisplay();
                     }
                     this.nextId = Math.max(...this.entities.map(e => e.id), 0) + 1;
-                    this.updateEntities();
-                    this.render();
+                    this.updateEntities(); this.render();
                 };
                 reader.readAsText(file);
             }
@@ -1076,13 +1056,18 @@
                     if (ent.currentGeometry) cnt++;
                 });
                 const d = document.querySelector('.debug-info');
-                if(d) d.textContent = `Year: ${formatYear(this.currentYear)} | Active: ${cnt} | Entities: ${this.entities.length}`;
+                const hint = this.activeTool === 'edit' 
+                    ? (this.editPoints ? 'Drag points to move, Del to delete' : 'Select entity with keyframe at this year')
+                    : '';
+                if(d) d.textContent = `Year: ${formatYear(this.currentYear)} | Active: ${cnt} | Entities: ${this.entities.length}${hint ? ' | ' + hint : ''}`;
             }
 
             render() {
                 this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.layerVisibility);
                 if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
                     this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform);
+                } else if (this.activeTool === 'edit' && this.editPoints) {
+                    this.renderer.drawEditPoints(this.editPoints, this.editPointHoveredIdx, this.renderer.transform);
                 }
             }
         }
