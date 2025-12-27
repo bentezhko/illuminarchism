@@ -313,7 +313,7 @@
         .year-label {
             font-size: 0.8rem;
             color: var(--ink-faded);
-            min-width: 40px;
+            min-width: 60px;
             text-align: center;
         }
 
@@ -401,7 +401,7 @@
             <button class="timeline-toggle" id="timeline-toggle" title="Toggle Timeline">▼</button>
         </div>
         <div class="timeline-content">
-            <div class="year-display" id="timeline-year">1000</div>
+            <div class="year-display" id="timeline-year">1000 AD</div>
             
             <div class="playback-controls">
                 <button class="playback-btn" id="btn-first" title="First (Home)">⏮</button>
@@ -412,10 +412,10 @@
             </div>
 
             <div class="timeline-slider-container">
-                <span class="year-label" id="year-start">800</span>
+                <span class="year-label" id="year-start">10000 BC</span>
                 <input type="range" class="timeline-slider" id="timeline-slider" 
-                       min="800" max="1500" value="1000" step="10">
-                <span class="year-label" id="year-end">1500</span>
+                       min="-10000" max="2025" value="1000" step="10">
+                <span class="year-label" id="year-end">2025 AD</span>
             </div>
 
             <div class="speed-controls">
@@ -429,10 +429,22 @@
     </div>
 
     <canvas id="canvas"></canvas>
-    <div class="debug-info">Year: 1000 | Active: 0 | Entities: 0</div>
+    <div class="debug-info">Year: 1000 AD | Active: 0 | Entities: 0</div>
 
     <script>
         const CONFIG = { RESAMPLE_COUNT: 50 };
+
+        // Year formatting helper
+        function formatYear(year) {
+            const rounded = Math.round(year);
+            if (rounded < 0) {
+                return `${Math.abs(rounded)} BC`;
+            } else if (rounded === 0) {
+                return '1 BC';
+            } else {
+                return `${rounded} AD`;
+            }
+        }
 
         // --- 1. Geometry Utilities ---
         function lerp(a, b, t) { return a + (b - a) * t; }
@@ -711,10 +723,10 @@
                 playBtn.addEventListener('click', () => this.togglePlayback());
 
                 // Navigation
-                firstBtn.addEventListener('click', () => this.goToYear(800));
-                prevBtn.addEventListener('click', () => this.stepYear(-10));
-                nextBtn.addEventListener('click', () => this.stepYear(10));
-                lastBtn.addEventListener('click', () => this.goToYear(1500));
+                firstBtn.addEventListener('click', () => this.goToYear(-10000));
+                prevBtn.addEventListener('click', () => this.stepYear(-50));
+                nextBtn.addEventListener('click', () => this.stepYear(50));
+                lastBtn.addEventListener('click', () => this.goToYear(2025));
 
                 // Speed controls
                 document.querySelectorAll('.speed-btn').forEach(btn => {
@@ -759,15 +771,15 @@
                 const now = performance.now();
                 const delta = now - this.lastFrameTime;
                 
-                // Base speed: 10 years per second
-                const baseYearsPerSecond = 10;
+                // Base speed: 50 years per second (faster for larger timeline)
+                const baseYearsPerSecond = 50;
                 const yearStep = (delta / 1000) * baseYearsPerSecond * this.playbackSpeed;
                 
                 this.currentYear += yearStep;
                 
                 // Loop at end
-                if (this.currentYear > 1500) {
-                    this.currentYear = 800;
+                if (this.currentYear > 2025) {
+                    this.currentYear = -10000;
                 }
                 
                 this.lastFrameTime = now;
@@ -781,7 +793,7 @@
             }
 
             goToYear(year) {
-                this.currentYear = Math.max(800, Math.min(1500, year));
+                this.currentYear = Math.max(-10000, Math.min(2025, year));
                 document.getElementById('timeline-slider').value = this.currentYear;
                 this.updateYearDisplay();
                 this.updateEntities();
@@ -793,8 +805,7 @@
             }
 
             updateYearDisplay() {
-                const displayYear = Math.round(this.currentYear);
-                document.getElementById('timeline-year').textContent = displayYear;
+                document.getElementById('timeline-year').textContent = formatYear(this.currentYear);
             }
 
             setupUI() {
@@ -856,16 +867,16 @@
                         this.togglePlayback();
                     } else if (e.key === 'ArrowLeft') {
                         e.preventDefault();
-                        this.stepYear(-10);
+                        this.stepYear(-50);
                     } else if (e.key === 'ArrowRight') {
                         e.preventDefault();
-                        this.stepYear(10);
+                        this.stepYear(50);
                     } else if (e.key === 'Home') {
                         e.preventDefault();
-                        this.goToYear(800);
+                        this.goToYear(-10000);
                     } else if (e.key === 'End') {
                         e.preventDefault();
-                        this.goToYear(1500);
+                        this.goToYear(2025);
                     }
                 });
             }
@@ -922,7 +933,7 @@
                     this.updateEntities();
                     this.render();
                     
-                    alert(`✓ Shape completed for ${ent.name} at year ${Math.round(this.currentYear)}`);
+                    alert(`✓ Shape completed for ${ent.name} at ${formatYear(this.currentYear)}`);
                 }
             }
 
@@ -1046,7 +1057,7 @@
                     const data = JSON.parse(ev.target.result);
                     this.entities = data.entities.map(e => Object.assign(new HistoricalEntity(), e));
                     if (data.camera) this.renderer.transform = data.camera;
-                    if (data.year) {
+                    if (data.year !== undefined) {
                         this.currentYear = data.year;
                         document.getElementById('timeline-slider').value = this.currentYear;
                         this.updateYearDisplay();
@@ -1065,7 +1076,7 @@
                     if (ent.currentGeometry) cnt++;
                 });
                 const d = document.querySelector('.debug-info');
-                if(d) d.textContent = `Year: ${Math.round(this.currentYear)} | Active: ${cnt} | Entities: ${this.entities.length}`;
+                if(d) d.textContent = `Year: ${formatYear(this.currentYear)} | Active: ${cnt} | Entities: ${this.entities.length}`;
             }
 
             render() {
