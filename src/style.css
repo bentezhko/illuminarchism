@@ -1,0 +1,274 @@
+/**
+ * Illuminarchism Stylesheet
+ * Medieval manuscript aesthetics with parchment and gold leaf
+ */
+
+:root {
+    /* Medieval Palette */
+    --parchment-bg: #f3e9d2;
+    --parchment-dark: #e0d0b0;
+    --ink-primary: #2b2118;
+    --ink-faded: #5c4d3c;
+    --rubric-red: #8a3324;
+    --gold-leaf: #c5a059;
+    --lapis-lazuli: #264e86;
+    --verdigris: #43b3ae;
+    
+    --ui-shadow: 0 4px 6px rgba(43, 33, 24, 0.2);
+    --border-width: 2px;
+}
+
+* {
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--parchment-bg);
+    font-family: 'IM Fell English', serif;
+    color: var(--ink-primary);
+}
+
+/* === UI Overlay Layer === */
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 10;
+}
+
+.pointer-events-auto {
+    pointer-events: auto;
+}
+
+/* === Header === */
+
+header {
+    padding: 1rem 2rem;
+    background: linear-gradient(to bottom, var(--parchment-bg) 80%, transparent);
+    border-bottom: 1px solid var(--gold-leaf);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+h1 {
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    margin: 0;
+    font-size: 2rem;
+    color: var(--ink-primary);
+    text-shadow: 1px 1px 0px var(--parchment-dark);
+    letter-spacing: 2px;
+}
+
+h1 span {
+    color: var(--rubric-red);
+}
+
+h1 small {
+    font-size: 0.5em;
+    opacity: 0.7;
+    font-weight: 400;
+}
+
+/* === Buttons === */
+
+.file-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-text {
+    background: var(--parchment-dark);
+    border: 1px solid var(--ink-faded);
+    color: var(--ink-primary);
+    padding: 0.5rem 1rem;
+    font-family: 'Cinzel', serif;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+}
+
+.btn-text:hover {
+    background: var(--gold-leaf);
+    border-color: var(--ink-primary);
+    color: var(--ink-primary);
+}
+
+/* === Toolbar === */
+
+.toolbar {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: rgba(243, 233, 210, 0.95);
+    padding: 0.5rem;
+    border: var(--border-width) solid var(--ink-primary);
+    border-radius: 4px;
+    box-shadow: var(--ui-shadow);
+}
+
+.btn-tool {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--ink-faded);
+    background: var(--parchment-bg);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+}
+
+.btn-tool:hover {
+    background: var(--gold-leaf);
+    color: white;
+    transform: scale(1.05);
+}
+
+.btn-tool.active {
+    background: var(--rubric-red);
+    color: white;
+    border-color: var(--ink-primary);
+}
+
+.toolbar hr {
+    width: 100%;
+    border: 0;
+    border-top: 1px dashed var(--ink-faded);
+    margin: 0.25rem 0;
+}
+
+/* === Panels === */
+
+.panel {
+    position: absolute;
+    right: 1rem;
+    top: 6rem;
+    width: 280px;
+    background: rgba(243, 233, 210, 0.95);
+    border: var(--border-width) solid var(--ink-primary);
+    padding: 1rem;
+    box-shadow: var(--ui-shadow);
+    font-size: 0.9rem;
+    border-radius: 4px;
+}
+
+.panel h3 {
+    margin-top: 0;
+    border-bottom: 1px solid var(--rubric-red);
+    color: var(--rubric-red);
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    padding-bottom: 0.5rem;
+}
+
+.control-group {
+    margin-bottom: 1rem;
+}
+
+.control-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.3rem;
+    color: var(--ink-primary);
+}
+
+input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+    accent-color: var(--rubric-red);
+}
+
+input[type="text"],
+input[type="color"],
+textarea {
+    width: 100%;
+    padding: 0.4rem;
+    border: 1px solid var(--ink-faded);
+    background: var(--parchment-bg);
+    font-family: 'IM Fell English', serif;
+    color: var(--ink-primary);
+    border-radius: 2px;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* === Info Panel === */
+
+#info-panel {
+    display: none;
+}
+
+/* === Canvas === */
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+/* === Timeline === */
+
+.timeline-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--ink-faded);
+}
+
+.timeline-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+#year-display {
+    font-weight: bold;
+    color: var(--rubric-red);
+}
+
+/* === Utility Classes === */
+
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
