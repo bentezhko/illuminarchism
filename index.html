@@ -3,136 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Illuminarchism | The Scriptorium</title>
-    
-    <!-- Medieval Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
-    
-    <!-- Stylesheet -->
-    <link rel="stylesheet" href="src/style.css">
-
-    <style>
-        /* View Container Styles */
-        .view-container {
-            display: none;
-            width: 100%;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
-        
-        .view-container.active {
-            display: block;
-        }
-
-        /* View Indicator */
-        #view-indicator {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(43, 33, 24, 0.85);
-            color: #f3e9d2;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-family: 'Cinzel', serif;
-            font-size: 12px;
-            z-index: 100000;
-            pointer-events: none;
-            border: 2px solid #c5a059;
-            box-shadow: 0 4px 6px rgba(43, 33, 24, 0.3);
-        }
-    </style>
-</head>
-<body>
-
-    <!-- View Indicator -->
-    <div id="view-indicator">View 1: Scriptorium</div>
-
-    <!-- VIEW 1: Original Atlas (Scriptorium) -->
-    <div id="original-view" class="view-container active">
-        <!-- UI Overlay Layer -->
-        <div id="ui-layer">
-            <header class="pointer-events-auto">
-                <h1>Illumin<span>archism</span> <small>Ver. Scriptorium</small></h1>
-                <div class="file-controls">
-                    <button class="btn-text" id="btn-save">💾 Save Atlas</button>
-                    <button class="btn-text" id="btn-load">📂 Load Atlas</button>
-                    <input type="file" id="file-input" accept=".json" hidden>
-                </div>
-            </header>
-
-            <!-- Toolbar -->
-            <div class="toolbar pointer-events-auto" id="toolbar">
-                <button class="btn-tool active" data-tool="pan" title="Pan/Zoom (Hand)">✋</button>
-                <button class="btn-tool" data-tool="select" title="Select Realm">🔍</button>
-                <hr>
-                <button class="btn-tool" data-tool="draw_poly" title="Draw Realm (Polygon)">🏰</button>
-                <button class="btn-tool" data-tool="draw_line" title="Draw Route/River">〰️</button>
-                <button class="btn-tool" data-tool="roughen" title="Roughen Edges (Fractal)">⚡</button>
-            </div>
-
-            <!-- Ink Controls Panel -->
-            <div class="panel pointer-events-auto" id="ink-controls">
-                <h3>Ink Properties</h3>
-                
-                <div class="control-group">
-                    <label>Wobble (Hand Shake)</label>
-                    <input type="range" id="sl-wobble" min="0" max="10" value="2">
-                </div>
-                
-                <div class="control-group">
-                    <label>Ink Bleed (Opacity)</label>
-                    <input type="range" id="sl-bleed" min="1" max="10" value="3">
-                </div>
-                
-                <div class="control-group">
-                    <label>Paper Roughness</label>
-                    <input type="range" id="sl-paper" min="0" max="50" value="20">
-                </div>
-                
-                <div class="timeline-container">
-                    <div class="timeline-display">
-                        <strong>Timeline:</strong>
-                        <span id="year-display">1000 AD</span>
-                    </div>
-                    <input type="range" id="time-slider" min="800" max="1400" value="1000">
-                </div>
-            </div>
-
-            <!-- Info Panel (Hidden by default) -->
-            <div class="panel pointer-events-auto" id="info-panel" style="top: 25rem;">
-                <h3>Realm Details</h3>
-                
-                <div class="control-group">
-                    <label>Name</label>
-                    <input type="text" id="entity-name" placeholder="Realm name">
-                </div>
-                
-                <div class="control-group">
-                    <label>Color</label>
-                    <input type="color" id="entity-color" value="#264e86">
-                </div>
-                
-                <div class="control-group">
-                    <label>Description</label>
-                    <textarea id="entity-desc" placeholder="Describe this realm..."></textarea>
-                </div>
-            </div>
-        </div>
-
-        <!-- Canvas -->
-        <canvas id="map-canvas"></canvas>
-
-        <!-- Main Application Script (ES6 Module) -->
-        <script type="module" src="/src/main.js"></script>
-    </div>
-
-    <!-- VIEW 2: Gemini Webapp -->
-    <div id="gemini-view" class="view-container">
-        
+    <title>Illuminarchism | The Feudal Atlas</title>
     
     <!-- Google Fonts for Medieval Aesthetic -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -372,21 +243,22 @@
             margin-top: 0.5rem;
         }
     </style>
-
+</head>
+<body>
 
     <!-- UI Overlay Layer -->
-    <div id="ui-layer-gemini">
+    <div id="ui-layer">
         <header class="pointer-events-auto">
             <h1>Illumin<span>archism</span> <small>Ver. Gemini</small></h1>
             <div class="file-controls">
-                <button class="btn-text" id="btn-save-gemini">💾 Save Atlas</button>
-                <button class="btn-text" id="btn-load-gemini">📂 Load Atlas</button>
-                <input type="file" id="file-input-gemini" accept=".json" hidden>
+                <button class="btn-text" id="btn-save">💾 Save Atlas</button>
+                <button class="btn-text" id="btn-load">📂 Load Atlas</button>
+                <input type="file" id="file-input" accept=".json" hidden>
             </div>
         </header>
 
         <!-- Toolbar -->
-        <div class="toolbar pointer-events-auto" id="toolbar-gemini">
+        <div class="toolbar pointer-events-auto" id="toolbar">
             <button class="btn-tool active" data-tool="pan" title="Pan/Zoom (Hand)">✋</button>
             <button class="btn-tool" data-tool="select" title="Select Realm">🔍</button>
             <hr>
@@ -396,56 +268,56 @@
         </div>
 
         <!-- Ink Controls Panel -->
-        <div class="panel pointer-events-auto" id="ink-controls-gemini">
+        <div class="panel pointer-events-auto" id="ink-controls">
             <h3>Ink Properties</h3>
             
             <div class="control-group">
                 <label>Wobble (Hand Shake)</label>
-                <input type="range" id="sl-wobble-gemini" min="0" max="10" value="2">
+                <input type="range" id="sl-wobble" min="0" max="10" value="2">
             </div>
             
             <div class="control-group">
                 <label>Ink Bleed (Opacity)</label>
-                <input type="range" id="sl-bleed-gemini" min="1" max="10" value="3">
+                <input type="range" id="sl-bleed" min="1" max="10" value="3">
             </div>
             
             <div class="control-group">
                 <label>Paper Roughness</label>
-                <input type="range" id="sl-paper-gemini" min="0" max="50" value="20">
+                <input type="range" id="sl-paper" min="0" max="50" value="20">
             </div>
             
             <div class="timeline-container">
                 <div class="timeline-display">
                     <strong>Timeline:</strong>
-                    <span id="year-display-gemini">1000 AD</span>
+                    <span id="year-display">1000 AD</span>
                 </div>
-                <input type="range" id="time-slider-gemini" min="800" max="1400" value="1000">
+                <input type="range" id="time-slider" min="800" max="1400" value="1000">
             </div>
         </div>
 
         <!-- Info Panel (Hidden by default) -->
-        <div class="panel pointer-events-auto" id="info-panel-gemini" style="top: 25rem; display: none;">
+        <div class="panel pointer-events-auto" id="info-panel" style="top: 25rem; display: none;">
             <h3>Realm Details</h3>
             
             <div class="control-group">
                 <label>Name</label>
-                <input type="text" id="entity-name-gemini" placeholder="Realm name">
+                <input type="text" id="entity-name" placeholder="Realm name">
             </div>
             
             <div class="control-group">
                 <label>Color</label>
-                <input type="color" id="entity-color-gemini" value="#264e86">
+                <input type="color" id="entity-color" value="#264e86">
             </div>
             
             <div class="control-group">
                 <label>Description</label>
-                <textarea id="entity-desc-gemini" placeholder="Describe this realm..."></textarea>
+                <textarea id="entity-desc" placeholder="Describe this realm..."></textarea>
             </div>
         </div>
     </div>
 
     <!-- Canvas -->
-    <canvas id="map-canvas-gemini"></canvas>
+    <canvas id="map-canvas"></canvas>
 
     <script>
         // ========================================
@@ -480,7 +352,7 @@
         // ========================================
         // CANVAS SETUP
         // ========================================
-        const canvas = document.getElementById('map-canvas-gemini');
+        const canvas = document.getElementById('map-canvas');
         const ctx = canvas.getContext('2d');
 
         function resizeCanvas() {
@@ -769,18 +641,18 @@
         // UI PANEL INTERACTIONS
         // ========================================
         function showInfoPanel() {
-            const panel = document.getElementById('info-panel-gemini');
+            const panel = document.getElementById('info-panel');
             panel.style.display = 'block';
             
             if (AppState.selectedEntity) {
-                document.getElementById('entity-name-gemini').value = AppState.selectedEntity.name;
-                document.getElementById('entity-color-gemini').value = AppState.selectedEntity.color;
-                document.getElementById('entity-desc-gemini').value = AppState.selectedEntity.description;
+                document.getElementById('entity-name').value = AppState.selectedEntity.name;
+                document.getElementById('entity-color').value = AppState.selectedEntity.color;
+                document.getElementById('entity-desc').value = AppState.selectedEntity.description;
             }
         }
 
         function hideInfoPanel() {
-            document.getElementById('info-panel-gemini').style.display = 'none';
+            document.getElementById('info-panel').style.display = 'none';
         }
 
         // ========================================
@@ -802,44 +674,44 @@
         // ========================================
         // INK CONTROLS
         // ========================================
-        document.getElementById('sl-wobble-gemini').addEventListener('input', (e) => {
+        document.getElementById('sl-wobble').addEventListener('input', (e) => {
             AppState.wobble = parseFloat(e.target.value);
             redraw();
         });
 
-        document.getElementById('sl-bleed-gemini').addEventListener('input', (e) => {
+        document.getElementById('sl-bleed').addEventListener('input', (e) => {
             AppState.bleed = parseFloat(e.target.value);
             redraw();
         });
 
-        document.getElementById('sl-paper-gemini').addEventListener('input', (e) => {
+        document.getElementById('sl-paper').addEventListener('input', (e) => {
             AppState.paperRoughness = parseFloat(e.target.value);
             redraw();
         });
 
-        document.getElementById('time-slider-gemini').addEventListener('input', (e) => {
+        document.getElementById('time-slider').addEventListener('input', (e) => {
             AppState.currentYear = parseInt(e.target.value);
-            document.getElementById('year-display-gemini').textContent = AppState.currentYear + ' AD';
+            document.getElementById('year-display').textContent = AppState.currentYear + ' AD';
             redraw();
         });
 
         // ========================================
         // ENTITY INFO UPDATES
         // ========================================
-        document.getElementById('entity-name-gemini').addEventListener('input', (e) => {
+        document.getElementById('entity-name').addEventListener('input', (e) => {
             if (AppState.selectedEntity) {
                 AppState.selectedEntity.name = e.target.value;
             }
         });
 
-        document.getElementById('entity-color-gemini').addEventListener('input', (e) => {
+        document.getElementById('entity-color').addEventListener('input', (e) => {
             if (AppState.selectedEntity) {
                 AppState.selectedEntity.color = e.target.value;
                 redraw();
             }
         });
 
-        document.getElementById('entity-desc-gemini').addEventListener('input', (e) => {
+        document.getElementById('entity-desc').addEventListener('input', (e) => {
             if (AppState.selectedEntity) {
                 AppState.selectedEntity.description = e.target.value;
             }
@@ -848,7 +720,7 @@
         // ========================================
         // FILE OPERATIONS
         // ========================================
-        document.getElementById('btn-save-gemini').addEventListener('click', () => {
+        document.getElementById('btn-save').addEventListener('click', () => {
             const json = JSON.stringify({
                 version: '1.0',
                 camera: AppState.camera,
@@ -864,11 +736,11 @@
             URL.revokeObjectURL(url);
         });
 
-        document.getElementById('btn-load-gemini').addEventListener('click', () => {
-            document.getElementById('file-input-gemini').click();
+        document.getElementById('btn-load').addEventListener('click', () => {
+            document.getElementById('file-input').click();
         });
 
-        document.getElementById('file-input-gemini').addEventListener('change', (e) => {
+        document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             
@@ -922,58 +794,6 @@
         // INITIALIZE
         // ========================================
         redraw();
-    </script>
-
-    </div>
-
-    <!-- View Switching Script -->
-    <script>
-        // Track which keys are currently pressed
-        const keysPressed = new Set();
-        let currentView = 1;
-
-        // Listen for keydown events
-        document.addEventListener('keydown', (e) => {
-            keysPressed.add(e.key.toLowerCase());
-            
-            // Check if both 'v' and '2' are pressed
-            if (keysPressed.has('v') && keysPressed.has('2')) {
-                toggleView();
-                keysPressed.clear(); // Clear to prevent repeated toggles
-            }
-        });
-
-        // Listen for keyup events to remove keys from the set
-        document.addEventListener('keyup', (e) => {
-            keysPressed.delete(e.key.toLowerCase());
-        });
-
-        function toggleView() {
-            const originalView = document.getElementById('original-view');
-            const geminiView = document.getElementById('gemini-view');
-            const indicator = document.getElementById('view-indicator');
-            
-            if (currentView === 1) {
-                // Switch to View 2 (Gemini)
-                originalView.classList.remove('active');
-                geminiView.classList.add('active');
-                indicator.textContent = 'View 2: Gemini Atlas';
-                currentView = 2;
-            } else {
-                // Switch back to View 1 (Original)
-                geminiView.classList.remove('active');
-                originalView.classList.add('active');
-                indicator.textContent = 'View 1: Scriptorium';
-                currentView = 1;
-            }
-        }
-
-        // Optional: Add Escape key to quickly return to View 1
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && currentView === 2) {
-                toggleView();
-            }
-        });
     </script>
 
 </body>
