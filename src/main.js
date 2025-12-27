@@ -15,6 +15,8 @@ import InfoPanel from './ui/InfoPanel.js';
 
 export default class IlluminarchismApp {
     constructor() {
+        console.log('🎨 Initializing Illuminarchism...');
+        
         // Core components
         this.canvas = this.createCanvas();
         this.renderer = new WebGLRenderer(this.canvas);
@@ -45,6 +47,7 @@ export default class IlluminarchismApp {
         
         // Initialize
         this.initUI();
+        this.createDemoEntity(); // Add demo entity
         this.loadInitialAtlases();
         this.startRenderLoop();
         
@@ -52,6 +55,7 @@ export default class IlluminarchismApp {
         window.illuminarchismApp = this;
         
         console.log('✨ Illuminarchism initialized (WebGL mode)');
+        console.log('📝 Try clicking the 🏰 Draw Polygon tool and clicking to add points!');
     }
     
     createCanvas() {
@@ -60,6 +64,29 @@ export default class IlluminarchismApp {
             throw new Error('Canvas element #map-canvas not found');
         }
         return canvas;
+    }
+    
+    /**
+     * Create a demo entity to verify rendering works
+     */
+    createDemoEntity() {
+        const demo = new HistoricalEntity(
+            'demo-kingdom',
+            'Demo Kingdom',
+            'polity',
+            '#264e86'
+        );
+        
+        // Simple square
+        demo.addKeyframe(1000, [
+            {x: -100, y: -100},
+            {x: 100, y: -100},
+            {x: 100, y: 100},
+            {x: -100, y: 100}
+        ]);
+        
+        this.entities.push(demo);
+        console.log('✓ Demo entity created (blue square at center)');
     }
     
     /**
@@ -88,7 +115,6 @@ export default class IlluminarchismApp {
     syncEntities() {
         this.entities = this.atlasManager.entities;
         this.updateEntities();
-        this.render();
     }
     
     /**
@@ -121,6 +147,7 @@ export default class IlluminarchismApp {
         if (wobbleSlider) {
             wobbleSlider.addEventListener('input', (e) => {
                 this.renderer.settings.wobble = parseFloat(e.target.value);
+                console.log('Wobble:', this.renderer.settings.wobble);
             });
         }
         
@@ -128,6 +155,7 @@ export default class IlluminarchismApp {
         if (bleedSlider) {
             bleedSlider.addEventListener('input', (e) => {
                 this.renderer.settings.inkBleed = parseFloat(e.target.value) * 0.1;
+                console.log('Ink bleed:', this.renderer.settings.inkBleed);
             });
         }
         
@@ -135,13 +163,13 @@ export default class IlluminarchismApp {
         if (paperSlider) {
             paperSlider.addEventListener('input', (e) => {
                 this.renderer.settings.paperRoughness = parseFloat(e.target.value);
+                console.log('Paper roughness:', this.renderer.settings.paperRoughness);
             });
         }
         
         // Window resize
         window.addEventListener('resize', () => {
             this.renderer.resize();
-            this.render();
         });
     }
     
@@ -206,6 +234,7 @@ export default class IlluminarchismApp {
     setActiveTool(toolName) {
         this.activeTool = toolName;
         this.cancelDraft();
+        console.log('🔧 Tool:', toolName);
     }
     
     /**
@@ -213,6 +242,7 @@ export default class IlluminarchismApp {
      */
     addDraftPoint(worldPos) {
         this.draftPoints.push(worldPos);
+        console.log(`📍 Draft point ${this.draftPoints.length}:`, worldPos);
     }
     
     /**
@@ -220,7 +250,7 @@ export default class IlluminarchismApp {
      */
     finishDraft() {
         if (this.draftPoints.length < 3) {
-            alert('Need at least 3 points!');
+            alert('Need at least 3 points to create a polygon!');
             return;
         }
         
@@ -239,12 +269,17 @@ export default class IlluminarchismApp {
         this.entities.push(entity);
         this.selectEntity(entity.id);
         this.cancelDraft();
+        
+        console.log('✓ Entity created:', entity.name);
     }
     
     /**
      * Cancel current draft
      */
     cancelDraft() {
+        if (this.draftPoints.length > 0) {
+            console.log('✗ Draft cancelled');
+        }
         this.draftPoints = [];
         this.draftCursor = null;
     }
@@ -256,6 +291,7 @@ export default class IlluminarchismApp {
         this.selectedEntityId = entityId;
         const entity = this.entities.find(e => e.id === entityId);
         this.infoPanel.update(entity);
+        console.log('Selected:', entity?.name || entityId);
     }
     
     /**
@@ -275,6 +311,8 @@ export default class IlluminarchismApp {
             this.selectedEntityId = null;
             this.infoPanel.hide();
         }
+        
+        console.log('✗ Entity deleted');
     }
     
     /**
@@ -294,6 +332,8 @@ export default class IlluminarchismApp {
         
         const roughened = GeoMath.roughenPolygon(currentGeo, 3, 20);
         entity.addKeyframe(this.currentYear, roughened);
+        
+        console.log('⚡ Borders roughened');
     }
     
     /**
@@ -329,7 +369,12 @@ export default class IlluminarchismApp {
             return true;
         });
         
-        this.renderer.render(visibleEntities, this.currentYear);
+        this.renderer.render(
+            visibleEntities, 
+            this.currentYear,
+            this.draftPoints,
+            this.draftCursor
+        );
     }
 }
 

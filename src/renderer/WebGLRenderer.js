@@ -40,15 +40,19 @@ export default class WebGLRenderer {
         // Shader programs
         this.mainProgram = null;
         this.parchmentProgram = null;
+        this.lineProgram = null; // For draft lines
         
         // Buffers
         this.geometryBuffer = null;
         this.parchmentBuffer = null;
+        this.lineBuffer = null;
         
         // Animation
         this.startTime = Date.now();
         
         this.init();
+        
+        console.log('✓ WebGL Renderer initialized');
     }
     
     init() {
@@ -61,6 +65,7 @@ export default class WebGLRenderer {
         // Create shader programs
         this.mainProgram = this.createProgram(VERTEX_SHADER, FRAGMENT_SHADER);
         this.parchmentProgram = this.createProgram(PARCHMENT_VERTEX_SHADER, PARCHMENT_FRAGMENT_SHADER);
+        this.lineProgram = this.createSimpleLineProgram();
         
         // Create parchment background (full-screen quad)
         this.createParchmentBuffer();
@@ -73,6 +78,8 @@ export default class WebGLRenderer {
         
         const vertexShader = this.compileShader(gl.VERTEX_SHADER, vertexSource);
         const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, fragmentSource);
+        
+        if (!vertexShader || !fragmentShader) return null;
         
         const program = gl.createProgram();
         gl.attachShader(program, vertexShader);
@@ -96,11 +103,37 @@ export default class WebGLRenderer {
         
         if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
             console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+            console.error('Source:', source);
             gl.deleteShader(shader);
             return null;
         }
         
         return shader;
+    }
+    
+    createSimpleLineProgram() {
+        const vertexShader = `#version 300 es
+        precision highp float;
+        
+        in vec2 a_position;
+        uniform mat3 u_matrix;
+        
+        void main() {
+            vec3 transformed = u_matrix * vec3(a_position, 1.0);
+            gl_Position = vec4(transformed.xy, 0.0, 1.0);
+        }`;
+        
+        const fragmentShader = `#version 300 es
+        precision highp float;
+        
+        uniform vec4 u_color;
+        out vec4 outColor;
+        
+        void main() {
+            outColor = u_color;
+        }`;
+        
+        return this.createProgram(vertexShader, fragmentShader);
     }
     
     createParchmentBuffer() {
@@ -228,57 +261,153 @@ export default class WebGLRenderer {
         return [r, g, b];
     }
     
-    render(entities, currentYear) {
+    /**
+     * Render draft lines (when drawing)
+     */
+    renderDraft(draftPoints, draftCursor) {
+        if (!draftPoints || draftPoints.length === 0) return;
+        
+        const gl = this.gl;
+        const points = [...draftPoints];
+        if (draftCursor) {
+            points.push(draftCursor);
+        }
+        
+        if (points.length < 2) return;
+        
+        // Create line vertices
+        const vertices = [];
+        for (const point of points) {
+            vertices.push(point.x, point.y);
+        }
+        
+        // Upload to GPU
+        if (!this.lineBuffer) {
+            this.lineBuffer = gl.createBuffer();
+        }
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+        
+        // Use line program
+        gl.useProgram(this.lineProgram);
+        
+        // Set uniforms
+        const matrixLocation = gl.getUniformLocation(this.lineProgram, 'u_matrix');
+        const colorLocation = gl.getUniformLocation(this.lineProgram, 'u_color');
+        
+        gl.uniformMatrix3fv(matrixLocation, false, this.createTransformMatrix());
+        gl.uniform4f(colorLocation, 0.541, 0.2, 0.141, 1.0); // Rubric red
+        
+        // Set vertex attributes
+        const positionLocation = gl.getAttribLocation(this.lineProgram, 'a_position');
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer);
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+        
+        // Draw line strip
+        gl.lineWidth(2.0);
+        gl.drawArrays(gl.LINE_STRIP, 0, points.length);
+        
+        // Draw vertices as points
+        for (let i = 0; i < draftPoints.length; i++) {
+            const point = draftPoints[i];
+            this.renderPoint(point.x, point.y, 5, [0.541, 0.2, 0.141, 1.0]);
+        }
+    }
+    
+    /**
+     * Render a single point
+     */
+    renderPoint(x, y, size, color) {
+        const gl = this.gl;
+        
+        // Create small quad
+        const s = size / this.transform.zoom;
+        const vertices = new Float32Array([
+            x - s, y - s,
+            x + s, y - s,
+            x - s, y + s,
+            x - s, y + s,
+            x + s, y - s,
+            x + s, y + s
+        ]);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
+        
+        gl.useProgram(this.lineProgram);
+        
+        const matrixLocation = gl.getUniformLocation(this.lineProgram, 'u_matrix');
+        const colorLocation = gl.getUniformLocation(this.lineProgram, 'u_color');
+        
+        gl.uniformMatrix3fv(matrixLocation, false, this.createTransformMatrix());
+        gl.uniform4f(colorLocation, color[0], color[1], color[2], color[3]);
+        
+        const positionLocation = gl.getAttribLocation(this.lineProgram, 'a_position');
+        gl.enableVertexAttribArray(positionLocation);
+        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+        
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+    
+    render(entities, currentYear, draftPoints = null, draftCursor = null) {
         const gl = this.gl;
         
         this.clear();
         this.renderParchment();
         
-        // Upload geometry
+        // Upload and render geometry
         const vertexCount = this.uploadGeometry(entities, currentYear);
-        if (vertexCount === 0) return;
         
-        // Use main program
-        gl.useProgram(this.mainProgram);
+        if (vertexCount > 0) {
+            // Use main program
+            gl.useProgram(this.mainProgram);
+            
+            // Set uniforms
+            const matrixLocation = gl.getUniformLocation(this.mainProgram, 'u_matrix');
+            const yearLocation = gl.getUniformLocation(this.mainProgram, 'u_currentYear');
+            const wobbleLocation = gl.getUniformLocation(this.mainProgram, 'u_wobble');
+            const timeLocation = gl.getUniformLocation(this.mainProgram, 'u_time');
+            const bleedLocation = gl.getUniformLocation(this.mainProgram, 'u_inkBleed');
+            const paperLocation = gl.getUniformLocation(this.mainProgram, 'u_paperRough');
+            
+            gl.uniformMatrix3fv(matrixLocation, false, this.createTransformMatrix());
+            gl.uniform1f(yearLocation, currentYear);
+            gl.uniform1f(wobbleLocation, this.settings.wobble);
+            gl.uniform1f(timeLocation, (Date.now() - this.startTime) * 0.001);
+            gl.uniform1f(bleedLocation, this.settings.inkBleed);
+            gl.uniform1f(paperLocation, this.settings.paperRoughness);
+            
+            // Set vertex attributes
+            const stride = 8 * 4; // 8 floats * 4 bytes
+            const positionLocation = gl.getAttribLocation(this.mainProgram, 'a_position');
+            const texCoordLocation = gl.getAttribLocation(this.mainProgram, 'a_texCoord');
+            const colorLocation = gl.getAttribLocation(this.mainProgram, 'a_color');
+            const yearAttrLocation = gl.getAttribLocation(this.mainProgram, 'a_year');
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.geometryBuffer);
+            
+            gl.enableVertexAttribArray(positionLocation);
+            gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, stride, 0);
+            
+            gl.enableVertexAttribArray(texCoordLocation);
+            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 8);
+            
+            gl.enableVertexAttribArray(colorLocation);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, stride, 16);
+            
+            gl.enableVertexAttribArray(yearAttrLocation);
+            gl.vertexAttribPointer(yearAttrLocation, 1, gl.FLOAT, false, stride, 28);
+            
+            // Draw
+            gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+        }
         
-        // Set uniforms
-        const matrixLocation = gl.getUniformLocation(this.mainProgram, 'u_matrix');
-        const yearLocation = gl.getUniformLocation(this.mainProgram, 'u_currentYear');
-        const wobbleLocation = gl.getUniformLocation(this.mainProgram, 'u_wobble');
-        const timeLocation = gl.getUniformLocation(this.mainProgram, 'u_time');
-        const bleedLocation = gl.getUniformLocation(this.mainProgram, 'u_inkBleed');
-        const paperLocation = gl.getUniformLocation(this.mainProgram, 'u_paperRough');
-        
-        gl.uniformMatrix3fv(matrixLocation, false, this.createTransformMatrix());
-        gl.uniform1f(yearLocation, currentYear);
-        gl.uniform1f(wobbleLocation, this.settings.wobble);
-        gl.uniform1f(timeLocation, (Date.now() - this.startTime) * 0.001);
-        gl.uniform1f(bleedLocation, this.settings.inkBleed);
-        gl.uniform1f(paperLocation, this.settings.paperRoughness);
-        
-        // Set vertex attributes
-        const stride = 8 * 4; // 8 floats * 4 bytes
-        const positionLocation = gl.getAttribLocation(this.mainProgram, 'a_position');
-        const texCoordLocation = gl.getAttribLocation(this.mainProgram, 'a_texCoord');
-        const colorLocation = gl.getAttribLocation(this.mainProgram, 'a_color');
-        const yearAttrLocation = gl.getAttribLocation(this.mainProgram, 'a_year');
-        
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.geometryBuffer);
-        
-        gl.enableVertexAttribArray(positionLocation);
-        gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, stride, 0);
-        
-        gl.enableVertexAttribArray(texCoordLocation);
-        gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 8);
-        
-        gl.enableVertexAttribArray(colorLocation);
-        gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, stride, 16);
-        
-        gl.enableVertexAttribArray(yearAttrLocation);
-        gl.vertexAttribPointer(yearAttrLocation, 1, gl.FLOAT, false, stride, 28);
-        
-        // Draw
-        gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+        // Render draft
+        if (draftPoints && draftPoints.length > 0) {
+            this.renderDraft(draftPoints, draftCursor);
+        }
     }
     
     pan(dx, dy) {
