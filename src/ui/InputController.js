@@ -1,6 +1,6 @@
 /**
  * InputController Module
- * Handles mouse and keyboard input
+ * Handles mouse and keyboard input for WebGL renderer
  */
 
 import GeoMath from '../core/GeoMath.js';
@@ -24,13 +24,21 @@ export default class InputController {
             e.preventDefault();
             const delta = -Math.sign(e.deltaY);
             const scale = 1 + (delta * 0.1);
-            this.renderer.zoom(scale, e.offsetX, e.offsetY);
-            this.app.render();
+            
+            // Get mouse position for zoom center
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            this.renderer.zoom(scale, x, y);
         }, { passive: false });
         
         // Mouse down
         canvas.addEventListener('mousedown', (e) => {
-            const worldPos = this.renderer.toWorld(e.offsetX, e.offsetY);
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const worldPos = this.renderer.screenToWorld(screenX, screenY);
             
             if (this.app.activeTool === 'pan') {
                 this.isDragging = true;
@@ -48,7 +56,10 @@ export default class InputController {
         
         // Mouse move
         canvas.addEventListener('mousemove', (e) => {
-            const worldPos = this.renderer.toWorld(e.offsetX, e.offsetY);
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const worldPos = this.renderer.screenToWorld(screenX, screenY);
             
             // Handle panning
             if (this.isDragging && this.app.activeTool === 'pan') {
@@ -57,7 +68,6 @@ export default class InputController {
                 this.renderer.pan(dx, dy);
                 this.lastX = e.clientX;
                 this.lastY = e.clientY;
-                this.app.render();
             }
             
             // Handle hover detection (throttled)
@@ -69,7 +79,6 @@ export default class InputController {
             // Update draft cursor
             if (this.app.activeTool.startsWith('draw_')) {
                 this.app.draftCursor = worldPos;
-                this.app.render();
             }
         });
         
@@ -78,6 +87,9 @@ export default class InputController {
             this.isDragging = false;
             canvas.style.cursor = 'crosshair';
         });
+        
+        // Touch support for mobile
+        this.initTouchSupport(canvas);
         
         // Keyboard shortcuts
         window.addEventListener('keydown', (e) => {
@@ -93,9 +105,63 @@ export default class InputController {
             
             // Delete selected entity
             if ((e.key === 'Delete' || e.key === 'Backspace') && this.app.selectedEntityId) {
+                e.preventDefault();
                 this.app.deleteEntity(this.app.selectedEntityId);
             }
+            
+            // Tool shortcuts
+            if (e.key === 'p' || e.key === 'P') this.app.toolbar.selectTool('pan');
+            if (e.key === 's' || e.key === 'S') this.app.toolbar.selectTool('select');
+            if (e.key === 'd' || e.key === 'D') this.app.toolbar.selectTool('draw_poly');
         });
+    }
+
+    /**
+     * Initialize touch support for tablets/mobile
+     */
+    initTouchSupport(canvas) {
+        let lastTouchDistance = 0;
+        
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                // Two-finger pinch zoom
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+                e.preventDefault();
+            } else if (e.touches.length === 1) {
+                // Single touch
+                this.lastX = e.touches[0].clientX;
+                this.lastY = e.touches[0].clientY;
+            }
+        }, { passive: false });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                // Pinch zoom
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (lastTouchDistance > 0) {
+                    const scale = distance / lastTouchDistance;
+                    const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    this.renderer.zoom(scale, centerX, centerY);
+                }
+                
+                lastTouchDistance = distance;
+                e.preventDefault();
+            } else if (e.touches.length === 1 && this.app.activeTool === 'pan') {
+                // Pan
+                const dx = e.touches[0].clientX - this.lastX;
+                const dy = e.touches[0].clientY - this.lastY;
+                this.renderer.pan(dx, dy);
+                this.lastX = e.touches[0].clientX;
+                this.lastY = e.touches[0].clientY;
+                e.preventDefault();
+            }
+        }, { passive: false });
     }
 
     /**
