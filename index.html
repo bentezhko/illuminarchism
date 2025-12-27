@@ -12,22 +12,381 @@
     
     <!-- Stylesheet -->
     <link rel="stylesheet" href="src/style.css">
+
+    <style>
+        /* View Container Styles */
+        .view-container {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        .view-container.active {
+            display: block;
+        }
+
+        /* View Indicator */
+        #view-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(43, 33, 24, 0.85);
+            color: #f3e9d2;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-family: 'Cinzel', serif;
+            font-size: 12px;
+            z-index: 100000;
+            pointer-events: none;
+            border: 2px solid #c5a059;
+            box-shadow: 0 4px 6px rgba(43, 33, 24, 0.3);
+        }
+    </style>
 </head>
 <body>
 
+    <!-- View Indicator -->
+    <div id="view-indicator">View 1: Scriptorium</div>
+
+    <!-- VIEW 1: Original Atlas (Scriptorium) -->
+    <div id="original-view" class="view-container active">
+        <!-- UI Overlay Layer -->
+        <div id="ui-layer">
+            <header class="pointer-events-auto">
+                <h1>Illumin<span>archism</span> <small>Ver. Scriptorium</small></h1>
+                <div class="file-controls">
+                    <button class="btn-text" id="btn-save">💾 Save Atlas</button>
+                    <button class="btn-text" id="btn-load">📂 Load Atlas</button>
+                    <input type="file" id="file-input" accept=".json" hidden>
+                </div>
+            </header>
+
+            <!-- Toolbar -->
+            <div class="toolbar pointer-events-auto" id="toolbar">
+                <button class="btn-tool active" data-tool="pan" title="Pan/Zoom (Hand)">✋</button>
+                <button class="btn-tool" data-tool="select" title="Select Realm">🔍</button>
+                <hr>
+                <button class="btn-tool" data-tool="draw_poly" title="Draw Realm (Polygon)">🏰</button>
+                <button class="btn-tool" data-tool="draw_line" title="Draw Route/River">〰️</button>
+                <button class="btn-tool" data-tool="roughen" title="Roughen Edges (Fractal)">⚡</button>
+            </div>
+
+            <!-- Ink Controls Panel -->
+            <div class="panel pointer-events-auto" id="ink-controls">
+                <h3>Ink Properties</h3>
+                
+                <div class="control-group">
+                    <label>Wobble (Hand Shake)</label>
+                    <input type="range" id="sl-wobble" min="0" max="10" value="2">
+                </div>
+                
+                <div class="control-group">
+                    <label>Ink Bleed (Opacity)</label>
+                    <input type="range" id="sl-bleed" min="1" max="10" value="3">
+                </div>
+                
+                <div class="control-group">
+                    <label>Paper Roughness</label>
+                    <input type="range" id="sl-paper" min="0" max="50" value="20">
+                </div>
+                
+                <div class="timeline-container">
+                    <div class="timeline-display">
+                        <strong>Timeline:</strong>
+                        <span id="year-display">1000 AD</span>
+                    </div>
+                    <input type="range" id="time-slider" min="800" max="1400" value="1000">
+                </div>
+            </div>
+
+            <!-- Info Panel (Hidden by default) -->
+            <div class="panel pointer-events-auto" id="info-panel" style="top: 25rem;">
+                <h3>Realm Details</h3>
+                
+                <div class="control-group">
+                    <label>Name</label>
+                    <input type="text" id="entity-name" placeholder="Realm name">
+                </div>
+                
+                <div class="control-group">
+                    <label>Color</label>
+                    <input type="color" id="entity-color" value="#264e86">
+                </div>
+                
+                <div class="control-group">
+                    <label>Description</label>
+                    <textarea id="entity-desc" placeholder="Describe this realm..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <canvas id="map-canvas"></canvas>
+
+        <!-- Main Application Script (ES6 Module) -->
+        <script type="module" src="/src/main.js"></script>
+    </div>
+
+    <!-- VIEW 2: Gemini Webapp -->
+    <div id="gemini-view" class="view-container">
+        
+    
+    <!-- Google Fonts for Medieval Aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Palette: Medieval Manuscript */
+            --parchment-bg: #f3e9d2;
+            --parchment-dark: #e0d0b0;
+            --ink-primary: #2b2118;
+            --ink-faded: #5c4d3c;
+            --rubric-red: #8a3324;
+            --gold-leaf: #c5a059;
+            --lapis-lazuli: #264e86;
+            --verdigris: #43b3ae; 
+            
+            --ui-shadow: 0 4px 6px rgba(43, 33, 24, 0.2);
+            --border-width: 2px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'IM Fell English', serif;
+            background: linear-gradient(135deg, var(--parchment-bg) 0%, var(--parchment-dark) 100%);
+            color: var(--ink-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* === HEADER === */
+        header {
+            background: linear-gradient(to bottom, var(--parchment-dark), var(--parchment-bg));
+            border-bottom: var(--border-width) solid var(--ink-faded);
+            box-shadow: var(--ui-shadow);
+            padding: 1rem 2rem;
+            position: relative;
+            z-index: 1000;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            color: var(--rubric-red);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            display: inline-block;
+        }
+
+        h1 span {
+            color: var(--lapis-lazuli);
+        }
+
+        h1 small {
+            font-size: 0.6rem;
+            color: var(--ink-faded);
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        .file-controls {
+            float: right;
+        }
+
+        .btn-text {
+            font-family: 'IM Fell English', serif;
+            background: var(--lapis-lazuli);
+            color: var(--parchment-bg);
+            border: none;
+            padding: 0.5rem 1rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn-text:hover {
+            background: var(--ink-primary);
+        }
+
+        /* === TOOLBAR === */
+        .toolbar {
+            position: fixed;
+            left: 1rem;
+            top: 6rem;
+            background: var(--parchment-bg);
+            border: var(--border-width) solid var(--ink-faded);
+            box-shadow: var(--ui-shadow);
+            display: flex;
+            flex-direction: column;
+            padding: 0.5rem;
+            border-radius: 8px;
+            z-index: 900;
+        }
+
+        .btn-tool {
+            width: 50px;
+            height: 50px;
+            margin: 0.25rem 0;
+            font-size: 1.5rem;
+            cursor: pointer;
+            background: transparent;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-tool:hover {
+            background: var(--parchment-dark);
+            border-color: var(--gold-leaf);
+        }
+
+        .btn-tool.active {
+            background: var(--lapis-lazuli);
+            border-color: var(--ink-primary);
+            color: white;
+        }
+
+        .toolbar hr {
+            width: 100%;
+            border: none;
+            border-top: 1px solid var(--ink-faded);
+            margin: 0.5rem 0;
+        }
+
+        /* === PANELS === */
+        .panel {
+            position: fixed;
+            right: 1rem;
+            top: 6rem;
+            width: 280px;
+            background: var(--parchment-bg);
+            border: var(--border-width) solid var(--ink-faded);
+            box-shadow: var(--ui-shadow);
+            padding: 1rem;
+            border-radius: 8px;
+            z-index: 900;
+        }
+
+        .panel h3 {
+            font-family: 'Cinzel', serif;
+            color: var(--rubric-red);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            border-bottom: 1px solid var(--ink-faded);
+            padding-bottom: 0.5rem;
+        }
+
+        .control-group {
+            margin-bottom: 1rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--ink-faded);
+            margin-bottom: 0.25rem;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .control-group input[type="text"],
+        .control-group input[type="color"],
+        .control-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--ink-faded);
+            border-radius: 4px;
+            background: var(--parchment-dark);
+            color: var(--ink-primary);
+            font-family: 'IM Fell English', serif;
+        }
+
+        .control-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .timeline-container {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--ink-faded);
+        }
+
+        .timeline-display {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        #year-display {
+            color: var(--lapis-lazuli);
+            font-weight: bold;
+        }
+
+        /* === CANVAS === */
+        #map-canvas {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 80px);
+            border: none;
+            cursor: crosshair;
+        }
+
+        /* === UTILITY === */
+        .pointer-events-auto {
+            pointer-events: auto;
+        }
+
+        #ui-layer {
+            pointer-events: none;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Tooltip hints */
+        [title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            background: var(--ink-primary);
+            color: var(--parchment-bg);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            z-index: 10000;
+            margin-top: 0.5rem;
+        }
+    </style>
+
+
     <!-- UI Overlay Layer -->
-    <div id="ui-layer">
+    <div id="ui-layer-gemini">
         <header class="pointer-events-auto">
-            <h1>Illumin<span>archism</span> <small>Ver. Scriptorium</small></h1>
+            <h1>Illumin<span>archism</span> <small>Ver. Gemini</small></h1>
             <div class="file-controls">
-                <button class="btn-text" id="btn-save">💾 Save Atlas</button>
-                <button class="btn-text" id="btn-load">📂 Load Atlas</button>
-                <input type="file" id="file-input" accept=".json" hidden>
+                <button class="btn-text" id="btn-save-gemini">💾 Save Atlas</button>
+                <button class="btn-text" id="btn-load-gemini">📂 Load Atlas</button>
+                <input type="file" id="file-input-gemini" accept=".json" hidden>
             </div>
         </header>
 
         <!-- Toolbar -->
-        <div class="toolbar pointer-events-auto" id="toolbar">
+        <div class="toolbar pointer-events-auto" id="toolbar-gemini">
             <button class="btn-tool active" data-tool="pan" title="Pan/Zoom (Hand)">✋</button>
             <button class="btn-tool" data-tool="select" title="Select Realm">🔍</button>
             <hr>
@@ -37,59 +396,585 @@
         </div>
 
         <!-- Ink Controls Panel -->
-        <div class="panel pointer-events-auto" id="ink-controls">
+        <div class="panel pointer-events-auto" id="ink-controls-gemini">
             <h3>Ink Properties</h3>
             
             <div class="control-group">
                 <label>Wobble (Hand Shake)</label>
-                <input type="range" id="sl-wobble" min="0" max="10" value="2">
+                <input type="range" id="sl-wobble-gemini" min="0" max="10" value="2">
             </div>
             
             <div class="control-group">
                 <label>Ink Bleed (Opacity)</label>
-                <input type="range" id="sl-bleed" min="1" max="10" value="3">
+                <input type="range" id="sl-bleed-gemini" min="1" max="10" value="3">
             </div>
             
             <div class="control-group">
                 <label>Paper Roughness</label>
-                <input type="range" id="sl-paper" min="0" max="50" value="20">
+                <input type="range" id="sl-paper-gemini" min="0" max="50" value="20">
             </div>
             
             <div class="timeline-container">
                 <div class="timeline-display">
                     <strong>Timeline:</strong>
-                    <span id="year-display">1000 AD</span>
+                    <span id="year-display-gemini">1000 AD</span>
                 </div>
-                <input type="range" id="time-slider" min="800" max="1400" value="1000">
+                <input type="range" id="time-slider-gemini" min="800" max="1400" value="1000">
             </div>
         </div>
 
         <!-- Info Panel (Hidden by default) -->
-        <div class="panel pointer-events-auto" id="info-panel" style="top: 25rem;">
+        <div class="panel pointer-events-auto" id="info-panel-gemini" style="top: 25rem; display: none;">
             <h3>Realm Details</h3>
             
             <div class="control-group">
                 <label>Name</label>
-                <input type="text" id="entity-name" placeholder="Realm name">
+                <input type="text" id="entity-name-gemini" placeholder="Realm name">
             </div>
             
             <div class="control-group">
                 <label>Color</label>
-                <input type="color" id="entity-color" value="#264e86">
+                <input type="color" id="entity-color-gemini" value="#264e86">
             </div>
             
             <div class="control-group">
                 <label>Description</label>
-                <textarea id="entity-desc" placeholder="Describe this realm..."></textarea>
+                <textarea id="entity-desc-gemini" placeholder="Describe this realm..."></textarea>
             </div>
         </div>
     </div>
 
     <!-- Canvas -->
-    <canvas id="map-canvas"></canvas>
+    <canvas id="map-canvas-gemini"></canvas>
 
-    <!-- Main Application Script (ES6 Module) -->
-    <script type="module" src="/src/main.js"></script>
+    <script>
+        // ========================================
+        // GLOBAL APP STATE
+        // ========================================
+        const AppState = {
+            currentTool: 'pan',          // Active drawing mode
+            entities: [],                // All polygons/lines
+            selectedEntity: null,        // Currently selected
+            
+            // Camera (pan/zoom)
+            camera: {
+                x: 0,
+                y: 0,
+                zoom: 1
+            },
+            
+            // Ink aesthetic settings
+            wobble: 2,
+            bleed: 3,
+            paperRoughness: 20,
+            
+            // Timeline
+            currentYear: 1000,
+            
+            // Drawing state
+            tempPoints: [],              // Points being drawn
+            isDragging: false,
+            dragStart: { x: 0, y: 0 }
+        };
+
+        // ========================================
+        // CANVAS SETUP
+        // ========================================
+        const canvas = document.getElementById('map-canvas-gemini');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 80; // Account for header
+            redraw();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // ========================================
+        // COORDINATE TRANSFORM
+        // ========================================
+        function screenToWorld(screenX, screenY) {
+            return {
+                x: (screenX - AppState.camera.x) / AppState.camera.zoom,
+                y: (screenY - AppState.camera.y) / AppState.camera.zoom
+            };
+        }
+
+        function worldToScreen(worldX, worldY) {
+            return {
+                x: worldX * AppState.camera.zoom + AppState.camera.x,
+                y: worldY * AppState.camera.zoom + AppState.camera.y
+            };
+        }
+
+        // ========================================
+        // DRAWING UTILITIES
+        // ========================================
+        function applyInkEffect(x, y) {
+            // Add wobble (hand tremor)
+            const wobbleX = (Math.random() - 0.5) * AppState.wobble;
+            const wobbleY = (Math.random() - 0.5) * AppState.wobble;
+            return { x: x + wobbleX, y: y + wobbleY };
+        }
+
+        function drawParchmentBackground() {
+            // Base parchment color
+            ctx.fillStyle = '#f3e9d2';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Paper texture (noise)
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const noise = (Math.random() - 0.5) * AppState.paperRoughness;
+                data[i] += noise;     // R
+                data[i+1] += noise;   // G
+                data[i+2] += noise;   // B
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // ========================================
+        // ENTITY RENDERING
+        // ========================================
+        function drawEntity(entity) {
+            if (entity.points.length < 2) return;
+            
+            ctx.save();
+            
+            // Apply camera transform
+            ctx.translate(AppState.camera.x, AppState.camera.y);
+            ctx.scale(AppState.camera.zoom, AppState.camera.zoom);
+            
+            // Set style based on entity type
+            if (entity.type === 'polygon') {
+                // Fill
+                ctx.fillStyle = entity.color + Math.floor(255 * (AppState.bleed / 10)).toString(16).padStart(2, '0');
+                ctx.beginPath();
+                const firstPoint = applyInkEffect(entity.points[0].x, entity.points[0].y);
+                ctx.moveTo(firstPoint.x, firstPoint.y);
+                
+                for (let i = 1; i < entity.points.length; i++) {
+                    const point = applyInkEffect(entity.points[i].x, entity.points[i].y);
+                    ctx.lineTo(point.x, point.y);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Stroke (border/line)
+            ctx.strokeStyle = entity.type === 'line' ? entity.color : '#2b2118';
+            ctx.lineWidth = entity.type === 'line' ? 3 : 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            const firstStroke = applyInkEffect(entity.points[0].x, entity.points[0].y);
+            ctx.moveTo(firstStroke.x, firstStroke.y);
+            
+            for (let i = 1; i < entity.points.length; i++) {
+                const point = applyInkEffect(entity.points[i].x, entity.points[i].y);
+                ctx.lineTo(point.x, point.y);
+            }
+            
+            if (entity.type === 'polygon') {
+                ctx.closePath();
+            }
+            
+            ctx.stroke();
+            
+            // Highlight if selected
+            if (AppState.selectedEntity === entity) {
+                ctx.strokeStyle = '#c5a059';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([5, 5]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            ctx.restore();
+        }
+
+        function drawTemporaryPath() {
+            if (AppState.tempPoints.length === 0) return;
+            
+            ctx.save();
+            ctx.translate(AppState.camera.x, AppState.camera.y);
+            ctx.scale(AppState.camera.zoom, AppState.camera.zoom);
+            
+            ctx.strokeStyle = '#264e86';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            
+            ctx.beginPath();
+            ctx.moveTo(AppState.tempPoints[0].x, AppState.tempPoints[0].y);
+            
+            for (let i = 1; i < AppState.tempPoints.length; i++) {
+                ctx.lineTo(AppState.tempPoints[i].x, AppState.tempPoints[i].y);
+            }
+            
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
+        // ========================================
+        // MAIN RENDER LOOP
+        // ========================================
+        function redraw() {
+            drawParchmentBackground();
+            
+            // Draw all entities
+            AppState.entities.forEach(entity => {
+                if (!entity.startYear || !entity.endYear || 
+                    (AppState.currentYear >= entity.startYear && AppState.currentYear <= entity.endYear)) {
+                    drawEntity(entity);
+                }
+            });
+            
+            // Draw work-in-progress path
+            drawTemporaryPath();
+        }
+
+        // ========================================
+        // MOUSE INTERACTION
+        // ========================================
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const worldPos = screenToWorld(mouseX, mouseY);
+            
+            if (AppState.currentTool === 'pan') {
+                AppState.isDragging = true;
+                AppState.dragStart = { x: mouseX, y: mouseY };
+            } else if (AppState.currentTool === 'draw_poly' || AppState.currentTool === 'draw_line') {
+                AppState.tempPoints.push(worldPos);
+                redraw();
+            } else if (AppState.currentTool === 'select') {
+                selectEntityAt(worldPos);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (AppState.currentTool === 'pan' && AppState.isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                AppState.camera.x += mouseX - AppState.dragStart.x;
+                AppState.camera.y += mouseY - AppState.dragStart.y;
+                
+                AppState.dragStart = { x: mouseX, y: mouseY };
+                redraw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            AppState.isDragging = false;
+        });
+
+        canvas.addEventListener('dblclick', () => {
+            if ((AppState.currentTool === 'draw_poly' || AppState.currentTool === 'draw_line') 
+                && AppState.tempPoints.length >= 2) {
+                finalizePath();
+            }
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const worldBefore = screenToWorld(mouseX, mouseY);
+            
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            AppState.camera.zoom *= zoomFactor;
+            AppState.camera.zoom = Math.max(0.1, Math.min(5, AppState.camera.zoom));
+            
+            const worldAfter = screenToWorld(mouseX, mouseY);
+            
+            AppState.camera.x += (worldAfter.x - worldBefore.x) * AppState.camera.zoom;
+            AppState.camera.y += (worldAfter.y - worldBefore.y) * AppState.camera.zoom;
+            
+            redraw();
+        });
+
+        // ========================================
+        // ENTITY OPERATIONS
+        // ========================================
+        function finalizePath() {
+            const newEntity = {
+                id: Date.now(),
+                type: AppState.currentTool === 'draw_poly' ? 'polygon' : 'line',
+                points: [...AppState.tempPoints],
+                color: '#264e86',
+                name: 'New ' + (AppState.currentTool === 'draw_poly' ? 'Realm' : 'Route'),
+                description: '',
+                startYear: 800,
+                endYear: 1400
+            };
+            
+            AppState.entities.push(newEntity);
+            AppState.tempPoints = [];
+            AppState.selectedEntity = newEntity;
+            
+            showInfoPanel();
+            redraw();
+        }
+
+        function selectEntityAt(worldPos) {
+            // Simple point-in-polygon test
+            for (let i = AppState.entities.length - 1; i >= 0; i--) {
+                const entity = AppState.entities[i];
+                if (isPointInEntity(worldPos, entity)) {
+                    AppState.selectedEntity = entity;
+                    showInfoPanel();
+                    redraw();
+                    return;
+                }
+            }
+            
+            AppState.selectedEntity = null;
+            hideInfoPanel();
+            redraw();
+        }
+
+        function isPointInEntity(point, entity) {
+            if (entity.type === 'line') return false;
+            
+            // Ray casting algorithm
+            let inside = false;
+            const points = entity.points;
+            
+            for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+                const xi = points[i].x, yi = points[i].y;
+                const xj = points[j].x, yj = points[j].y;
+                
+                const intersect = ((yi > point.y) !== (yj > point.y))
+                    && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+                
+                if (intersect) inside = !inside;
+            }
+            
+            return inside;
+        }
+
+        // ========================================
+        // UI PANEL INTERACTIONS
+        // ========================================
+        function showInfoPanel() {
+            const panel = document.getElementById('info-panel-gemini');
+            panel.style.display = 'block';
+            
+            if (AppState.selectedEntity) {
+                document.getElementById('entity-name-gemini').value = AppState.selectedEntity.name;
+                document.getElementById('entity-color-gemini').value = AppState.selectedEntity.color;
+                document.getElementById('entity-desc-gemini').value = AppState.selectedEntity.description;
+            }
+        }
+
+        function hideInfoPanel() {
+            document.getElementById('info-panel-gemini').style.display = 'none';
+        }
+
+        // ========================================
+        // TOOLBAR BUTTONS
+        // ========================================
+        document.querySelectorAll('.btn-tool').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                AppState.currentTool = btn.dataset.tool;
+                
+                if (AppState.currentTool !== 'draw_poly' && AppState.currentTool !== 'draw_line') {
+                    AppState.tempPoints = [];
+                    redraw();
+                }
+            });
+        });
+
+        // ========================================
+        // INK CONTROLS
+        // ========================================
+        document.getElementById('sl-wobble-gemini').addEventListener('input', (e) => {
+            AppState.wobble = parseFloat(e.target.value);
+            redraw();
+        });
+
+        document.getElementById('sl-bleed-gemini').addEventListener('input', (e) => {
+            AppState.bleed = parseFloat(e.target.value);
+            redraw();
+        });
+
+        document.getElementById('sl-paper-gemini').addEventListener('input', (e) => {
+            AppState.paperRoughness = parseFloat(e.target.value);
+            redraw();
+        });
+
+        document.getElementById('time-slider-gemini').addEventListener('input', (e) => {
+            AppState.currentYear = parseInt(e.target.value);
+            document.getElementById('year-display-gemini').textContent = AppState.currentYear + ' AD';
+            redraw();
+        });
+
+        // ========================================
+        // ENTITY INFO UPDATES
+        // ========================================
+        document.getElementById('entity-name-gemini').addEventListener('input', (e) => {
+            if (AppState.selectedEntity) {
+                AppState.selectedEntity.name = e.target.value;
+            }
+        });
+
+        document.getElementById('entity-color-gemini').addEventListener('input', (e) => {
+            if (AppState.selectedEntity) {
+                AppState.selectedEntity.color = e.target.value;
+                redraw();
+            }
+        });
+
+        document.getElementById('entity-desc-gemini').addEventListener('input', (e) => {
+            if (AppState.selectedEntity) {
+                AppState.selectedEntity.description = e.target.value;
+            }
+        });
+
+        // ========================================
+        // FILE OPERATIONS
+        // ========================================
+        document.getElementById('btn-save-gemini').addEventListener('click', () => {
+            const json = JSON.stringify({
+                version: '1.0',
+                camera: AppState.camera,
+                entities: AppState.entities
+            }, null, 2);
+            
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'illuminarchism_atlas.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        document.getElementById('btn-load-gemini').addEventListener('click', () => {
+            document.getElementById('file-input-gemini').click();
+        });
+
+        document.getElementById('file-input-gemini').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    AppState.camera = data.camera || { x: 0, y: 0, zoom: 1 };
+                    AppState.entities = data.entities || [];
+                    AppState.selectedEntity = null;
+                    hideInfoPanel();
+                    redraw();
+                } catch (err) {
+                    alert('Error loading file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // ========================================
+        // ROUGHEN TOOL
+        // ========================================
+        document.querySelector('[data-tool="roughen"]').addEventListener('click', () => {
+            if (AppState.selectedEntity && AppState.selectedEntity.type === 'polygon') {
+                roughenEntity(AppState.selectedEntity);
+                redraw();
+            }
+        });
+
+        function roughenEntity(entity) {
+            const newPoints = [];
+            
+            for (let i = 0; i < entity.points.length; i++) {
+                const p1 = entity.points[i];
+                const p2 = entity.points[(i + 1) % entity.points.length];
+                
+                newPoints.push(p1);
+                
+                // Add midpoint with offset
+                const mid = {
+                    x: (p1.x + p2.x) / 2 + (Math.random() - 0.5) * 20,
+                    y: (p1.y + p2.y) / 2 + (Math.random() - 0.5) * 20
+                };
+                newPoints.push(mid);
+            }
+            
+            entity.points = newPoints;
+        }
+
+        // ========================================
+        // INITIALIZE
+        // ========================================
+        redraw();
+    </script>
+
+    </div>
+
+    <!-- View Switching Script -->
+    <script>
+        // Track which keys are currently pressed
+        const keysPressed = new Set();
+        let currentView = 1;
+
+        // Listen for keydown events
+        document.addEventListener('keydown', (e) => {
+            keysPressed.add(e.key.toLowerCase());
+            
+            // Check if both 'v' and '2' are pressed
+            if (keysPressed.has('v') && keysPressed.has('2')) {
+                toggleView();
+                keysPressed.clear(); // Clear to prevent repeated toggles
+            }
+        });
+
+        // Listen for keyup events to remove keys from the set
+        document.addEventListener('keyup', (e) => {
+            keysPressed.delete(e.key.toLowerCase());
+        });
+
+        function toggleView() {
+            const originalView = document.getElementById('original-view');
+            const geminiView = document.getElementById('gemini-view');
+            const indicator = document.getElementById('view-indicator');
+            
+            if (currentView === 1) {
+                // Switch to View 2 (Gemini)
+                originalView.classList.remove('active');
+                geminiView.classList.add('active');
+                indicator.textContent = 'View 2: Gemini Atlas';
+                currentView = 2;
+            } else {
+                // Switch back to View 1 (Original)
+                geminiView.classList.remove('active');
+                originalView.classList.add('active');
+                indicator.textContent = 'View 1: Scriptorium';
+                currentView = 1;
+            }
+        }
+
+        // Optional: Add Escape key to quickly return to View 1
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && currentView === 2) {
+                toggleView();
+            }
+        });
+    </script>
 
 </body>
 </html>
