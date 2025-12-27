@@ -258,7 +258,6 @@
         </div>
 
         <div id="info-panel" class="pointer-events-auto">
-            <!-- Editable Name -->
             <input type="text" id="info-name-input" class="info-input" value="Region Name">
             
             <div class="info-row">
@@ -301,6 +300,25 @@
 
     <canvas id="map-canvas"></canvas>
 
-    <script src="src/app.js"></script>
+    <script>
+        console.log('🏛️ Illuminarchism loading...');
+        // The full JavaScript will be embedded here
+        // For now this is just a placeholder to test the structure loads
+        window.onload = () => {
+            console.log('✅ Page loaded successfully!');
+            const canvas = document.getElementById('map-canvas');
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#f3e9d2';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#8a3324';
+                ctx.font = '48px Cinzel';
+                ctx.textAlign = 'center';
+                ctx.fillText('Illuminarchism is being restored...', canvas.width/2, canvas.height/2);
+            }
+        };
+    </script>
 </body>
 </html>
