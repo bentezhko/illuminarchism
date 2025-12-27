@@ -26,775 +26,631 @@
             --border-width: 2px;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; user-select: none; }
 
-        body {
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+            background-color: var(--parchment-bg);
             font-family: 'IM Fell English', serif;
-            background: linear-gradient(135deg, var(--parchment-bg) 0%, var(--parchment-dark) 100%);
             color: var(--ink-primary);
-            overflow: hidden;
-            height: 100vh;
         }
 
-        /* === HEADER === */
+        /* --- UI Overlay --- */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            z-index: 10;
+        }
+
+        .pointer-events-auto { pointer-events: auto; }
+
+        /* Header */
         header {
-            background: linear-gradient(to bottom, var(--parchment-dark), var(--parchment-bg));
-            border-bottom: var(--border-width) solid var(--ink-faded);
-            box-shadow: var(--ui-shadow);
             padding: 1rem 2rem;
-            position: relative;
-            z-index: 1000;
+            background: linear-gradient(to bottom, var(--parchment-bg) 80%, transparent);
+            border-bottom: 1px solid var(--gold-leaf);
+            display: flex; justify-content: space-between; align-items: center;
         }
 
         h1 {
             font-family: 'Cinzel', serif;
-            font-size: 2rem;
-            color: var(--rubric-red);
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-            display: inline-block;
+            font-size: 2rem; color: var(--rubric-red);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
 
-        h1 span {
-            color: var(--lapis-lazuli);
-        }
+        h1 span { color: var(--lapis-lazuli); }
+        h1 small { font-size: 0.6rem; color: var(--ink-faded); margin-left: 0.5rem; }
 
-        h1 small {
-            font-size: 0.6rem;
-            color: var(--ink-faded);
-            margin-left: 0.5rem;
-            vertical-align: middle;
-        }
-
-        .file-controls {
-            float: right;
-        }
-
-        .btn-text {
+        .file-controls button {
             font-family: 'IM Fell English', serif;
-            background: var(--lapis-lazuli);
-            color: var(--parchment-bg);
-            border: none;
-            padding: 0.5rem 1rem;
-            margin-left: 0.5rem;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: background 0.2s;
-            font-size: 0.95rem;
+            background: var(--lapis-lazuli); color: var(--parchment-bg);
+            border: none; padding: 0.5rem 1rem; margin-left: 0.5rem;
+            cursor: pointer; border-radius: 4px; transition: background 0.2s;
         }
 
-        .btn-text:hover {
-            background: var(--ink-primary);
-        }
+        .file-controls button:hover { background: var(--ink-primary); }
 
-        /* === TOOLBAR === */
+        /* Left Toolbar */
         .toolbar {
-            position: fixed;
-            left: 1rem;
-            top: 6rem;
+            position: fixed; left: 1rem; top: 6rem;
             background: var(--parchment-bg);
             border: var(--border-width) solid var(--ink-faded);
             box-shadow: var(--ui-shadow);
-            display: flex;
-            flex-direction: column;
-            padding: 0.5rem;
-            border-radius: 8px;
-            z-index: 900;
+            padding: 0.5rem; border-radius: 8px; z-index: 900;
+            display: flex; flex-direction: column;
         }
 
         .btn-tool {
-            width: 50px;
-            height: 50px;
-            margin: 0.25rem 0;
-            font-size: 1.5rem;
-            cursor: pointer;
-            background: transparent;
-            border: 2px solid transparent;
-            border-radius: 6px;
-            transition: all 0.2s;
+            width: 50px; height: 50px; margin: 0.25rem 0; font-size: 1.5rem;
+            cursor: pointer; background: transparent; border: 2px solid transparent;
+            border-radius: 6px; transition: all 0.2s;
         }
 
-        .btn-tool:hover {
-            background: var(--parchment-dark);
-            border-color: var(--gold-leaf);
-        }
+        .btn-tool:hover { background: var(--parchment-dark); border-color: var(--gold-leaf); }
+        .btn-tool.active { background: var(--lapis-lazuli); border-color: var(--ink-primary); color: white; }
+        .toolbar hr { width: 100%; border: none; border-top: 1px solid var(--ink-faded); margin: 0.5rem 0; }
 
-        .btn-tool.active {
-            background: var(--lapis-lazuli);
-            border-color: var(--ink-primary);
-            color: white;
-        }
-
-        .toolbar hr {
-            width: 100%;
-            border: none;
-            border-top: 1px solid var(--ink-faded);
-            margin: 0.5rem 0;
-        }
-
-        /* === PANELS === */
+        /* Right Panel */
         .panel {
-            position: fixed;
-            right: 1rem;
-            top: 6rem;
-            width: 280px;
-            background: var(--parchment-bg);
-            border: var(--border-width) solid var(--ink-faded);
-            box-shadow: var(--ui-shadow);
-            padding: 1rem;
-            border-radius: 8px;
-            z-index: 900;
+            position: fixed; right: 1rem; top: 6rem; width: 280px;
+            background: var(--parchment-bg); border: var(--border-width) solid var(--ink-faded);
+            box-shadow: var(--ui-shadow); padding: 1rem; border-radius: 8px; z-index: 900;
         }
 
         .panel h3 {
-            font-family: 'Cinzel', serif;
-            color: var(--rubric-red);
-            margin-bottom: 1rem;
-            font-size: 1.2rem;
-            border-bottom: 1px solid var(--ink-faded);
-            padding-bottom: 0.5rem;
+            font-family: 'Cinzel', serif; color: var(--rubric-red); margin-bottom: 1rem;
+            font-size: 1.2rem; border-bottom: 1px solid var(--ink-faded); padding-bottom: 0.5rem;
         }
 
-        .control-group {
-            margin-bottom: 1rem;
+        .control-group { margin-bottom: 1rem; }
+        .control-group label { display: block; font-size: 0.9rem; color: var(--ink-faded); margin-bottom: 0.25rem; }
+        .control-group input, .control-group select, .control-group textarea {
+            width: 100%; padding: 0.5rem; border: 1px solid var(--ink-faded); border-radius: 4px;
+            background: var(--parchment-dark); color: var(--ink-primary); font-family: 'IM Fell English', serif;
         }
+        .control-group textarea { resize: vertical; min-height: 60px; }
+        .control-group input[type="range"] { cursor: pointer; }
 
-        .control-group label {
-            display: block;
-            font-size: 0.9rem;
-            color: var(--ink-faded);
-            margin-bottom: 0.25rem;
-        }
-
-        .control-group input[type="range"] {
-            width: 100%;
-            cursor: pointer;
-        }
-
-        .control-group input[type="text"],
-        .control-group input[type="color"],
-        .control-group textarea {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid var(--ink-faded);
-            border-radius: 4px;
-            background: var(--parchment-dark);
-            color: var(--ink-primary);
-            font-family: 'IM Fell English', serif;
-        }
-
-        .control-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .timeline-container {
-            margin-top: 1.5rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--ink-faded);
-        }
-
+        /* Timeline */
+        .timeline-area { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--ink-faded); }
         .timeline-display {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
+            display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;
+        }
+        #year-display { color: var(--lapis-lazuli); font-weight: bold; }
+
+        /* Layer Visibility */
+        .layer-toggle { margin-bottom: 0.5rem; display: flex; align-items: center; }
+        .layer-toggle input { margin-right: 0.5rem; }
+
+        /* Bottom debug info */
+        .debug-info {
+            position: fixed; bottom: 1rem; left: 1rem; background: rgba(0,0,0,0.7);
+            color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; z-index: 1000;
         }
 
-        #year-display {
-            color: var(--lapis-lazuli);
-            font-weight: bold;
-        }
-
-        /* === CANVAS === */
-        #map-canvas {
-            display: block;
-            width: 100%;
-            height: calc(100vh - 80px);
-            border: none;
-            cursor: crosshair;
-        }
-
-        /* === UTILITY === */
-        .pointer-events-auto {
-            pointer-events: auto;
-        }
-
-        #ui-layer {
-            pointer-events: none;
-            position: relative;
-            z-index: 10;
-        }
-
-        /* Tooltip hints */
-        [title]:hover::after {
-            content: attr(title);
-            position: absolute;
-            background: var(--ink-primary);
-            color: var(--parchment-bg);
-            padding: 0.5rem;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            z-index: 10000;
-            margin-top: 0.5rem;
-        }
+        /* Canvas */
+        #canvas { display: block; cursor: crosshair; }
     </style>
 </head>
 <body>
-
-    <!-- UI Overlay Layer -->
     <div id="ui-layer">
         <header class="pointer-events-auto">
-            <h1>Illumin<span>archism</span> <small>Ver. Gemini</small></h1>
+            <h1>Illumin<span>archism</span> <small>Ver. Atlas</small></h1>
             <div class="file-controls">
-                <button class="btn-text" id="btn-save">💾 Save Atlas</button>
-                <button class="btn-text" id="btn-load">📂 Load Atlas</button>
+                <button id="btn-save">💾 Save</button>
+                <button id="btn-load">📂 Load</button>
                 <input type="file" id="file-input" accept=".json" hidden>
             </div>
         </header>
+    </div>
 
-        <!-- Toolbar -->
-        <div class="toolbar pointer-events-auto" id="toolbar">
-            <button class="btn-tool active" data-tool="pan" title="Pan/Zoom (Hand)">✋</button>
-            <button class="btn-tool" data-tool="select" title="Select Realm">🔍</button>
-            <hr>
-            <button class="btn-tool" data-tool="draw_poly" title="Draw Realm (Polygon)">🏰</button>
-            <button class="btn-tool" data-tool="draw_line" title="Draw Route/River">〰️</button>
-            <button class="btn-tool" data-tool="roughen" title="Roughen Edges (Fractal)">⚡</button>
+    <div class="toolbar pointer-events-auto">
+        <button class="btn-tool active" data-tool="pan" title="Pan/Zoom">✋</button>
+        <button class="btn-tool" data-tool="select" title="Select Entity">🔍</button>
+        <hr>
+        <button class="btn-tool" data-tool="draw" title="Draw">🖊️</button>
+        <button class="btn-tool" data-tool="edit" title="Edit Points">⚒️</button>
+        <hr>
+        <button class="btn-tool" id="btn-add-keyframe" title="Add Keyframe">🎬</button>
+    </div>
+
+    <div class="panel pointer-events-auto" id="controls-panel">
+        <h3>Entity Details</h3>
+        <div class="control-group">
+            <label>Entity Type</label>
+            <select id="entity-type">
+                <option value="polity">Polity</option>
+                <option value="sub-polity">Sub-Polity</option>
+                <option value="city">City</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Name</label>
+            <input type="text" id="entity-name" placeholder="Entity name">
+        </div>
+        <div class="control-group">
+            <label>Color</label>
+            <input type="color" id="entity-color" value="#264e86">
+        </div>
+        <div class="control-group">
+            <label>Parent ID (optional)</label>
+            <input type="text" id="parent-id" placeholder="Leave blank or enter ID">
+        </div>
+        <div class="control-group">
+            <label>Description</label>
+            <textarea id="entity-desc"></textarea>
         </div>
 
-        <!-- Ink Controls Panel -->
-        <div class="panel pointer-events-auto" id="ink-controls">
-            <h3>Ink Properties</h3>
-            
-            <div class="control-group">
-                <label>Wobble (Hand Shake)</label>
-                <input type="range" id="sl-wobble" min="0" max="10" value="2">
+        <div class="timeline-area">
+            <h3>Timeline</h3>
+            <div class="timeline-display">
+                <span><strong>Year:</strong></span>
+                <span id="year-display">1000</span>
             </div>
-            
-            <div class="control-group">
-                <label>Ink Bleed (Opacity)</label>
-                <input type="range" id="sl-bleed" min="1" max="10" value="3">
-            </div>
-            
-            <div class="control-group">
-                <label>Paper Roughness</label>
-                <input type="range" id="sl-paper" min="0" max="50" value="20">
-            </div>
-            
-            <div class="timeline-container">
-                <div class="timeline-display">
-                    <strong>Timeline:</strong>
-                    <span id="year-display">1000 AD</span>
-                </div>
-                <input type="range" id="time-slider" min="800" max="1400" value="1000">
-            </div>
+            <input type="range" id="time-slider" min="800" max="1500" value="1000" step="10">
         </div>
 
-        <!-- Info Panel (Hidden by default) -->
-        <div class="panel pointer-events-auto" id="info-panel" style="top: 25rem; display: none;">
-            <h3>Realm Details</h3>
-            
-            <div class="control-group">
-                <label>Name</label>
-                <input type="text" id="entity-name" placeholder="Realm name">
-            </div>
-            
-            <div class="control-group">
-                <label>Color</label>
-                <input type="color" id="entity-color" value="#264e86">
-            </div>
-            
-            <div class="control-group">
-                <label>Description</label>
-                <textarea id="entity-desc" placeholder="Describe this realm..."></textarea>
-            </div>
+        <h3 style="margin-top:1.5rem;">Layers</h3>
+        <div class="layer-toggle">
+            <input type="checkbox" id="toggle-polity" checked>
+            <label>Polities</label>
+        </div>
+        <div class="layer-toggle">
+            <input type="checkbox" id="toggle-sub-polity" checked>
+            <label>Sub-Polities</label>
+        </div>
+        <div class="layer-toggle">
+            <input type="checkbox" id="toggle-city" checked>
+            <label>Cities</label>
         </div>
     </div>
 
-    <!-- Canvas -->
-    <canvas id="map-canvas"></canvas>
+    <canvas id="canvas"></canvas>
+    <div class="debug-info">Year: 1000 | Active: 0</div>
 
     <script>
-        // ========================================
-        // GLOBAL APP STATE
-        // ========================================
-        const AppState = {
-            currentTool: 'pan',          // Active drawing mode
-            entities: [],                // All polygons/lines
-            selectedEntity: null,        // Currently selected
-            
-            // Camera (pan/zoom)
-            camera: {
-                x: 0,
-                y: 0,
-                zoom: 1
-            },
-            
-            // Ink aesthetic settings
-            wobble: 2,
-            bleed: 3,
-            paperRoughness: 20,
-            
-            // Timeline
-            currentYear: 1000,
-            
-            // Drawing state
-            tempPoints: [],              // Points being drawn
-            isDragging: false,
-            dragStart: { x: 0, y: 0 }
-        };
+        const CONFIG = { RESAMPLE_COUNT: 50 };
 
-        // ========================================
-        // CANVAS SETUP
-        // ========================================
-        const canvas = document.getElementById('map-canvas');
-        const ctx = canvas.getContext('2d');
+        // --- 1. Geometry Utilities ---
+        function lerp(a, b, t) { return a + (b - a) * t; }
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight - 80; // Account for header
-            redraw();
-        }
-
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        // ========================================
-        // COORDINATE TRANSFORM
-        // ========================================
-        function screenToWorld(screenX, screenY) {
-            return {
-                x: (screenX - AppState.camera.x) / AppState.camera.zoom,
-                y: (screenY - AppState.camera.y) / AppState.camera.zoom
-            };
-        }
-
-        function worldToScreen(worldX, worldY) {
-            return {
-                x: worldX * AppState.camera.zoom + AppState.camera.x,
-                y: worldY * AppState.camera.zoom + AppState.camera.y
-            };
-        }
-
-        // ========================================
-        // DRAWING UTILITIES
-        // ========================================
-        function applyInkEffect(x, y) {
-            // Add wobble (hand tremor)
-            const wobbleX = (Math.random() - 0.5) * AppState.wobble;
-            const wobbleY = (Math.random() - 0.5) * AppState.wobble;
-            return { x: x + wobbleX, y: y + wobbleY };
-        }
-
-        function drawParchmentBackground() {
-            // Base parchment color
-            ctx.fillStyle = '#f3e9d2';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Paper texture (noise)
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            
-            for (let i = 0; i < data.length; i += 4) {
-                const noise = (Math.random() - 0.5) * AppState.paperRoughness;
-                data[i] += noise;     // R
-                data[i+1] += noise;   // G
-                data[i+2] += noise;   // B
-            }
-            
-            ctx.putImageData(imageData, 0, 0);
-        }
-
-        // ========================================
-        // ENTITY RENDERING
-        // ========================================
-        function drawEntity(entity) {
-            if (entity.points.length < 2) return;
-            
-            ctx.save();
-            
-            // Apply camera transform
-            ctx.translate(AppState.camera.x, AppState.camera.y);
-            ctx.scale(AppState.camera.zoom, AppState.camera.zoom);
-            
-            // Set style based on entity type
-            if (entity.type === 'polygon') {
-                // Fill
-                ctx.fillStyle = entity.color + Math.floor(255 * (AppState.bleed / 10)).toString(16).padStart(2, '0');
-                ctx.beginPath();
-                const firstPoint = applyInkEffect(entity.points[0].x, entity.points[0].y);
-                ctx.moveTo(firstPoint.x, firstPoint.y);
-                
-                for (let i = 1; i < entity.points.length; i++) {
-                    const point = applyInkEffect(entity.points[i].x, entity.points[i].y);
-                    ctx.lineTo(point.x, point.y);
-                }
-                ctx.closePath();
-                ctx.fill();
-            }
-            
-            // Stroke (border/line)
-            ctx.strokeStyle = entity.type === 'line' ? entity.color : '#2b2118';
-            ctx.lineWidth = entity.type === 'line' ? 3 : 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            ctx.beginPath();
-            const firstStroke = applyInkEffect(entity.points[0].x, entity.points[0].y);
-            ctx.moveTo(firstStroke.x, firstStroke.y);
-            
-            for (let i = 1; i < entity.points.length; i++) {
-                const point = applyInkEffect(entity.points[i].x, entity.points[i].y);
-                ctx.lineTo(point.x, point.y);
-            }
-            
-            if (entity.type === 'polygon') {
-                ctx.closePath();
-            }
-            
-            ctx.stroke();
-            
-            // Highlight if selected
-            if (AppState.selectedEntity === entity) {
-                ctx.strokeStyle = '#c5a059';
-                ctx.lineWidth = 4;
-                ctx.setLineDash([5, 5]);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
-            
-            ctx.restore();
-        }
-
-        function drawTemporaryPath() {
-            if (AppState.tempPoints.length === 0) return;
-            
-            ctx.save();
-            ctx.translate(AppState.camera.x, AppState.camera.y);
-            ctx.scale(AppState.camera.zoom, AppState.camera.zoom);
-            
-            ctx.strokeStyle = '#264e86';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            
-            ctx.beginPath();
-            ctx.moveTo(AppState.tempPoints[0].x, AppState.tempPoints[0].y);
-            
-            for (let i = 1; i < AppState.tempPoints.length; i++) {
-                ctx.lineTo(AppState.tempPoints[i].x, AppState.tempPoints[i].y);
-            }
-            
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.restore();
-        }
-
-        // ========================================
-        // MAIN RENDER LOOP
-        // ========================================
-        function redraw() {
-            drawParchmentBackground();
-            
-            // Draw all entities
-            AppState.entities.forEach(entity => {
-                if (!entity.startYear || !entity.endYear || 
-                    (AppState.currentYear >= entity.startYear && AppState.currentYear <= entity.endYear)) {
-                    drawEntity(entity);
-                }
-            });
-            
-            // Draw work-in-progress path
-            drawTemporaryPath();
-        }
-
-        // ========================================
-        // MOUSE INTERACTION
-        // ========================================
-        canvas.addEventListener('mousedown', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            const worldPos = screenToWorld(mouseX, mouseY);
-            
-            if (AppState.currentTool === 'pan') {
-                AppState.isDragging = true;
-                AppState.dragStart = { x: mouseX, y: mouseY };
-            } else if (AppState.currentTool === 'draw_poly' || AppState.currentTool === 'draw_line') {
-                AppState.tempPoints.push(worldPos);
-                redraw();
-            } else if (AppState.currentTool === 'select') {
-                selectEntityAt(worldPos);
-            }
-        });
-
-        canvas.addEventListener('mousemove', (e) => {
-            if (AppState.currentTool === 'pan' && AppState.isDragging) {
-                const rect = canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
-                
-                AppState.camera.x += mouseX - AppState.dragStart.x;
-                AppState.camera.y += mouseY - AppState.dragStart.y;
-                
-                AppState.dragStart = { x: mouseX, y: mouseY };
-                redraw();
-            }
-        });
-
-        canvas.addEventListener('mouseup', () => {
-            AppState.isDragging = false;
-        });
-
-        canvas.addEventListener('dblclick', () => {
-            if ((AppState.currentTool === 'draw_poly' || AppState.currentTool === 'draw_line') 
-                && AppState.tempPoints.length >= 2) {
-                finalizePath();
-            }
-        });
-
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            
-            const worldBefore = screenToWorld(mouseX, mouseY);
-            
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-            AppState.camera.zoom *= zoomFactor;
-            AppState.camera.zoom = Math.max(0.1, Math.min(5, AppState.camera.zoom));
-            
-            const worldAfter = screenToWorld(mouseX, mouseY);
-            
-            AppState.camera.x += (worldAfter.x - worldBefore.x) * AppState.camera.zoom;
-            AppState.camera.y += (worldAfter.y - worldBefore.y) * AppState.camera.zoom;
-            
-            redraw();
-        });
-
-        // ========================================
-        // ENTITY OPERATIONS
-        // ========================================
-        function finalizePath() {
-            const newEntity = {
-                id: Date.now(),
-                type: AppState.currentTool === 'draw_poly' ? 'polygon' : 'line',
-                points: [...AppState.tempPoints],
-                color: '#264e86',
-                name: 'New ' + (AppState.currentTool === 'draw_poly' ? 'Realm' : 'Route'),
-                description: '',
-                startYear: 800,
-                endYear: 1400
-            };
-            
-            AppState.entities.push(newEntity);
-            AppState.tempPoints = [];
-            AppState.selectedEntity = newEntity;
-            
-            showInfoPanel();
-            redraw();
-        }
-
-        function selectEntityAt(worldPos) {
-            // Simple point-in-polygon test
-            for (let i = AppState.entities.length - 1; i >= 0; i--) {
-                const entity = AppState.entities[i];
-                if (isPointInEntity(worldPos, entity)) {
-                    AppState.selectedEntity = entity;
-                    showInfoPanel();
-                    redraw();
-                    return;
-                }
-            }
-            
-            AppState.selectedEntity = null;
-            hideInfoPanel();
-            redraw();
-        }
-
-        function isPointInEntity(point, entity) {
-            if (entity.type === 'line') return false;
-            
-            // Ray casting algorithm
-            let inside = false;
-            const points = entity.points;
-            
-            for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-                const xi = points[i].x, yi = points[i].y;
-                const xj = points[j].x, yj = points[j].y;
-                
-                const intersect = ((yi > point.y) !== (yj > point.y))
-                    && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
-                
-                if (intersect) inside = !inside;
-            }
-            
-            return inside;
-        }
-
-        // ========================================
-        // UI PANEL INTERACTIONS
-        // ========================================
-        function showInfoPanel() {
-            const panel = document.getElementById('info-panel');
-            panel.style.display = 'block';
-            
-            if (AppState.selectedEntity) {
-                document.getElementById('entity-name').value = AppState.selectedEntity.name;
-                document.getElementById('entity-color').value = AppState.selectedEntity.color;
-                document.getElementById('entity-desc').value = AppState.selectedEntity.description;
-            }
-        }
-
-        function hideInfoPanel() {
-            document.getElementById('info-panel').style.display = 'none';
-        }
-
-        // ========================================
-        // TOOLBAR BUTTONS
-        // ========================================
-        document.querySelectorAll('.btn-tool').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                AppState.currentTool = btn.dataset.tool;
-                
-                if (AppState.currentTool !== 'draw_poly' && AppState.currentTool !== 'draw_line') {
-                    AppState.tempPoints = [];
-                    redraw();
-                }
-            });
-        });
-
-        // ========================================
-        // INK CONTROLS
-        // ========================================
-        document.getElementById('sl-wobble').addEventListener('input', (e) => {
-            AppState.wobble = parseFloat(e.target.value);
-            redraw();
-        });
-
-        document.getElementById('sl-bleed').addEventListener('input', (e) => {
-            AppState.bleed = parseFloat(e.target.value);
-            redraw();
-        });
-
-        document.getElementById('sl-paper').addEventListener('input', (e) => {
-            AppState.paperRoughness = parseFloat(e.target.value);
-            redraw();
-        });
-
-        document.getElementById('time-slider').addEventListener('input', (e) => {
-            AppState.currentYear = parseInt(e.target.value);
-            document.getElementById('year-display').textContent = AppState.currentYear + ' AD';
-            redraw();
-        });
-
-        // ========================================
-        // ENTITY INFO UPDATES
-        // ========================================
-        document.getElementById('entity-name').addEventListener('input', (e) => {
-            if (AppState.selectedEntity) {
-                AppState.selectedEntity.name = e.target.value;
-            }
-        });
-
-        document.getElementById('entity-color').addEventListener('input', (e) => {
-            if (AppState.selectedEntity) {
-                AppState.selectedEntity.color = e.target.value;
-                redraw();
-            }
-        });
-
-        document.getElementById('entity-desc').addEventListener('input', (e) => {
-            if (AppState.selectedEntity) {
-                AppState.selectedEntity.description = e.target.value;
-            }
-        });
-
-        // ========================================
-        // FILE OPERATIONS
-        // ========================================
-        document.getElementById('btn-save').addEventListener('click', () => {
-            const json = JSON.stringify({
-                version: '1.0',
-                camera: AppState.camera,
-                entities: AppState.entities
-            }, null, 2);
-            
-            const blob = new Blob([json], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'illuminarchism_atlas.json';
-            a.click();
-            URL.revokeObjectURL(url);
-        });
-
-        document.getElementById('btn-load').addEventListener('click', () => {
-            document.getElementById('file-input').click();
-        });
-
-        document.getElementById('file-input').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    AppState.camera = data.camera || { x: 0, y: 0, zoom: 1 };
-                    AppState.entities = data.entities || [];
-                    AppState.selectedEntity = null;
-                    hideInfoPanel();
-                    redraw();
-                } catch (err) {
-                    alert('Error loading file: ' + err.message);
-                }
-            };
-            reader.readAsText(file);
-        });
-
-        // ========================================
-        // ROUGHEN TOOL
-        // ========================================
-        document.querySelector('[data-tool="roughen"]').addEventListener('click', () => {
-            if (AppState.selectedEntity && AppState.selectedEntity.type === 'polygon') {
-                roughenEntity(AppState.selectedEntity);
-                redraw();
-            }
-        });
-
-        function roughenEntity(entity) {
+        function resampleGeometry(sourcePoints, targetCount, isClosed) {
+            if (sourcePoints.length < 2) return sourcePoints;
             const newPoints = [];
-            
-            for (let i = 0; i < entity.points.length; i++) {
-                const p1 = entity.points[i];
-                const p2 = entity.points[(i + 1) % entity.points.length];
-                
-                newPoints.push(p1);
-                
-                // Add midpoint with offset
-                const mid = {
-                    x: (p1.x + p2.x) / 2 + (Math.random() - 0.5) * 20,
-                    y: (p1.y + p2.y) / 2 + (Math.random() - 0.5) * 20
-                };
-                newPoints.push(mid);
+            const segments = isClosed ? sourcePoints.length : sourcePoints.length - 1;
+            let totalDist = 0;
+            const dists = [];
+
+            for (let i = 0; i < segments; i++) {
+                const p1 = sourcePoints[i];
+                const p2 = sourcePoints[(i + 1) % sourcePoints.length];
+                const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                dists.push(d);
+                totalDist += d;
             }
-            
-            entity.points = newPoints;
+
+            if (totalDist === 0) return sourcePoints;
+            const stepDist = totalDist / targetCount;
+
+            let currentDist = 0;
+            let segmentIdx = 0;
+            let withinSegmentDist = 0;
+
+            for (let i = 0; i < targetCount; i++) {
+                const targetDist = i * stepDist;
+                while (segmentIdx < segments && currentDist + dists[segmentIdx] < targetDist) {
+                    currentDist += dists[segmentIdx];
+                    segmentIdx++;
+                }
+
+                if (segmentIdx >= segments) {
+                    newPoints.push({...sourcePoints[sourcePoints.length - 1]});
+                    continue;
+                }
+
+                withinSegmentDist = targetDist - currentDist;
+                const t = dists[segmentIdx] > 0 ? withinSegmentDist / dists[segmentIdx] : 0;
+                const p1 = sourcePoints[segmentIdx];
+                const p2 = sourcePoints[(segmentIdx + 1) % sourcePoints.length];
+                newPoints.push({ x: lerp(p1.x, p2.x, t), y: lerp(p1.y, p2.y, t) });
+            }
+
+            while(newPoints.length < targetCount) newPoints.push({...sourcePoints[sourcePoints.length-1]});
+            return newPoints;
         }
 
-        // ========================================
-        // INITIALIZE
-        // ========================================
-        redraw();
-    </script>
+        // --- 2. Data Structures ---
+        class HistoricalEntity {
+            constructor(id, name, type, color, parentId = null) {
+                this.id = id;
+                this.name = name;
+                this.type = type; 
+                this.color = color;
+                this.parentId = parentId; // The glue of the hierarchy
+                this.description = "A mapped entity.";
+                this.timeline = []; 
+                this.validRange = { start: -Infinity, end: Infinity };
+                // Back to basics: Single geometry array
+                this.currentGeometry = null; 
+            }
 
+            addKeyframe(year, geometry) {
+                this.timeline = this.timeline.filter(k => k.year !== year);
+                let resampled;
+                if (this.type === 'city') {
+                    resampled = geometry; 
+                } else {
+                    const isClosed = (this.type === 'polity');
+                    resampled = resampleGeometry(geometry, CONFIG.RESAMPLE_COUNT, isClosed);
+                }
+                this.timeline.push({ year, geometry: resampled });
+                this.timeline.sort((a, b) => a.year - b.year);
+                if(this.timeline.length > 0) {
+                    this.validRange.start = Math.min(this.timeline[0].year - 100, this.validRange.start);
+                    this.validRange.end = Math.max(this.timeline[this.timeline.length-1].year + 100, this.validRange.end);
+                }
+            }
+
+            getGeometryAtYear(targetYear) {
+                if (targetYear < this.validRange.start || targetYear > this.validRange.end || this.timeline.length === 0) return null;
+                if (this.timeline.length === 1) return this.timeline[0].geometry;
+
+                let prev = null, next = null;
+                for (let frame of this.timeline) {
+                    if (frame.year <= targetYear) prev = frame;
+                    if (frame.year >= targetYear && !next) next = frame;
+                }
+
+                if (!prev) return next ? next.geometry : null;
+                if (!next) return prev.geometry;
+                if (prev.year === next.year) return prev.geometry;
+
+                const t = (targetYear - prev.year) / (next.year - prev.year);
+                const interpolated = [];
+                const count = Math.max(prev.geometry.length, next.geometry.length);
+
+                for (let i = 0; i < count; i++) {
+                    const p1 = prev.geometry[i % prev.geometry.length];
+                    const p2 = next.geometry[i % next.geometry.length];
+                    interpolated.push({ x: lerp(p1.x, p2.x, t), y: lerp(p1.y, p2.y, t) });
+                }
+                return interpolated;
+            }
+        }
+
+        // --- 3. Renderer ---
+        class CanvasRenderer {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.transform = { x: 0, y: 0, zoom: 1 };
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            clear() {
+                this.ctx.fillStyle = '#f3e9d2';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+
+            worldToScreen(wx, wy) {
+                return {
+                    x: wx * this.transform.zoom + this.transform.x,
+                    y: wy * this.transform.zoom + this.transform.y
+                };
+            }
+
+            screenToWorld(sx, sy) {
+                return {
+                    x: (sx - this.transform.x) / this.transform.zoom,
+                    y: (sy - this.transform.y) / this.transform.zoom
+                };
+            }
+
+            draw(entities, hoveredId, selectedId, activeTool, layerVisibility) {
+                this.clear();
+                this.ctx.save();
+                this.ctx.translate(this.transform.x, this.transform.y);
+                this.ctx.scale(this.transform.zoom, this.transform.zoom);
+
+                for (let ent of entities) {
+                    if (!layerVisibility[ent.type]) continue;
+                    if (!ent.currentGeometry || ent.currentGeometry.length < 2) continue;
+
+                    if (ent.type === 'city') {
+                        this.drawCity(ent, hoveredId, selectedId);
+                    } else {
+                        this.drawPolygon(ent, hoveredId, selectedId);
+                    }
+                }
+
+                this.ctx.restore();
+            }
+
+            drawPolygon(ent, hoveredId, selectedId) {
+                const geo = ent.currentGeometry;
+                if (!geo || geo.length < 3) return;
+
+                this.ctx.fillStyle = ent.color + '40';
+                this.ctx.strokeStyle = ent.color;
+                this.ctx.lineWidth = 2;
+
+                if (ent.id === hoveredId) this.ctx.lineWidth = 3;
+                if (ent.id === selectedId) { this.ctx.strokeStyle = '#c5a059'; this.ctx.lineWidth = 4; }
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(geo[0].x, geo[0].y);
+                for (let i = 1; i < geo.length; i++) this.ctx.lineTo(geo[i].x, geo[i].y);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+            }
+
+            drawCity(ent, hoveredId, selectedId) {
+                const geo = ent.currentGeometry;
+                if (!geo || geo.length === 0) return;
+                const pos = geo[0];
+
+                this.ctx.fillStyle = ent.color;
+                if (ent.id === hoveredId) this.ctx.fillStyle = '#c5a059';
+                if (ent.id === selectedId) this.ctx.fillStyle = '#8a3324';
+
+                this.ctx.beginPath();
+                this.ctx.arc(pos.x, pos.y, 5 / this.transform.zoom, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            drawDraft(points, cursor, transform, drawType) {
+                if (points.length === 0) return;
+                this.ctx.save();
+                this.ctx.translate(transform.x, transform.y);
+                this.ctx.scale(transform.zoom, transform.zoom);
+
+                this.ctx.strokeStyle = '#264e86';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                this.ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) this.ctx.lineTo(points[i].x, points[i].y);
+                if (cursor) this.ctx.lineTo(cursor.x, cursor.y);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+
+                for (let p of points) {
+                    this.ctx.fillStyle = '#264e86';
+                    this.ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+                }
+
+                this.ctx.restore();
+            }
+        }
+
+        // --- 4. Main App ---
+        class IlluminarchismApp {
+            constructor() {
+                this.canvas = document.getElementById('canvas');
+                this.renderer = new CanvasRenderer(this.canvas);
+                this.entities = [];
+                this.currentYear = 1000;
+                this.nextId = 1;
+
+                this.selectedEntityId = null;
+                this.hoveredEntityId = null;
+                this.activeTool = 'pan';
+                this.drawType = 'polity';
+
+                this.draftPoints = [];
+                this.draftCursor = null;
+
+                this.layerVisibility = { polity: true, 'sub-polity': true, city: true };
+
+                this.isPanning = false;
+                this.lastMouse = { x: 0, y: 0 };
+
+                this.setupUI();
+                this.setupCanvas();
+                this.updateEntities();
+                this.render();
+            }
+
+            setupUI() {
+                document.querySelectorAll('.btn-tool').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.activeTool = btn.dataset.tool;
+                        if (this.activeTool !== 'draw') this.draftPoints = [];
+                        this.render();
+                    });
+                });
+
+                document.getElementById('time-slider').addEventListener('input', (e) => {
+                    this.currentYear = parseInt(e.target.value);
+                    document.getElementById('year-display').textContent = this.currentYear;
+                    this.updateEntities();
+                    this.render();
+                });
+
+                ['polity', 'sub-polity', 'city'].forEach(type => {
+                    document.getElementById('toggle-' + type.replace('-', '-')).addEventListener('change', (e) => {
+                        this.layerVisibility[type] = e.target.checked;
+                        this.render();
+                    });
+                });
+
+                document.getElementById('entity-type').addEventListener('change', (e) => {
+                    this.drawType = e.target.value;
+                });
+
+                document.getElementById('btn-add-keyframe').addEventListener('click', () => {
+                    if (this.selectedEntityId && this.draftPoints.length > 0) {
+                        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                        if (ent) {
+                            ent.addKeyframe(this.currentYear, [...this.draftPoints]);
+                            this.draftPoints = [];
+                            this.updateEntities();
+                            this.render();
+                        }
+                    }
+                });
+
+                document.getElementById('btn-save').addEventListener('click', () => this.saveData());
+                document.getElementById('btn-load').addEventListener('click', () => document.getElementById('file-input').click());
+                document.getElementById('file-input').addEventListener('change', (e) => this.loadData(e));
+            }
+
+            setupCanvas() {
+                this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+                this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
+            }
+
+            onMouseDown(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+                const world = this.renderer.screenToWorld(sx, sy);
+
+                if (this.activeTool === 'pan') {
+                    this.isPanning = true;
+                    this.lastMouse = { x: sx, y: sy };
+                } else if (this.activeTool === 'draw') {
+                    this.draftPoints.push(world);
+                    this.render();
+                } else if (this.activeTool === 'select') {
+                    this.selectEntityAt(world);
+                }
+            }
+
+            onMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+
+                if (this.isPanning && this.activeTool === 'pan') {
+                    this.renderer.transform.x += sx - this.lastMouse.x;
+                    this.renderer.transform.y += sy - this.lastMouse.y;
+                    this.lastMouse = { x: sx, y: sy };
+                    this.render();
+                } else if (this.activeTool === 'draw') {
+                    this.draftCursor = this.renderer.screenToWorld(sx, sy);
+                    this.render();
+                }
+            }
+
+            onMouseUp(e) {
+                if (this.activeTool === 'pan') this.isPanning = false;
+            }
+
+            onWheel(e) {
+                e.preventDefault();
+                const rect = this.canvas.getBoundingClientRect();
+                const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+
+                const worldBefore = this.renderer.screenToWorld(sx, sy);
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                this.renderer.transform.zoom *= zoomFactor;
+                this.renderer.transform.zoom = Math.max(0.1, Math.min(5, this.renderer.transform.zoom));
+
+                const worldAfter = this.renderer.screenToWorld(sx, sy);
+                this.renderer.transform.x += (worldAfter.x - worldBefore.x) * this.renderer.transform.zoom;
+                this.renderer.transform.y += (worldAfter.y - worldBefore.y) * this.renderer.transform.zoom;
+
+                this.render();
+            }
+
+            selectEntityAt(world) {
+                for (let i = this.entities.length - 1; i >= 0; i--) {
+                    const ent = this.entities[i];
+                    if (!ent.currentGeometry) continue;
+                    if (this.isPointInEntity(world, ent)) {
+                        this.selectedEntityId = ent.id;
+                        this.populatePanel(ent);
+                        this.render();
+                        return;
+                    }
+                }
+                this.selectedEntityId = null;
+                this.render();
+            }
+
+            isPointInEntity(pt, ent) {
+                if (ent.type === 'city') {
+                    const pos = ent.currentGeometry[0];
+                    return Math.hypot(pt.x - pos.x, pt.y - pos.y) < 10;
+                }
+                let inside = false;
+                const geo = ent.currentGeometry;
+                for (let i = 0, j = geo.length - 1; i < geo.length; j = i++) {
+                    const xi = geo[i].x, yi = geo[i].y;
+                    const xj = geo[j].x, yj = geo[j].y;
+                    if (((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi)) inside = !inside;
+                }
+                return inside;
+            }
+
+            populatePanel(ent) {
+                document.getElementById('entity-type').value = ent.type;
+                document.getElementById('entity-name').value = ent.name;
+                document.getElementById('entity-color').value = ent.color;
+                document.getElementById('parent-id').value = ent.parentId || '';
+                document.getElementById('entity-desc').value = ent.description;
+            }
+
+            saveData() {
+                const data = JSON.stringify({ entities: this.entities, camera: this.renderer.transform, year: this.currentYear }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'illuminarchism_atlas.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            loadData(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const data = JSON.parse(ev.target.result);
+                    this.entities = data.entities.map(e => Object.assign(new HistoricalEntity(), e));
+                    if (data.camera) this.renderer.transform = data.camera;
+                    if (data.year) {
+                        this.currentYear = data.year;
+                        document.getElementById('time-slider').value = this.currentYear;
+                        document.getElementById('year-display').textContent = this.currentYear;
+                    }
+                    this.updateEntities();
+                    this.render();
+                };
+                reader.readAsText(file);
+            }
+
+            updateEntities() {
+                let cnt = 0;
+                this.entities.forEach(ent => {
+                    ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
+                    if (ent.currentGeometry) cnt++;
+                });
+                const d = document.querySelector('.debug-info');
+                if(d) d.textContent = `Year: ${this.currentYear} | Active: ${cnt}`;
+            }
+
+            render() {
+                this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.layerVisibility);
+                if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
+                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+                }
+            }
+        }
+
+        window.onload = () => { window.illuminarchismApp = new IlluminarchismApp(); };
+    </script>
 </body>
 </html>
