@@ -1,0 +1,11 @@
+{
+  "name": "illuminarchism",
+  "version": "1.0.0",
+  "description": "Historical Atlas Editor",
+  "scripts": {
+    "build": "echo 'No build needed - static HTML'"
+  },
+  "keywords": ["atlas", "history", "map"],
+  "author": "bentezhko",
+  "license": "MIT"
+}
