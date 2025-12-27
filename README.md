@@ -12,8 +12,10 @@ A WebGL-powered historical atlas tool that lets you create, visualize, and anima
 
 - ✨ **Medieval Aesthetic**: GPU-accelerated parchment texture, ink wobble, and watercolor effects
 - 🗺️ **Temporal Cartography**: Keyframe-based geometry with smooth GPU interpolation
-- 📋 **Multi-Layer System**: Independent vector layers (calendars, traffic rules, political boundaries)
-- 🎨 **Interactive Drawing**: Create polygons and lines with fractal border generation
+- 📋 **Multi-Category System**: 🏛️ Political, 🌍 Geographic, 🎭 Cultural, 📝 Linguistic layers
+- 🌊 **Geographic Features**: Rivers, lakes, oceans, mountains, coastlines
+- 🎨 **Interactive Drawing**: Create polygons, lines, and points with fractal border generation
+- 📊 **Data Browser**: Tree-view sidebar for managing hundreds of entities by category
 - 💾 **Atlas Format**: Custom JSON format compatible with GeoJSON
 - 🚀 **High Performance**: 10,000+ polygons at 60 FPS via WebGL
 - 📁 **Git-Based Storage**: Version control your historical data
@@ -35,36 +37,46 @@ npx http-server
 open http://localhost:8000
 ```
 
+## Categories
+
+### 🏛️ Political
+- **Country** (polygon) - Nation states and empires
+- **Region** (polygon) - Provinces, counties, districts
+- **City** (point) - Urban centers
+- **Border** (line) - Political boundaries
+
+### 🌍 Geographic
+- **River** (line) - Flowing water
+- **Lake** (polygon) - Bodies of fresh water
+- **Ocean** (polygon) - Seas and oceans
+- **Mountain Range** (line) - Mountain chains
+- **Coastline** (line) - Coastal boundaries
+
+### 🎭 Cultural
+- **Traffic Direction** (polygon) - Left vs right-side driving regions
+- **Time Format** (polygon) - 12h vs 24h time systems
+- **Calendar System** (polygon) - Julian, Gregorian, Islamic, etc.
+- **Writing Direction** (polygon) - LTR vs RTL writing systems
+
+### 📝 Linguistic
+- **Language** (polygon) - Language regions
+- **Dialect** (polygon) - Regional language variants
+- **Word Evolution** (polygon) - Track individual words through time
+- **Writing Script** (polygon) - Alphabet and writing systems
+
 ## Project Structure
 
 ```
 illuminarchism/
-├── index.html              # Entry point
-├── src/
-│   ├── core/
-│   │   ├── Entity.js        # Historical entity data model
-│   │   ├── GeoMath.js       # Geometric utilities
-│   │   └── AtlasManager.js  # Multi-file atlas loader
-│   ├── renderer/
-│   │   ├── WebGLRenderer.js # GPU rendering engine
-│   │   └── shaders/
-│   │       └── MedievalShader.js # GLSL effects
-│   ├── ui/
-│   │   ├── Toolbar.js       # Tool selection
-│   │   ├── Timeline.js      # Temporal controls
-│   │   ├── InfoPanel.js     # Entity editor
-│   │   └── InputController.js # Input handling
-│   ├── io/
-│   │   └── AtlasExporter.js # Export to JSON
-│   ├── main.js              # Application entry
-│   └── style.css            # Medieval styling
-├── atlases/                 # Vector data repository
+├── index.html              # Entry point (single-file app)
+├── package.json            # Build config for Cloudflare Pages
+├── _headers                # Cloudflare security headers
+├── atlases/                # Vector data repository
 │   ├── political/
-│   ├── calendars/
-│   ├── traffic/
-│   ├── examples/
+│   ├── geographic/
+│   ├── cultural/
+│   ├── linguistic/
 │   └── README.md
-├── MIGRATION.md            # Canvas 2D → WebGL guide
 └── README.md
 ```
 
@@ -73,111 +85,86 @@ illuminarchism/
 ### 1. Draw Your Data
 
 1. Open Illuminarchism in browser
-2. Select drawing tool (🏰 Polygon or 〰️ Line)
-3. Click to add points
-4. Press **Enter** to finish
-5. Edit name, color, description in info panel
+2. Select category (🏛️ Political, 🌍 Geographic, 🎭 Cultural, 📝 Linguistic)
+3. Select subcategory (e.g., River, Country, Language)
+4. Click **🖊️ Draw** tool
+5. Click to add points, press **Enter** or **double-click** to finish
+6. Edit name, color, description in right panel
 
-### 2. Export to Atlas File
+### 2. Use Data Browser
 
-1. Click **💾 Save Atlas**
-2. Enter layer name (e.g., `calendars`, `traffic`, `political`)
-3. File downloads as `atlas_{layer}_{year}.json`
+- Click **📊** button (bottom-left) to open Data Browser
+- See all entities organized by category → subcategory
+- Click any item to select and edit it
+- Each entity has a unique **ID** (#1, #2, etc.)
+- Toggle layer visibility for entire categories
 
-### 3. Add to Repository
+### 3. Export to Atlas File
+
+1. Click **💾 Save**
+2. Downloads `illuminarchism_atlas.json` with all entities
+3. Includes camera position and current year
+
+### 4. Add to Repository
 
 ```bash
 # Move to appropriate directory
-mv ~/Downloads/atlas_calendars_1582.json atlases/calendars/
+mv ~/Downloads/illuminarchism_atlas.json atlases/my_research/
 
 # Commit to version control
-git add atlases/calendars/atlas_calendars_1582.json
-git commit -m "Add Gregorian calendar adoption regions (1582)"
+git add atlases/my_research/illuminarchism_atlas.json
+git commit -m "Add historical water systems (1200 AD)"
 git push
 ```
-
-### 4. Auto-Load on Startup
-
-```javascript
-// Edit src/main.js
-const defaultAtlases = [
-    'atlases/calendars/atlas_calendars_1582.json',
-    'atlases/traffic/left_driving_1800.json'
-];
-```
-
-### 5. Toggle Layers
-
-```javascript
-// In browser console or UI
-app.layerVisibility['calendars'] = true;  // Show
-app.layerVisibility['traffic'] = false;   // Hide
-```
-
-## Atlas Format
-
-Custom JSON format compatible with GeoJSON:
-
-```json
-{
-  "meta": {
-    "id": "gregorian-calendar-1582",
-    "year": 1582,
-    "layer": "calendars",
-    "description": "Regions adopting Gregorian calendar",
-    "author": "bentezhko"
-  },
-  "style": {
-    "color": "#264e86",
-    "strokeWidth": 2,
-    "fillOpacity": 0.4
-  },
-  "entities": [
-    {
-      "id": "papal-states-gregorian",
-      "name": "Papal States",
-      "type": "polity",
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [[
-          [12.0, 42.0],
-          [13.0, 42.0],
-          [13.0, 43.0],
-          [12.0, 43.0],
-          [12.0, 42.0]
-        ]]
-      }
-    }
-  ]
-}
-```
-
-See `atlases/README.md` for complete format specification.
 
 ## Usage
 
 ### Tools
 
-- **✋ Pan**: Click and drag to navigate
+- **✋ Pan**: Click and drag to navigate, scroll to zoom
 - **🔍 Select**: Click entities to select and edit
-- **🏰 Draw Polygon**: Click points, press Enter to finish
-- **〰️ Draw Line**: Draw rivers, routes, borders
-- **⚡ Roughen**: Apply fractal algorithm to borders
+- **🖊️ Draw**: Click points, press Enter/double-click/right-click to finish
+- **⚒️ Edit Points**: Drag individual vertices, Delete key to remove points
+- **🎬 Add Keyframe**: Add geometry at current year for selected entity
 
 ### Keyboard Shortcuts
 
-- `P` - Pan tool
-- `S` - Select tool
-- `D` - Draw polygon
 - `Enter` - Finish drawing
-- `Esc` - Cancel drawing
-- `Delete` - Delete selected entity
+- `Esc` - Cancel drawing/editing
+- `Delete` - Delete point while editing
+- `Space` - Play/pause timeline
+- `←/→` - Step timeline 50 years
+- `Home/End` - Jump to timeline start/end
 
 ### Timeline
 
-- Drag slider to change year
+- Drag slider: 10000 BC to 2025 AD
+- Play button: Animate through time
+- Speed controls: 0.5x, 1x, 2x, 4x
 - Entities interpolate smoothly between keyframes
-- GPU handles temporal blending automatically
+
+## Data Browser
+
+**Tree Structure:**
+```
+📚 Data Browser
+  ├─ 🏛️ Political
+  │   ├─ 📁 Country
+  │   │   ├─ 📍 Roman Empire #1
+  │   │   └─ 📍 Byzantine Empire #2
+  │   └─ 📁 City
+  │       └─ 📍 Constantinople #3
+  ├─ 🌍 Geographic
+  │   ├─ 📁 River
+  │   │   └─ 📍 Danube #4
+  │   └─ 📁 Lake
+  └─ 🎭 Cultural
+```
+
+- Click category header to collapse/expand
+- Click entity to select and edit
+- Selected entities highlighted in blue
+- Toggle entire layers on/off at bottom
 
 ## Configuration
 
@@ -192,110 +179,57 @@ app.renderer.settings.paperRoughness = 30;  // Parchment grain
 
 Or use UI sliders in Ink Properties panel.
 
-## Performance
-
-| Dataset Size | Canvas 2D | WebGL |
-|--------------|-----------|-------|
-| 100 polygons | 60 FPS | 60 FPS |
-| 1,000 polygons | 30 FPS | 60 FPS |
-| 10,000 polygons | 5 FPS | 60 FPS |
-
-WebGL uses GPU parallelization and geometry batching for consistent performance.
-
 ## Browser Support
 
-Requires WebGL2 support:
+Works in all modern browsers (no WebGL required - uses Canvas 2D):
 
-- ✅ Chrome 56+
-- ✅ Firefox 51+
-- ✅ Safari 15+
-- ✅ Edge 79+
-
-Check compatibility: https://get.webgl.org/webgl2/
+- ✅ Chrome 90+
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Edge 90+
 
 ## Examples
 
-### Load Multiple Atlases
+### Track Word Evolution
 
-```javascript
-const atlases = [
-    'atlases/political/ottoman_1453.json',
-    'atlases/calendars/gregorian_1582.json',
-    'atlases/traffic/left_driving_1800.json'
-];
+1. Select **📝 Linguistic** → **Word Evolution**
+2. Name: "water"
+3. Draw region where word="aqua" (Latin) at year 100 AD
+4. Change year to 800 AD, draw new region for "eau" (French)
+5. Play timeline to see word spreading and evolving
 
-await app.atlasManager.loadMultiple(atlases);
-app.syncEntities();
-```
+### Map Traffic Rules
 
-### Export Custom Layer
+1. Select **🎭 Cultural** → **Traffic Direction**
+2. Draw left-side driving regions (UK, Japan, etc.)
+3. Add keyframes at different years to show changes
+4. See how traffic rules spread historically
 
-```javascript
-const customEntities = app.entities.filter(e => !e.atlasId);
-AtlasExporter.exportSession(customEntities, 1453, 'my-research');
-// Downloads: atlas_my-research_1453.json
-```
+### Rivers Changing Course
 
-### Toggle Layer Visibility
+1. Select **🌍 Geographic** → **River**
+2. Draw river at year 1000 AD
+3. Change year to 1500 AD, draw new course
+4. Timeline interpolates the gradual shift
 
-```javascript
-// Show only political boundaries
-app.layerVisibility = {
-    political: true,
-    calendars: false,
-    traffic: false
-};
-```
+## Performance
 
-## Technical Details
-
-### WebGL Rendering Pipeline
-
-1. **Geometry Upload**: Entities → GPU buffers
-2. **Vertex Shader**: Apply wobble, transform coordinates
-3. **Fragment Shader**: Parchment texture, ink bleeding
-4. **Blending**: Alpha compositing for transparency
-
-### Shader Effects
-
-**Parchment Texture**:
-```glsl
-float grain = perlinNoise(uv * 1000.0);
-vec3 parchment = vec3(0.953, 0.914, 0.824) + vec3(grain);
-```
-
-**Ink Wobble**:
-```glsl
-vec2 wobble = (noise(position) - 0.5) * u_wobble;
-position += wobble;
-```
-
-**Watercolor Bleed**:
-```glsl
-for (int i = 0; i < 3; i++) {
-    bleed += perlinNoise(uv * 10.0 + offset);
-}
-color = mix(parchment, ink, bleed);
-```
-
-## Migration from Canvas 2D
-
-See `MIGRATION.md` for complete guide. Key changes:
-
-- Renderer now uses WebGL2 instead of Canvas 2D
-- Performance: 10x improvement for large datasets
-- Atlas system: Multi-file support with layers
-- Same visual effects maintained via shaders
+| Dataset Size | FPS | Notes |
+|--------------|-----|-------|
+| 100 entities | 60 FPS | Smooth |
+| 1,000 entities | 60 FPS | Good |
+| 5,000 entities | 30-60 FPS | Depends on complexity |
 
 ## Future Enhancements
 
-- [ ] PostGIS backend for massive datasets
-- [ ] TimescaleDB for temporal queries
-- [ ] Tile-based rendering for continent-scale maps
-- [ ] SVG export
-- [ ] Collaborative multi-user editing
-- [ ] QGIS/ArcGIS import
-- [ ] Historical map overlay (georeferenced scans)
+- [ ] Import GeoJSON/KML files
+- [ ] Export to SVG/GeoJSON
+- [ ] Search/filter entities
+- [ ] Undo/redo system
+- [ ] Relationship mapping (parent/child entities)
+- [ ] Multi-language UI
+- [ ] Historical map overlay
+- [ ] Collaborative editing
 
 ## License
 
@@ -304,7 +238,7 @@ MIT License - See LICENSE file
 ## Credits
 
 **Developer**: bentezhko  
-**AI Assistant**: Gemini Pro 2.0 Experimental, Claude  
+**AI Assistant**: Perplexity Pro, Claude  
 **Fonts**: Cinzel, IM Fell English (Google Fonts)  
 
 ## Contributing
@@ -314,15 +248,14 @@ Contributions welcome! Please:
 1. Fork repository
 2. Create feature branch
 3. Add atlas files to `atlases/` with proper documentation
-4. Test WebGL rendering
+4. Test all categories and tools
 5. Submit pull request
 
 ## Support
 
 - **Issues**: https://github.com/bentezhko/illuminarchism/issues
-- **WebGL Check**: https://get.webgl.org/webgl2/
-- **Documentation**: See `atlases/README.md` and `MIGRATION.md`
+- **Live Demo**: https://illuminarchism.pages.dev
 
 ---
 
-**Illuminarchism** - Where historiography meets GPU acceleration.
+**Illuminarchism** - Multi-dimensional historical atlases with medieval aesthetics.
