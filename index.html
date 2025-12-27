@@ -96,6 +96,7 @@
             position: fixed; right: 1rem; top: 6rem; width: 280px;
             background: var(--parchment-bg); border: var(--border-width) solid var(--ink-faded);
             box-shadow: var(--ui-shadow); padding: 1rem; border-radius: 8px; z-index: 900;
+            max-height: calc(100vh - 8rem); overflow-y: auto;
         }
 
         .panel h3 {
@@ -110,23 +111,216 @@
             background: var(--parchment-dark); color: var(--ink-primary); font-family: 'IM Fell English', serif;
         }
         .control-group textarea { resize: vertical; min-height: 60px; }
-        .control-group input[type="range"] { cursor: pointer; }
-
-        /* Timeline */
-        .timeline-area { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--ink-faded); }
-        .timeline-display {
-            display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;
-        }
-        #year-display { color: var(--lapis-lazuli); font-weight: bold; }
 
         /* Layer Visibility */
         .layer-toggle { margin-bottom: 0.5rem; display: flex; align-items: center; }
         .layer-toggle input { margin-right: 0.5rem; }
 
+        /* TIMELINE POPUP - Bottom Center */
+        .timeline-popup {
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--parchment-bg);
+            border: var(--border-width) solid var(--ink-faded);
+            box-shadow: var(--ui-shadow);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            z-index: 1000;
+            min-width: 600px;
+            max-width: 80vw;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-popup.collapsed {
+            min-width: auto;
+            padding: 0.5rem 1rem;
+        }
+
+        .timeline-popup.collapsed .timeline-content {
+            display: none;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .timeline-popup.collapsed .timeline-header {
+            margin-bottom: 0;
+        }
+
+        .timeline-title {
+            font-family: 'Cinzel', serif;
+            color: var(--rubric-red);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .timeline-toggle {
+            background: transparent;
+            border: none;
+            color: var(--ink-faded);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.25rem 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .timeline-toggle:hover {
+            color: var(--ink-primary);
+        }
+
+        .timeline-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Year Display */
+        .year-display {
+            text-align: center;
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            color: var(--lapis-lazuli);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Playback Controls */
+        .playback-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .playback-btn {
+            background: var(--lapis-lazuli);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .playback-btn:hover {
+            background: var(--ink-primary);
+            transform: scale(1.1);
+        }
+
+        .playback-btn.primary {
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+        }
+
+        .playback-btn.playing {
+            background: var(--rubric-red);
+        }
+
+        /* Speed Controls */
+        .speed-controls {
+            display: flex;
+            gap: 0.25rem;
+            align-items: center;
+        }
+
+        .speed-btn {
+            background: transparent;
+            border: 1px solid var(--ink-faded);
+            color: var(--ink-primary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'IM Fell English', serif;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .speed-btn:hover {
+            background: var(--parchment-dark);
+        }
+
+        .speed-btn.active {
+            background: var(--lapis-lazuli);
+            color: white;
+            border-color: var(--lapis-lazuli);
+        }
+
+        .speed-label {
+            font-size: 0.8rem;
+            color: var(--ink-faded);
+            margin-right: 0.25rem;
+        }
+
+        /* Timeline Slider */
+        .timeline-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .timeline-slider {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--parchment-dark);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .timeline-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--lapis-lazuli);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 0.2s;
+        }
+
+        .timeline-slider::-webkit-slider-thumb:hover {
+            background: var(--ink-primary);
+            transform: scale(1.2);
+        }
+
+        .timeline-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--lapis-lazuli);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .year-label {
+            font-size: 0.8rem;
+            color: var(--ink-faded);
+            min-width: 40px;
+            text-align: center;
+        }
+
         /* Bottom debug info */
         .debug-info {
             position: fixed; bottom: 1rem; left: 1rem; background: rgba(0,0,0,0.7);
-            color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; z-index: 1000;
+            color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; z-index: 999;
         }
 
         /* Canvas */
@@ -182,15 +376,6 @@
             <textarea id="entity-desc"></textarea>
         </div>
 
-        <div class="timeline-area">
-            <h3>Timeline</h3>
-            <div class="timeline-display">
-                <span><strong>Year:</strong></span>
-                <span id="year-display">1000</span>
-            </div>
-            <input type="range" id="time-slider" min="800" max="1500" value="1000" step="10">
-        </div>
-
         <h3 style="margin-top:1.5rem;">Layers</h3>
         <div class="layer-toggle">
             <input type="checkbox" id="toggle-polity" checked>
@@ -206,8 +391,45 @@
         </div>
     </div>
 
+    <!-- TIMELINE POPUP -->
+    <div class="timeline-popup pointer-events-auto">
+        <div class="timeline-header">
+            <div class="timeline-title">
+                <span>⏱️</span>
+                <span>Timeline</span>
+            </div>
+            <button class="timeline-toggle" id="timeline-toggle" title="Toggle Timeline">▼</button>
+        </div>
+        <div class="timeline-content">
+            <div class="year-display" id="timeline-year">1000</div>
+            
+            <div class="playback-controls">
+                <button class="playback-btn" id="btn-first" title="First (Home)">⏮</button>
+                <button class="playback-btn" id="btn-prev" title="Previous (Left Arrow)">◀</button>
+                <button class="playback-btn primary" id="btn-play" title="Play/Pause (Space)">▶</button>
+                <button class="playback-btn" id="btn-next" title="Next (Right Arrow)">▶</button>
+                <button class="playback-btn" id="btn-last" title="Last (End)">⏭</button>
+            </div>
+
+            <div class="timeline-slider-container">
+                <span class="year-label" id="year-start">800</span>
+                <input type="range" class="timeline-slider" id="timeline-slider" 
+                       min="800" max="1500" value="1000" step="10">
+                <span class="year-label" id="year-end">1500</span>
+            </div>
+
+            <div class="speed-controls">
+                <span class="speed-label">Speed:</span>
+                <button class="speed-btn" data-speed="0.5">0.5x</button>
+                <button class="speed-btn active" data-speed="1">1x</button>
+                <button class="speed-btn" data-speed="2">2x</button>
+                <button class="speed-btn" data-speed="4">4x</button>
+            </div>
+        </div>
+    </div>
+
     <canvas id="canvas"></canvas>
-    <div class="debug-info">Year: 1000 | Active: 0 | Hint: Double-click, Enter, or Right-click to finish polygon</div>
+    <div class="debug-info">Year: 1000 | Active: 0 | Entities: 0</div>
 
     <script>
         const CONFIG = { RESAMPLE_COUNT: 50 };
@@ -453,11 +675,126 @@
                 this.isPanning = false;
                 this.lastMouse = { x: 0, y: 0 };
 
+                // Timeline playback
+                this.isPlaying = false;
+                this.playbackSpeed = 1;
+                this.animationFrame = null;
+                this.lastFrameTime = 0;
+
                 this.setupUI();
                 this.setupCanvas();
                 this.setupKeyboard();
+                this.setupTimeline();
                 this.updateEntities();
                 this.render();
+            }
+
+            setupTimeline() {
+                const slider = document.getElementById('timeline-slider');
+                const playBtn = document.getElementById('btn-play');
+                const firstBtn = document.getElementById('btn-first');
+                const prevBtn = document.getElementById('btn-prev');
+                const nextBtn = document.getElementById('btn-next');
+                const lastBtn = document.getElementById('btn-last');
+                const toggleBtn = document.getElementById('timeline-toggle');
+                const popup = document.querySelector('.timeline-popup');
+
+                // Slider
+                slider.addEventListener('input', (e) => {
+                    this.currentYear = parseInt(e.target.value);
+                    this.updateYearDisplay();
+                    this.updateEntities();
+                    this.render();
+                });
+
+                // Play/Pause
+                playBtn.addEventListener('click', () => this.togglePlayback());
+
+                // Navigation
+                firstBtn.addEventListener('click', () => this.goToYear(800));
+                prevBtn.addEventListener('click', () => this.stepYear(-10));
+                nextBtn.addEventListener('click', () => this.stepYear(10));
+                lastBtn.addEventListener('click', () => this.goToYear(1500));
+
+                // Speed controls
+                document.querySelectorAll('.speed-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.playbackSpeed = parseFloat(btn.dataset.speed);
+                    });
+                });
+
+                // Toggle collapse
+                toggleBtn.addEventListener('click', () => {
+                    popup.classList.toggle('collapsed');
+                    toggleBtn.textContent = popup.classList.contains('collapsed') ? '▲' : '▼';
+                });
+            }
+
+            togglePlayback() {
+                this.isPlaying = !this.isPlaying;
+                const playBtn = document.getElementById('btn-play');
+                
+                if (this.isPlaying) {
+                    playBtn.innerHTML = '⏸';
+                    playBtn.classList.add('playing');
+                    playBtn.title = 'Pause (Space)';
+                    this.lastFrameTime = performance.now();
+                    this.animate();
+                } else {
+                    playBtn.innerHTML = '▶';
+                    playBtn.classList.remove('playing');
+                    playBtn.title = 'Play (Space)';
+                    if (this.animationFrame) {
+                        cancelAnimationFrame(this.animationFrame);
+                        this.animationFrame = null;
+                    }
+                }
+            }
+
+            animate() {
+                if (!this.isPlaying) return;
+
+                const now = performance.now();
+                const delta = now - this.lastFrameTime;
+                
+                // Base speed: 10 years per second
+                const baseYearsPerSecond = 10;
+                const yearStep = (delta / 1000) * baseYearsPerSecond * this.playbackSpeed;
+                
+                this.currentYear += yearStep;
+                
+                // Loop at end
+                if (this.currentYear > 1500) {
+                    this.currentYear = 800;
+                }
+                
+                this.lastFrameTime = now;
+                
+                document.getElementById('timeline-slider').value = this.currentYear;
+                this.updateYearDisplay();
+                this.updateEntities();
+                this.render();
+                
+                this.animationFrame = requestAnimationFrame(() => this.animate());
+            }
+
+            goToYear(year) {
+                this.currentYear = Math.max(800, Math.min(1500, year));
+                document.getElementById('timeline-slider').value = this.currentYear;
+                this.updateYearDisplay();
+                this.updateEntities();
+                this.render();
+            }
+
+            stepYear(delta) {
+                this.goToYear(this.currentYear + delta);
+            }
+
+            updateYearDisplay() {
+                const displayYear = Math.round(this.currentYear);
+                document.getElementById('timeline-year').textContent = displayYear;
             }
 
             setupUI() {
@@ -469,13 +806,6 @@
                         if (this.activeTool !== 'draw') this.draftPoints = [];
                         this.render();
                     });
-                });
-
-                document.getElementById('time-slider').addEventListener('input', (e) => {
-                    this.currentYear = parseInt(e.target.value);
-                    document.getElementById('year-display').textContent = this.currentYear;
-                    this.updateEntities();
-                    this.render();
                 });
 
                 ['polity', 'sub-polity', 'city'].forEach(type => {
@@ -508,18 +838,34 @@
 
             setupKeyboard() {
                 document.addEventListener('keydown', (e) => {
+                    // Drawing shortcuts
                     if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
                         if (e.key === 'Enter') {
-                            console.log('Enter key pressed - finishing drawing');
                             if (this.draftPoints.length >= 2) {
                                 this.finishDrawing();
-                            } else {
-                                alert('Need at least 2 points to finish');
                             }
                         } else if (e.key === 'Escape') {
-                            console.log('Escape key pressed - cancelling drawing');
                             this.cancelDrawing();
                         }
+                        return;
+                    }
+
+                    // Timeline shortcuts
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        this.togglePlayback();
+                    } else if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        this.stepYear(-10);
+                    } else if (e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        this.stepYear(10);
+                    } else if (e.key === 'Home') {
+                        e.preventDefault();
+                        this.goToYear(800);
+                    } else if (e.key === 'End') {
+                        e.preventDefault();
+                        this.goToYear(1500);
                     }
                 });
             }
@@ -530,20 +876,16 @@
                 this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
                 this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
                 
-                // Double-click to finish
                 this.canvas.addEventListener('dblclick', (e) => {
                     e.preventDefault();
                     if (this.activeTool === 'draw' && this.draftPoints.length >= 2) {
-                        console.log('Double-click detected - finishing drawing');
                         this.finishDrawing();
                     }
                 });
 
-                // Right-click to finish
                 this.canvas.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     if (this.activeTool === 'draw' && this.draftPoints.length >= 2) {
-                        console.log('Right-click detected - finishing drawing');
                         this.finishDrawing();
                     }
                 });
@@ -555,7 +897,6 @@
                     return;
                 }
                 
-                // Create new entity if none selected
                 if (!this.selectedEntityId) {
                     const type = document.getElementById('entity-type').value;
                     const name = document.getElementById('entity-name').value || `New ${type} ${this.nextId}`;
@@ -566,17 +907,14 @@
                     this.entities.push(newEntity);
                     this.selectedEntityId = newEntity.id;
                     this.populatePanel(newEntity);
-                    console.log(`Created new entity: ${name} (ID: ${newEntity.id})`);
                 }
 
                 const ent = this.entities.find(e => e.id === this.selectedEntityId);
                 if (ent) {
                     ent.addKeyframe(this.currentYear, [...this.draftPoints]);
-                    console.log(`Added keyframe for ${ent.name} at year ${this.currentYear} with ${this.draftPoints.length} points`);
                     this.draftPoints = [];
                     this.draftCursor = null;
                     
-                    // Switch to select tool
                     this.activeTool = 'select';
                     document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
                     document.querySelector('[data-tool="select"]').classList.add('active');
@@ -584,12 +922,11 @@
                     this.updateEntities();
                     this.render();
                     
-                    alert(`✓ Shape completed for ${ent.name} at year ${this.currentYear}`);
+                    alert(`✓ Shape completed for ${ent.name} at year ${Math.round(this.currentYear)}`);
                 }
             }
 
             cancelDrawing() {
-                console.log('Drawing cancelled');
                 this.draftPoints = [];
                 this.draftCursor = null;
                 this.render();
@@ -687,7 +1024,11 @@
             }
 
             saveData() {
-                const data = JSON.stringify({ entities: this.entities, camera: this.renderer.transform, year: this.currentYear }, null, 2);
+                const data = JSON.stringify({ 
+                    entities: this.entities, 
+                    camera: this.renderer.transform, 
+                    year: this.currentYear 
+                }, null, 2);
                 const blob = new Blob([data], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -707,8 +1048,8 @@
                     if (data.camera) this.renderer.transform = data.camera;
                     if (data.year) {
                         this.currentYear = data.year;
-                        document.getElementById('time-slider').value = this.currentYear;
-                        document.getElementById('year-display').textContent = this.currentYear;
+                        document.getElementById('timeline-slider').value = this.currentYear;
+                        this.updateYearDisplay();
                     }
                     this.nextId = Math.max(...this.entities.map(e => e.id), 0) + 1;
                     this.updateEntities();
@@ -724,7 +1065,7 @@
                     if (ent.currentGeometry) cnt++;
                 });
                 const d = document.querySelector('.debug-info');
-                if(d) d.textContent = `Year: ${this.currentYear} | Active: ${cnt} | Entities: ${this.entities.length}`;
+                if(d) d.textContent = `Year: ${Math.round(this.currentYear)} | Active: ${cnt} | Entities: ${this.entities.length}`;
             }
 
             render() {
