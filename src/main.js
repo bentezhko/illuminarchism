@@ -15,7 +15,7 @@ import InfoPanel from './ui/InfoPanel.js';
 
 export default class IlluminarchismApp {
     constructor() {
-        console.log('🎨 Initializing Illuminarchism...');
+        console.log('🏛️ Initializing Illuminarchism ChronosCarto...');
         
         // Core components
         this.canvas = this.createCanvas();
@@ -47,7 +47,7 @@ export default class IlluminarchismApp {
         
         // Initialize
         this.initUI();
-        this.createDemoEntity(); // Add demo entity
+        this.createDemoEntities(); // Add VISIBLE demo entities
         this.loadInitialAtlases();
         this.startRenderLoop();
         
@@ -55,7 +55,7 @@ export default class IlluminarchismApp {
         window.illuminarchismApp = this;
         
         console.log('✨ Illuminarchism initialized (WebGL mode)');
-        console.log('📝 Try clicking the 🏰 Draw Polygon tool and clicking to add points!');
+        console.log('📝 Demo entities loaded. Try panning/zooming!');
     }
     
     createCanvas() {
@@ -67,26 +67,107 @@ export default class IlluminarchismApp {
     }
     
     /**
-     * Create a demo entity to verify rendering works
+     * Create visible demo entities to test rendering
      */
-    createDemoEntity() {
-        const demo = new HistoricalEntity(
-            'demo-kingdom',
-            'Demo Kingdom',
+    createDemoEntities() {
+        console.log('🎨 Creating demo entities...');
+        
+        // Main Kingdom (Blue) - Large central territory
+        const kingdom = new HistoricalEntity(
+            'demo-kingdom-blue',
+            'Regnum Caeruleum',
             'polity',
             '#264e86'
         );
         
-        // Simple square
-        demo.addKeyframe(1000, [
-            {x: -100, y: -100},
-            {x: 100, y: -100},
-            {x: 100, y: 100},
-            {x: -100, y: 100}
+        // Year 800 - Smaller territory
+        kingdom.addKeyframe(800, [
+            {x: -200, y: -150},
+            {x: 200, y: -150},
+            {x: 200, y: 150},
+            {x: -200, y: 150}
         ]);
         
-        this.entities.push(demo);
-        console.log('✓ Demo entity created (blue square at center)');
+        // Year 1000 - Expanded
+        kingdom.addKeyframe(1000, [
+            {x: -300, y: -200},
+            {x: 300, y: -200},
+            {x: 300, y: 200},
+            {x: -300, y: 200}
+        ]);
+        
+        // Year 1200 - Further expansion with irregular shape
+        kingdom.addKeyframe(1200, [
+            {x: -350, y: -250},
+            {x: 400, y: -220},
+            {x: 380, y: 250},
+            {x: -320, y: 230}
+        ]);
+        
+        this.entities.push(kingdom);
+        console.log('✅ Created Blue Kingdom');
+        
+        // Red Duchy (Rival state)
+        const duchy = new HistoricalEntity(
+            'demo-duchy-red',
+            'Ducatus Rubrum',
+            'polity',
+            '#8a3324'
+        );
+        
+        duchy.addKeyframe(900, [
+            {x: 400, y: -100},
+            {x: 600, y: -100},
+            {x: 600, y: 100},
+            {x: 400, y: 100}
+        ]);
+        
+        duchy.addKeyframe(1100, [
+            {x: 420, y: -150},
+            {x: 650, y: -120},
+            {x: 630, y: 150},
+            {x: 400, y: 120}
+        ]);
+        
+        this.entities.push(duchy);
+        console.log('✅ Created Red Duchy');
+        
+        // River
+        const river = new HistoricalEntity(
+            'demo-river',
+            'Fluvius Magnus',
+            'river',
+            '#43b3ae'
+        );
+        
+        river.addKeyframe(800, [
+            {x: -400, y: -300},
+            {x: -200, y: -100},
+            {x: 0, y: 0},
+            {x: 200, y: 100},
+            {x: 400, y: 300}
+        ]);
+        
+        this.entities.push(river);
+        console.log('✅ Created River');
+        
+        // Capital City
+        const city = new HistoricalEntity(
+            'demo-city',
+            'Urbs Aeterna',
+            'city',
+            '#000000'
+        );
+        
+        city.addKeyframe(800, [{x: 0, y: 0}]);
+        
+        this.entities.push(city);
+        console.log('✅ Created Capital City');
+        
+        // Update all entities for current year
+        this.updateEntities();
+        
+        console.log(`📊 Total entities: ${this.entities.length}`);
     }
     
     /**
@@ -213,7 +294,7 @@ export default class IlluminarchismApp {
         }
         
         AtlasExporter.exportSession(customEntities, this.currentYear, layerName);
-        console.log(`✓ Exported ${customEntities.length} entities to ${layerName} layer`);
+        console.log(`✅ Exported ${customEntities.length} entities to ${layerName} layer`);
     }
     
     /**
@@ -270,7 +351,7 @@ export default class IlluminarchismApp {
         this.selectEntity(entity.id);
         this.cancelDraft();
         
-        console.log('✓ Entity created:', entity.name);
+        console.log('✅ Entity created:', entity.name);
     }
     
     /**
@@ -278,7 +359,7 @@ export default class IlluminarchismApp {
      */
     cancelDraft() {
         if (this.draftPoints.length > 0) {
-            console.log('✗ Draft cancelled');
+            console.log('✖ Draft cancelled');
         }
         this.draftPoints = [];
         this.draftCursor = null;
@@ -312,7 +393,7 @@ export default class IlluminarchismApp {
             this.infoPanel.hide();
         }
         
-        console.log('✗ Entity deleted');
+        console.log('✖ Entity deleted');
     }
     
     /**
