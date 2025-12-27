@@ -232,6 +232,7 @@
             <label>Category</label>
             <select id="entity-category">
                 <option value="political">🏛️ Political</option>
+                <option value="geographic">🌍 Geographic</option>
                 <option value="cultural">🎭 Cultural</option>
                 <option value="linguistic">📝 Linguistic</option>
             </select>
@@ -272,6 +273,10 @@
             <div class="layer-toggle">
                 <input type="checkbox" id="toggle-political" checked>
                 <label>🏛️ Political</label>
+            </div>
+            <div class="layer-toggle">
+                <input type="checkbox" id="toggle-geographic" checked>
+                <label>🌍 Geographic</label>
             </div>
             <div class="layer-toggle">
                 <input type="checkbox" id="toggle-cultural" checked>
@@ -328,6 +333,16 @@
                     region: { name: 'Region', geometryType: 'polygon' },
                     city: { name: 'City', geometryType: 'point' },
                     border: { name: 'Border', geometryType: 'line' }
+                }
+            },
+            geographic: {
+                name: '🌍 Geographic',
+                subcategories: {
+                    river: { name: 'River', geometryType: 'line' },
+                    lake: { name: 'Lake', geometryType: 'polygon' },
+                    ocean: { name: 'Ocean', geometryType: 'polygon' },
+                    mountain: { name: 'Mountain Range', geometryType: 'line' },
+                    coastline: { name: 'Coastline', geometryType: 'line' }
                 }
             },
             cultural: {
@@ -551,7 +566,7 @@
                 this.selectedEntityId = null; this.hoveredEntityId = null;
                 this.activeTool = 'pan'; this.currentCategory = 'political'; this.currentSubcategory = 'country';
                 this.draftPoints = []; this.draftCursor = null;
-                this.layerVisibility = { political: true, cultural: true, linguistic: true };
+                this.layerVisibility = { political: true, geographic: true, cultural: true, linguistic: true };
                 this.isPanning = false; this.lastMouse = { x: 0, y: 0 };
                 this.editPoints = null; this.editPointHoveredIdx = -1; this.editPointDragIdx = -1;
                 this.isPlaying = false; this.playbackSpeed = 1; this.animationFrame = null; this.lastFrameTime = 0;
@@ -678,7 +693,7 @@
                         this.render();
                     });
                 });
-                ['political', 'cultural', 'linguistic'].forEach(cat => {
+                ['political', 'geographic', 'cultural', 'linguistic'].forEach(cat => {
                     document.getElementById('toggle-' + cat).addEventListener('change', (e) => { this.layerVisibility[cat] = e.target.checked; this.render(); });
                 });
                 document.getElementById('entity-category').addEventListener('change', () => this.updateSubcategories());
