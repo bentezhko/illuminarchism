@@ -149,7 +149,7 @@
         <button class="btn-tool active" data-tool="pan" title="Pan/Zoom">✋</button>
         <button class="btn-tool" data-tool="select" title="Select Entity">🔍</button>
         <hr>
-        <button class="btn-tool" data-tool="draw" title="Draw">🖊️</button>
+        <button class="btn-tool" data-tool="draw" title="Draw (Double-click or Enter to finish)">🖊️</button>
         <button class="btn-tool" data-tool="edit" title="Edit Points">⚒️</button>
         <hr>
         <button class="btn-tool" id="btn-add-keyframe" title="Add Keyframe">🎬</button>
@@ -207,7 +207,7 @@
     </div>
 
     <canvas id="canvas"></canvas>
-    <div class="debug-info">Year: 1000 | Active: 0</div>
+    <div class="debug-info">Year: 1000 | Active: 0 | Hint: Double-click, Enter, or Right-click to finish polygon</div>
 
     <script>
         const CONFIG = { RESAMPLE_COUNT: 50 };
@@ -235,7 +235,6 @@
 
             let currentDist = 0;
             let segmentIdx = 0;
-            let withinSegmentDist = 0;
 
             for (let i = 0; i < targetCount; i++) {
                 const targetDist = i * stepDist;
@@ -249,7 +248,7 @@
                     continue;
                 }
 
-                withinSegmentDist = targetDist - currentDist;
+                const withinSegmentDist = targetDist - currentDist;
                 const t = dists[segmentIdx] > 0 ? withinSegmentDist / dists[segmentIdx] : 0;
                 const p1 = sourcePoints[segmentIdx];
                 const p2 = sourcePoints[(segmentIdx + 1) % sourcePoints.length];
@@ -267,11 +266,10 @@
                 this.name = name;
                 this.type = type; 
                 this.color = color;
-                this.parentId = parentId; // The glue of the hierarchy
+                this.parentId = parentId;
                 this.description = "A mapped entity.";
                 this.timeline = []; 
                 this.validRange = { start: -Infinity, end: Infinity };
-                // Back to basics: Single geometry array
                 this.currentGeometry = null; 
             }
 
@@ -281,7 +279,7 @@
                 if (this.type === 'city') {
                     resampled = geometry; 
                 } else {
-                    const isClosed = (this.type === 'polity');
+                    const isClosed = (this.type === 'polity' || this.type === 'sub-polity');
                     resampled = resampleGeometry(geometry, CONFIG.RESAMPLE_COUNT, isClosed);
                 }
                 this.timeline.push({ year, geometry: resampled });
@@ -361,7 +359,7 @@
 
                 for (let ent of entities) {
                     if (!layerVisibility[ent.type]) continue;
-                    if (!ent.currentGeometry || ent.currentGeometry.length < 2) continue;
+                    if (!ent.currentGeometry || ent.currentGeometry.length < 1) continue;
 
                     if (ent.type === 'city') {
                         this.drawCity(ent, hoveredId, selectedId);
@@ -406,7 +404,7 @@
                 this.ctx.fill();
             }
 
-            drawDraft(points, cursor, transform, drawType) {
+            drawDraft(points, cursor, transform) {
                 if (points.length === 0) return;
                 this.ctx.save();
                 this.ctx.translate(transform.x, transform.y);
@@ -424,7 +422,9 @@
 
                 for (let p of points) {
                     this.ctx.fillStyle = '#264e86';
-                    this.ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
                 }
 
                 this.ctx.restore();
@@ -455,6 +455,7 @@
 
                 this.setupUI();
                 this.setupCanvas();
+                this.setupKeyboard();
                 this.updateEntities();
                 this.render();
             }
@@ -478,7 +479,7 @@
                 });
 
                 ['polity', 'sub-polity', 'city'].forEach(type => {
-                    document.getElementById('toggle-' + type.replace('-', '-')).addEventListener('change', (e) => {
+                    document.getElementById('toggle-' + type).addEventListener('change', (e) => {
                         this.layerVisibility[type] = e.target.checked;
                         this.render();
                     });
@@ -505,14 +506,97 @@
                 document.getElementById('file-input').addEventListener('change', (e) => this.loadData(e));
             }
 
+            setupKeyboard() {
+                document.addEventListener('keydown', (e) => {
+                    if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
+                        if (e.key === 'Enter') {
+                            console.log('Enter key pressed - finishing drawing');
+                            if (this.draftPoints.length >= 2) {
+                                this.finishDrawing();
+                            } else {
+                                alert('Need at least 2 points to finish');
+                            }
+                        } else if (e.key === 'Escape') {
+                            console.log('Escape key pressed - cancelling drawing');
+                            this.cancelDrawing();
+                        }
+                    }
+                });
+            }
+
             setupCanvas() {
                 this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
                 this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
                 this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
                 this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
+                
+                // Double-click to finish
+                this.canvas.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    if (this.activeTool === 'draw' && this.draftPoints.length >= 2) {
+                        console.log('Double-click detected - finishing drawing');
+                        this.finishDrawing();
+                    }
+                });
+
+                // Right-click to finish
+                this.canvas.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    if (this.activeTool === 'draw' && this.draftPoints.length >= 2) {
+                        console.log('Right-click detected - finishing drawing');
+                        this.finishDrawing();
+                    }
+                });
+            }
+
+            finishDrawing() {
+                if (this.draftPoints.length < 2) {
+                    alert('Need at least 2 points to create a shape');
+                    return;
+                }
+                
+                // Create new entity if none selected
+                if (!this.selectedEntityId) {
+                    const type = document.getElementById('entity-type').value;
+                    const name = document.getElementById('entity-name').value || `New ${type} ${this.nextId}`;
+                    const color = document.getElementById('entity-color').value;
+                    const parentId = document.getElementById('parent-id').value || null;
+                    
+                    const newEntity = new HistoricalEntity(this.nextId++, name, type, color, parentId);
+                    this.entities.push(newEntity);
+                    this.selectedEntityId = newEntity.id;
+                    this.populatePanel(newEntity);
+                    console.log(`Created new entity: ${name} (ID: ${newEntity.id})`);
+                }
+
+                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                if (ent) {
+                    ent.addKeyframe(this.currentYear, [...this.draftPoints]);
+                    console.log(`Added keyframe for ${ent.name} at year ${this.currentYear} with ${this.draftPoints.length} points`);
+                    this.draftPoints = [];
+                    this.draftCursor = null;
+                    
+                    // Switch to select tool
+                    this.activeTool = 'select';
+                    document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
+                    document.querySelector('[data-tool="select"]').classList.add('active');
+                    
+                    this.updateEntities();
+                    this.render();
+                    
+                    alert(`✓ Shape completed for ${ent.name} at year ${this.currentYear}`);
+                }
+            }
+
+            cancelDrawing() {
+                console.log('Drawing cancelled');
+                this.draftPoints = [];
+                this.draftCursor = null;
+                this.render();
             }
 
             onMouseDown(e) {
+                if (e.button !== 0) return;
                 const rect = this.canvas.getBoundingClientRect();
                 const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
                 const world = this.renderer.screenToWorld(sx, sy);
@@ -626,6 +710,7 @@
                         document.getElementById('time-slider').value = this.currentYear;
                         document.getElementById('year-display').textContent = this.currentYear;
                     }
+                    this.nextId = Math.max(...this.entities.map(e => e.id), 0) + 1;
                     this.updateEntities();
                     this.render();
                 };
@@ -639,13 +724,13 @@
                     if (ent.currentGeometry) cnt++;
                 });
                 const d = document.querySelector('.debug-info');
-                if(d) d.textContent = `Year: ${this.currentYear} | Active: ${cnt}`;
+                if(d) d.textContent = `Year: ${this.currentYear} | Active: ${cnt} | Entities: ${this.entities.length}`;
             }
 
             render() {
                 this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.layerVisibility);
                 if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform);
                 }
             }
         }
