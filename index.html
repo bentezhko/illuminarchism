@@ -3,322 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Illuminarchism | The Feudal Atlas</title>
+    <title>Illuminarchism | The Scriptorium</title>
     
-    <!-- Google Fonts for Medieval Aesthetic -->
+    <!-- Medieval Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
-
-    <style>
-        :root {
-            /* Palette: Medieval Manuscript */
-            --parchment-bg: #f3e9d2;
-            --parchment-dark: #e0d0b0;
-            --ink-primary: #2b2118;
-            --ink-faded: #5c4d3c;
-            --rubric-red: #8a3324;
-            --gold-leaf: #c5a059;
-            --lapis-lazuli: #264e86;
-            --verdigris: #43b3ae; 
-            
-            --ui-shadow: 0 4px 6px rgba(43, 33, 24, 0.2);
-            --border-width: 2px;
-        }
-
-        * { box-sizing: border-box; user-select: none; }
-
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
-            background-color: var(--parchment-bg);
-            font-family: 'IM Fell English', serif;
-            color: var(--ink-primary);
-        }
-
-        /* --- UI Overlay --- */
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between;
-            z-index: 10;
-        }
-
-        .pointer-events-auto { pointer-events: auto; }
-
-        /* Header */
-        header {
-            padding: 1rem 2rem;
-            background: linear-gradient(to bottom, var(--parchment-bg) 80%, transparent);
-            border-bottom: 1px solid var(--gold-leaf);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-
-        h1 {
-            font-family: 'Cinzel', serif; font-weight: 700; margin: 0; font-size: 2rem;
-            color: var(--ink-primary); text-shadow: 1px 1px 0px var(--parchment-dark);
-            letter-spacing: 2px;
-        }
-        h1 span { color: var(--rubric-red); }
-
-        .file-controls { display: flex; gap: 1rem; }
-
-        .btn-text {
-            background: var(--parchment-dark); border: 1px solid var(--ink-faded);
-            color: var(--ink-primary); padding: 0.5rem 1rem;
-            font-family: 'Cinzel', serif; font-weight: bold; cursor: pointer;
-            transition: all 0.2s; box-shadow: var(--ui-shadow);
-        }
-        .btn-text:hover { background: var(--gold-leaf); color: white; border-color: var(--ink-primary); }
-
-        /* Toolbar */
-        #toolbar {
-            position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
-            display: flex; flex-direction: column; gap: 0.5rem;
-            background: rgba(243, 233, 210, 0.95); padding: 0.5rem;
-            border: var(--border-width) solid var(--ink-primary);
-            border-radius: 4px; box-shadow: var(--ui-shadow);
-            align-items: center;
-        }
-
-        .tool-btn {
-            width: 44px; height: 44px;
-            background: var(--parchment-dark); border: 1px solid var(--ink-faded);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-family: 'Cinzel', serif; font-weight: bold; font-size: 1.4rem;
-            color: var(--ink-primary); transition: all 0.2s ease; position: relative;
-        }
-        .tool-btn:hover { background: var(--gold-leaf); color: white; border-color: var(--ink-primary); }
-        .tool-btn.active { background: var(--rubric-red); color: white; border-color: var(--ink-primary); box-shadow: inset 2px 2px 4px rgba(0,0,0,0.4); }
-        .tool-btn:hover::after {
-            content: attr(title); position: absolute; left: 110%; top: 50%;
-            transform: translateY(-50%); background: var(--ink-primary);
-            color: var(--parchment-bg); padding: 0.25rem 0.5rem;
-            font-size: 0.8rem; font-family: 'IM Fell English', serif;
-            white-space: nowrap; border-radius: 2px; pointer-events: none; z-index: 20;
-        }
-
-        #draw-type-select {
-            margin-top: 0.5rem; padding: 0.2rem;
-            font-family: 'Cinzel', serif; font-size: 0.8rem;
-            background: var(--parchment-bg); border: 1px solid var(--ink-faded);
-            width: 100%; text-align: center;
-        }
-        
-        #draw-mode-checkbox {
-            margin-top: 0.5rem;
-            font-family: 'Cinzel', serif;
-            font-size: 0.7rem;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-            cursor: pointer;
-        }
-
-        /* Layers Panel */
-        #layer-panel {
-            position: absolute; left: 1rem; top: 7rem; 
-            background: rgba(243, 233, 210, 0.95);
-            padding: 0.5rem; border: var(--border-width) solid var(--ink-primary);
-            border-radius: 4px; box-shadow: var(--ui-shadow);
-            font-family: 'Cinzel', serif; font-size: 0.8rem;
-        }
-        .layer-toggle { display: block; margin-bottom: 0.3rem; cursor: pointer; }
-        .layer-toggle input { margin-right: 0.5rem; }
-
-        /* Info Panel */
-        #info-panel {
-            position: absolute; right: 1rem; top: 6rem; width: 280px;
-            background: rgba(243, 233, 210, 0.95);
-            border: var(--border-width) solid var(--ink-primary);
-            padding: 1rem; box-shadow: var(--ui-shadow); display: none;
-        }
-        
-        .info-input {
-            width: 100%; background: transparent; border: none;
-            border-bottom: 1px dashed var(--ink-faded);
-            font-family: 'Cinzel', serif; font-size: 1.2rem;
-            color: var(--rubric-red); margin-bottom: 0.5rem; outline: none;
-        }
-        .info-input:focus { border-bottom: 1px solid var(--rubric-red); }
-
-        .info-row {
-            display: flex; justify-content: space-between; font-size: 0.9rem;
-            margin-bottom: 0.5rem; border-bottom: 1px dashed rgba(92, 77, 60, 0.3);
-            align-items: center;
-        }
-
-        input[type="color"] {
-            -webkit-appearance: none; border: none; width: 24px; height: 24px;
-            cursor: pointer; background: none; padding: 0;
-        }
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: 1px solid var(--ink-primary); border-radius: 50%; }
-
-        #keyframe-list {
-            max-height: 100px; overflow-y: auto; font-size: 0.8rem;
-            background: rgba(255,255,255,0.3); padding: 0.5rem; margin-top: 0.5rem;
-        }
-
-        button.small-btn {
-            background: var(--ink-primary); color: var(--parchment-bg); border: none;
-            padding: 0.2rem 0.5rem; font-family: 'Cinzel', serif; cursor: pointer;
-            font-size: 0.7rem; margin-top: 0.5rem;
-        }
-        button.small-btn:hover { background: var(--rubric-red); }
-
-        /* Drawing Hint */
-        #draw-hint {
-            position: absolute; bottom: 6rem; left: 50%; transform: translateX(-50%);
-            background: rgba(43, 33, 24, 0.9); color: var(--parchment-bg);
-            padding: 0.5rem 1rem; border-radius: 4px; border: 1px solid var(--gold-leaf);
-            font-family: 'Cinzel', serif; font-size: 0.9rem;
-            pointer-events: none; opacity: 0; transition: opacity 0.3s; text-align: center;
-        }
-        #draw-hint.visible { opacity: 1; }
-
-        /* Temporal Controls */
-        #temporal-controls {
-            width: 100%; padding: 1rem 2rem;
-            background: linear-gradient(to top, var(--parchment-bg) 80%, transparent);
-            border-top: 1px solid var(--gold-leaf);
-            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
-        }
-
-        .timeline-wrapper {
-            display: flex; width: 100%; max-width: 800px; align-items: center; gap: 1rem;
-        }
-
-        #year-display {
-            font-family: 'Cinzel', serif; font-size: 2rem; font-weight: bold;
-            color: var(--rubric-red); min-width: 150px; text-align: center;
-        }
-
-        #btn-play {
-            width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink-primary);
-            background: var(--rubric-red); color: white; font-size: 1.2rem;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-        }
-        #btn-play:hover { background: var(--gold-leaf); }
-
-        input[type=range] { -webkit-appearance: none; flex-grow: 1; background: transparent; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%;
-            background: var(--ink-primary); border: 2px solid var(--parchment-bg);
-            cursor: pointer; margin-top: -10px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer; background: var(--ink-faded); border-radius: 2px;
-        }
-
-        #map-canvas { position: absolute; top: 0; left: 0; z-index: 1; cursor: grab; }
-        #map-canvas:active { cursor: grabbing; }
-
-        .debug-info {
-            position: absolute; bottom: 1rem; right: 1rem; font-size: 0.7rem;
-            color: var(--ink-faded); background: rgba(255,255,255,0.3);
-            padding: 0.2rem 0.5rem; border-radius: 4px;
-        }
-        
-        #file-input { display: none; }
-    </style>
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
 
+    <!-- UI Overlay Layer -->
     <div id="ui-layer">
         <header class="pointer-events-auto">
-            <h1>Illumin<span>archism</span></h1>
+            <h1>Illumin<span>archism</span> <small>Ver. Scriptorium</small></h1>
             <div class="file-controls">
-                <button class="btn-text" id="btn-save" title="Download .atlas JSON">💾 Save</button>
-                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">📂 Load</button>
-                <input type="file" id="file-input" accept=".json,.atlas">
+                <button class="btn-text" id="btn-save">💾 Save Atlas</button>
+                <button class="btn-text" id="btn-load">📂 Load Atlas</button>
+                <input type="file" id="file-input" accept=".json" hidden>
             </div>
         </header>
 
-        <div id="toolbar" class="pointer-events-auto">
-            <button class="tool-btn active" data-tool="pan" title="Pan Hand">✋</button>
-            <button class="tool-btn" data-tool="inspect" title="Inspect Region">🔍</button>
-            <div style="border-top: 1px solid var(--ink-faded); width: 100%; margin: 0.2rem 0;"></div>
-            <select id="draw-type-select" class="pointer-events-auto" title="Entity Type">
-                <option value="polity">Polity</option>
-                <option value="river">River</option>
-                <option value="city">City</option>
-            </select>
-            <label id="draw-mode-checkbox" title="Link new drawing to selected entity?">
-                <input type="checkbox" id="chk-annex"> Vassal/Annex
-            </label>
-            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">✎</button>
-            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
+        <!-- Toolbar -->
+        <div class="toolbar pointer-events-auto" id="toolbar">
+            <button class="btn-tool active" data-tool="pan" title="Pan/Zoom (Hand)">✋</button>
+            <button class="btn-tool" data-tool="select" title="Select Realm">🔍</button>
+            <hr>
+            <button class="btn-tool" data-tool="draw_poly" title="Draw Realm (Polygon)">🏰</button>
+            <button class="btn-tool" data-tool="draw_line" title="Draw Route/River">〰️</button>
+            <button class="btn-tool" data-tool="roughen" title="Roughen Edges (Fractal)">⚡</button>
         </div>
 
-        <div id="layer-panel" class="pointer-events-auto">
-            <div style="border-bottom: 1px solid var(--ink-faded); margin-bottom: 0.5rem; color: var(--rubric-red);">Vellum Layers</div>
-            <label class="layer-toggle"><input type="checkbox" id="layer-polity" checked> Realms</label>
-            <label class="layer-toggle"><input type="checkbox" id="layer-river" checked> Waterways</label>
-            <label class="layer-toggle"><input type="checkbox" id="layer-city" checked> Settlements</label>
-        </div>
-
-        <div id="info-panel" class="pointer-events-auto">
-            <input type="text" id="info-name-input" class="info-input" value="Region Name">
+        <!-- Ink Controls Panel -->
+        <div class="panel pointer-events-auto" id="ink-controls">
+            <h3>Ink Properties</h3>
             
-            <div class="info-row">
-                <span>Type:</span> 
-                <span id="info-type" style="font-weight:bold;">Polity</span>
-            </div>
-            <div class="info-row">
-                <span>Pigment:</span>
-                <input type="color" id="info-color-input" title="Change Color">
-            </div>
-            <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
-             <div class="info-row" id="info-parent-row" style="display:none;">
-                 <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
+            <div class="control-group">
+                <label>Wobble (Hand Shake)</label>
+                <input type="range" id="sl-wobble" min="0" max="10" value="2">
             </div>
             
-            <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years:</div>
-            <div id="keyframe-list"></div>
+            <div class="control-group">
+                <label>Ink Bleed (Opacity)</label>
+                <input type="range" id="sl-bleed" min="1" max="10" value="3">
+            </div>
             
-            <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
-                <button class="small-btn" id="btn-update-meta" style="flex:1;">Update</button>
-                <button class="small-btn" id="btn-deselect">Close</button>
+            <div class="control-group">
+                <label>Paper Roughness</label>
+                <input type="range" id="sl-paper" min="0" max="50" value="20">
+            </div>
+            
+            <div class="timeline-container">
+                <div class="timeline-display">
+                    <strong>Timeline:</strong>
+                    <span id="year-display">1000 AD</span>
+                </div>
+                <input type="range" id="time-slider" min="800" max="1400" value="1000">
             </div>
         </div>
 
-        <div id="draw-hint"></div>
-
-        <div id="temporal-controls" class="pointer-events-auto">
-            <div id="year-display">1000 AD</div>
-            <div class="timeline-wrapper">
-                <button id="btn-play" title="Play History">▶</button>
-                <input type="range" id="time-slider" min="800" max="1300" value="1000" step="1">
+        <!-- Info Panel (Hidden by default) -->
+        <div class="panel pointer-events-auto" id="info-panel" style="top: 25rem;">
+            <h3>Realm Details</h3>
+            
+            <div class="control-group">
+                <label>Name</label>
+                <input type="text" id="entity-name" placeholder="Realm name">
             </div>
-            <div style="font-size: 0.8rem; color: var(--ink-faded);">The Chronometer</div>
-        </div>
-        
-        <div class="debug-info pointer-events-auto">
-            Render: Watercolor/Ink | Mode: Interactive | Entities: Loading...
+            
+            <div class="control-group">
+                <label>Color</label>
+                <input type="color" id="entity-color" value="#264e86">
+            </div>
+            
+            <div class="control-group">
+                <label>Description</label>
+                <textarea id="entity-desc" placeholder="Describe this realm..."></textarea>
+            </div>
         </div>
     </div>
 
+    <!-- Canvas -->
     <canvas id="map-canvas"></canvas>
 
-    <script>
-        console.log('🏛️ Illuminarchism loading...');
-        // The full JavaScript will be embedded here
-        // For now this is just a placeholder to test the structure loads
-        window.onload = () => {
-            console.log('✅ Page loaded successfully!');
-            const canvas = document.getElementById('map-canvas');
-            if (canvas) {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#f3e9d2';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#8a3324';
-                ctx.font = '48px Cinzel';
-                ctx.textAlign = 'center';
-                ctx.fillText('Illuminarchism is being restored...', canvas.width/2, canvas.height/2);
-            }
-        };
-    </script>
+    <!-- Main Application Script (ES6 Module) -->
+    <script type="module" src="/src/main.js"></script>
+
 </body>
 </html>
