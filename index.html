@@ -1,925 +1,177 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Illuminarchism | The Feudal Atlas</title>
-    
+
     <!-- Google Fonts for Medieval Aesthetic -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap"
+        rel="stylesheet">
 
-    <style>
-        :root {
-            --parchment-bg: #f3e9d2;
-            --parchment-dark: #e0d0b0;
-            --ink-primary: #2b2118;
-            --ink-faded: #5c4d3c;
-            --rubric-red: #8a3324;
-            --gold-leaf: #c5a059;
-            --lapis-lazuli: #264e86;
-            --verdigris: #43b3ae; 
-            --ui-shadow: 0 4px 6px rgba(43, 33, 24, 0.2);
-            --border-width: 2px;
-        }
-
-        * { box-sizing: border-box; user-select: none; }
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
-            background-color: var(--parchment-bg);
-            font-family: 'IM Fell English', serif;
-            color: var(--ink-primary);
-        }
-
-        #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 10;
-        }
-        .pointer-events-auto { pointer-events: auto; }
-
-        header {
-            padding: 1rem 2rem; background: linear-gradient(to bottom, var(--parchment-bg) 80%, transparent);
-            border-bottom: 1px solid var(--gold-leaf); display: flex; justify-content: space-between; align-items: center;
-        }
-        h1 { font-family: 'Cinzel', serif; font-size: 2rem; color: var(--rubric-red); text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
-        h1 span { color: var(--lapis-lazuli); }
-        h1 small { font-size: 0.6rem; color: var(--ink-faded); margin-left: 0.5rem; }
-
-        .file-controls button {
-            font-family: 'IM Fell English', serif; background: var(--lapis-lazuli); color: var(--parchment-bg);
-            border: none; padding: 0.5rem 1rem; margin-left: 0.5rem; cursor: pointer; border-radius: 4px; transition: background 0.2s;
-        }
-        .file-controls button:hover { background: var(--ink-primary); }
-
-        .toolbar {
-            position: fixed; left: 1rem; top: 6rem; background: var(--parchment-bg);
-            border: var(--border-width) solid var(--ink-faded); box-shadow: var(--ui-shadow);
-            padding: 0.5rem; border-radius: 8px; z-index: 900; display: flex; flex-direction: column;
-        }
-        .btn-tool {
-            width: 50px; height: 50px; margin: 0.25rem 0; font-size: 1.5rem;
-            cursor: pointer; background: transparent; border: 2px solid transparent; border-radius: 6px; transition: all 0.2s;
-        }
-        .btn-tool:hover { background: var(--parchment-dark); border-color: var(--gold-leaf); }
-        .btn-tool.active { background: var(--lapis-lazuli); border-color: var(--ink-primary); color: white; }
-        .toolbar hr { width: 100%; border: none; border-top: 1px solid var(--ink-faded); margin: 0.5rem 0; }
-
-        .panel {
-            position: fixed; right: 1rem; top: 6rem; width: 320px;
-            background: var(--parchment-bg); border: var(--border-width) solid var(--ink-faded);
-            box-shadow: var(--ui-shadow); padding: 1rem; border-radius: 8px; z-index: 900;
-            max-height: calc(100vh - 8rem); overflow-y: auto;
-        }
-        .panel h3 {
-            font-family: 'Cinzel', serif; color: var(--rubric-red); margin-bottom: 1rem;
-            font-size: 1.2rem; border-bottom: 1px solid var(--ink-faded); padding-bottom: 0.5rem;
-        }
-
-        .control-group { margin-bottom: 1rem; }
-        .control-group label { display: block; font-size: 0.9rem; color: var(--ink-faded); margin-bottom: 0.25rem; }
-        .control-group input, .control-group select, .control-group textarea {
-            width: 100%; padding: 0.5rem; border: 1px solid var(--ink-faded); border-radius: 4px;
-            background: var(--parchment-dark); color: var(--ink-primary); font-family: 'IM Fell English', serif;
-        }
-        .control-group textarea { resize: vertical; min-height: 60px; }
-
-        /* DATA BROWSER SIDEBAR */
-        .data-browser {
-            position: fixed; left: 1rem; bottom: 1rem; width: 350px; height: 50vh;
-            background: var(--parchment-bg); border: var(--border-width) solid var(--ink-faded);
-            box-shadow: var(--ui-shadow); border-radius: 8px; z-index: 1000;
-            display: flex; flex-direction: column; transition: transform 0.3s;
-        }
-        .data-browser.collapsed { transform: translateX(-380px); }
-        .data-browser-header {
-            padding: 0.75rem 1rem; background: var(--lapis-lazuli); color: white;
-            font-family: 'Cinzel', serif; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center;
-            border-radius: 6px 6px 0 0;
-        }
-        .data-browser-toggle {
-            position: absolute; right: -40px; top: 50%; transform: translateY(-50%);
-            background: var(--lapis-lazuli); color: white; border: none;
-            width: 40px; height: 60px; cursor: pointer; border-radius: 0 8px 8px 0;
-            font-size: 1.2rem; transition: background 0.2s;
-        }
-        .data-browser-toggle:hover { background: var(--ink-primary); }
-        .data-browser-content { flex: 1; overflow-y: auto; padding: 0.5rem; }
-
-        /* Tree View */
-        .tree-category {
-            margin-bottom: 0.5rem; border: 1px solid var(--ink-faded); border-radius: 4px;
-            background: var(--parchment-dark);
-        }
-        .tree-category-header {
-            padding: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
-            font-weight: bold; transition: background 0.2s;
-        }
-        .tree-category-header:hover { background: var(--parchment-bg); }
-        .tree-category-icon { font-size: 0.8rem; transition: transform 0.2s; }
-        .tree-category.collapsed .tree-category-icon { transform: rotate(-90deg); }
-        .tree-category.collapsed .tree-subcategories { display: none; }
-
-        .tree-subcategories { padding-left: 1rem; }
-        .tree-subcategory {
-            padding: 0.4rem 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
-            font-size: 0.9rem; transition: background 0.2s;
-        }
-        .tree-subcategory:hover { background: var(--parchment-bg); }
-        .tree-subcategory.collapsed .tree-items { display: none; }
-
-        .tree-items { padding-left: 1rem; }
-        .tree-item {
-            padding: 0.3rem 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
-            font-size: 0.85rem; transition: all 0.2s;
-        }
-        .tree-item:hover { background: var(--gold-leaf); color: white; }
-        .tree-item.selected { background: var(--lapis-lazuli); color: white; font-weight: bold; }
-        .tree-item-id { font-family: monospace; color: var(--ink-faded); font-size: 0.75rem; }
-        .tree-item.selected .tree-item-id { color: rgba(255,255,255,0.7); }
-
-        .layer-visibility {
-            padding: 0.5rem; background: var(--parchment-dark); border-radius: 4px; margin-top: 0.5rem;
-        }
-        .layer-toggle { margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-        .layer-toggle input { margin: 0; }
-
-        /* Timeline */
-        .timeline-popup {
-            position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
-            background: var(--parchment-bg); border: var(--border-width) solid var(--ink-faded);
-            box-shadow: var(--ui-shadow); padding: 1rem 1.5rem; border-radius: 12px; z-index: 1000;
-            min-width: 600px; max-width: 80vw; transition: all 0.3s ease;
-        }
-        .timeline-popup.collapsed { min-width: auto; padding: 0.5rem 1rem; }
-        .timeline-popup.collapsed .timeline-content { display: none; }
-        .timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .timeline-popup.collapsed .timeline-header { margin-bottom: 0; }
-        .timeline-title { font-family: 'Cinzel', serif; color: var(--rubric-red); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; }
-        .timeline-toggle { background: transparent; border: none; color: var(--ink-faded); cursor: pointer; font-size: 1.2rem; padding: 0.25rem 0.5rem; transition: color 0.2s; }
-        .timeline-toggle:hover { color: var(--ink-primary); }
-        .timeline-content { display: flex; flex-direction: column; gap: 1rem; }
-        .year-display { text-align: center; font-family: 'Cinzel', serif; font-size: 2rem; color: var(--lapis-lazuli); font-weight: bold; margin-bottom: 0.5rem; }
-
-        .playback-controls { display: flex; justify-content: center; align-items: center; gap: 0.5rem; }
-        .playback-btn {
-            background: var(--lapis-lazuli); color: white; border: none; width: 40px; height: 40px; border-radius: 50%;
-            cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .playback-btn:hover { background: var(--ink-primary); transform: scale(1.1); }
-        .playback-btn.primary { width: 50px; height: 50px; font-size: 1.5rem; }
-        .playback-btn.playing { background: var(--rubric-red); }
-
-        .speed-controls { display: flex; gap: 0.25rem; align-items: center; }
-        .speed-btn {
-            background: transparent; border: 1px solid var(--ink-faded); color: var(--ink-primary);
-            padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer;
-            font-family: 'IM Fell English', serif; font-size: 0.8rem; transition: all 0.2s;
-        }
-        .speed-btn:hover { background: var(--parchment-dark); }
-        .speed-btn.active { background: var(--lapis-lazuli); color: white; border-color: var(--lapis-lazuli); }
-        .speed-label { font-size: 0.8rem; color: var(--ink-faded); margin-right: 0.25rem; }
-
-        .timeline-slider-container { display: flex; align-items: center; gap: 0.5rem; }
-        .timeline-slider {
-            flex: 1; height: 8px; border-radius: 4px; background: var(--parchment-dark);
-            outline: none; -webkit-appearance: none; cursor: pointer;
-        }
-        .timeline-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%;
-            background: var(--lapis-lazuli); cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: all 0.2s;
-        }
-        .timeline-slider::-webkit-slider-thumb:hover { background: var(--ink-primary); transform: scale(1.2); }
-        .timeline-slider::-moz-range-thumb {
-            width: 20px; height: 20px; border-radius: 50%; background: var(--lapis-lazuli);
-            cursor: pointer; border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        .year-label { font-size: 0.8rem; color: var(--ink-faded); min-width: 60px; text-align: center; }
-
-        .debug-info {
-            position: fixed; bottom: 1rem; right: 1rem; background: rgba(0,0,0,0.7);
-            color: #fff; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; z-index: 999;
-        }
-        #canvas { display: block; cursor: crosshair; }
-    </style>
+    <link rel="stylesheet" href="src/styles.css">
+    <script type="module" src="src/main.js"></script>
 </head>
+
 <body>
+
     <div id="ui-layer">
         <header class="pointer-events-auto">
-            <h1>Illumin<span>archism</span> <small>Ver. Atlas</small></h1>
+            <h1>Illumin<span>archism</span></h1>
             <div class="file-controls">
-                <button id="btn-save">💾 Save</button>
-                <button id="btn-load">📂 Load</button>
-                <input type="file" id="file-input" accept=".json" hidden>
+                <button class="btn-text" id="btn-save" title="Download .atlas JSON">💾 Save</button>
+                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">📂 Load</button>
+                <button id="btn-ontology" title="View Taxonomy">?</button>
+                <input type="file" id="file-input" accept=".json,.atlas">
             </div>
         </header>
+
+        <div id="toolbar" class="pointer-events-auto">
+            <button class="tool-btn active" data-tool="pan" title="Pan Hand">✋</button>
+            <button class="tool-btn" data-tool="inspect" title="Inspect Region">🔍</button>
+            <div style="border-top: 1px solid var(--ink-faded); width: 100%; margin: 0.2rem 0;"></div>
+
+            <!-- NEW: The Entity Dial (Triple Wheel) -->
+            <div id="entity-dial" title="Ontology: Domain - Form - Rank">
+                <div class="dial-tumbler" id="dial-domain">
+                    <span class="dial-label">Dom</span>
+                    <span class="dial-value" id="val-domain">POL</span>
+                </div>
+                <div class="dial-tumbler" id="dial-form">
+                    <span class="dial-label">Frm</span>
+                    <span class="dial-value" id="val-form">RLM</span>
+                </div>
+                <div class="dial-tumbler" id="dial-rank">
+                    <span class="dial-label">Rnk</span>
+                    <span class="dial-value" id="val-rank">KGD</span>
+                </div>
+            </div>
+
+            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">✎</button>
+            <button class="tool-btn" data-tool="vertex-edit" title="Edit Points">☷</button>
+            <button class="tool-btn" data-tool="transform" title="Transform (Move/Scale)">✥</button>
+            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
+        </div>
+
+        <button id="btn-toggle-registry" title="Open Atlas Registry">📜</button>
+
+        <!-- The Illuminated Registry (Sidebar) -->
+        <div id="atlas-registry" class="pointer-events-auto">
+            <div class="registry-header">
+                <span>Atlas Registry</span>
+                <span style="font-size:0.8rem; cursor:pointer;"
+                    onclick="document.getElementById('atlas-registry').classList.remove('open')">✖</span>
+            </div>
+            <div id="registry-content"></div>
+        </div>
+
+        <!-- Ontology InfoCard -->
+        <div id="ontology-modal" class="pointer-events-auto">
+            <span id="modal-close">✖</span>
+            <h2 style="border-bottom: 2px solid var(--rubric-red); padding-bottom:0.5rem;">The Cartographic Ontology
+            </h2>
+            <div class="ontology-section">
+                <div class="ontology-title">I. Domain (Category)</div>
+                <p>The high-level context.</p>
+            </div>
+            <div class="ontology-section">
+                <div class="ontology-title">III. Form (Type)</div>
+                <p>The geometric representation.</p>
+            </div>
+            <div class="ontology-section">
+                <div class="ontology-title">III. Rank (Class)</div>
+                <p>The hierarchical status (e.g. Kingdom vs Duchy).</p>
+            </div>
+        </div>
+
+        <div id="info-panel" class="pointer-events-auto">
+            <input type="text" id="info-name-input" class="info-input" value="Region Name">
+            <div class="info-row">
+                <span>Category:</span>
+                <span id="info-cat" style="font-weight:bold;">Political</span>
+            </div>
+            <div class="info-row">
+                <span>Type:</span>
+                <span id="info-type" style="font-weight:bold;">Polity</span>
+            </div>
+            <div class="info-row">
+                <span>Pigment:</span>
+                <input type="color" id="info-color-input" title="Change Color">
+            </div>
+
+            <div class="info-row">
+                <span>Texture:</span>
+                <select id="info-hatch-input">
+                    <option value="solid">Solid</option>
+                    <option value="diagonal-right">Diagonal (Right)</option>
+                    <option value="diagonal-left">Diagonal (Left)</option>
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                    <option value="cross">Cross Hatch</option>
+                    <option value="saltire">Saltire (X)</option>
+                    <option value="stipple">Stipple (Dots)</option>
+                    <option value="waves">Undy (Waves)</option>
+                </select>
+            </div>
+
+            <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
+            <div class="info-row" id="info-parent-row" style="display:none;">
+                <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
+            </div>
+            <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years:</div>
+            <div id="keyframe-list"></div>
+            <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
+                <button class="small-btn" id="btn-update-meta" style="flex:1;">Update</button>
+                <button class="small-btn" id="btn-deselect">Close</button>
+            </div>
+        </div>
+
+        <div id="draw-hint"></div>
+        <button id="btn-reset-view" title="Reset View to Center">⌖</button>
+
+        <div id="temporal-controls" class="pointer-events-auto">
+            <div id="year-display">1000 AD</div>
+            <div
+                style="display:flex; justify-content:space-between; width:100%; max-width:900px; margin-bottom:0.5rem; font-size:0.8rem; color:var(--rubric-red);">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span>Epoch Start:</span>
+                    <input type="number" id="epoch-start" value="-10000" class="epoch-input">
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span>Epoch End:</span>
+                    <input type="number" id="epoch-end" value="2025" class="epoch-input">
+                </div>
+            </div>
+            <div class="timeline-wrapper">
+                <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">⏮</button>
+                <button id="btn-play" title="Play History">▶</button>
+                <button id="btn-next-key" class="time-btn" title="Next Keyframe">⏭</button>
+
+                <div class="speed-control" title="Temporal Velocity (Years/Tick)">
+                    <span style="font-size:1rem;">🐢</span>
+                    <input type="range" id="speed-slider" min="1" max="100" value="10" step="1">
+                    <span style="font-size:1rem;">🐇</span>
+                </div>
+
+                <div id="timeline-track-container">
+                    <div id="keyframe-notches"></div>
+                    <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
+                </div>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--ink-faded);">The Chronometer</div>
+        </div>
+
+        <div class="debug-info pointer-events-auto">
+            Render: Watercolor/Ink | Mode: Interactive | Entities: Loading...
+        </div>
     </div>
 
-    <div class="toolbar pointer-events-auto">
-        <button class="btn-tool active" data-tool="pan" title="Pan/Zoom">✋</button>
-        <button class="btn-tool" data-tool="select" title="Select Entity">🔍</button>
-        <hr>
-        <button class="btn-tool" data-tool="draw" title="Draw (Double-click or Enter to finish)">🖊️</button>
-        <button class="btn-tool" data-tool="edit" title="Edit Points">⚒️</button>
-        <hr>
-        <button class="btn-tool" id="btn-add-keyframe" title="Add Keyframe">🎬</button>
-    </div>
+    <canvas id="map-canvas"></canvas>
 
-    <div class="panel pointer-events-auto" id="controls-panel">
-        <h3>Entity Details</h3>
-        <div class="control-group">
-            <label>Category</label>
-            <select id="entity-category">
-                <option value="political">🏛️ Political</option>
-                <option value="geographic">🌍 Geographic</option>
-                <option value="cultural">🎭 Cultural</option>
-                <option value="linguistic">📝 Linguistic</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <label>Subcategory</label>
-            <select id="entity-subcategory">
-                <option value="country">Country</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <label>Name</label>
-            <input type="text" id="entity-name" placeholder="Entity name">
-        </div>
-        <div class="control-group">
-            <label>Color</label>
-            <input type="color" id="entity-color" value="#264e86">
-        </div>
-        <div class="control-group">
-            <label>Parent ID (optional)</label>
-            <input type="text" id="parent-id" placeholder="Leave blank or enter ID">
-        </div>
-        <div class="control-group">
-            <label>Description</label>
-            <textarea id="entity-desc"></textarea>
-        </div>
-    </div>
-
-    <!-- DATA BROWSER -->
-    <div class="data-browser pointer-events-auto">
-        <button class="data-browser-toggle" id="data-browser-toggle">📊</button>
-        <div class="data-browser-header">
-            <span>📚 Data Browser</span>
-        </div>
-        <div class="data-browser-content" id="data-tree"></div>
-        <div class="layer-visibility">
-            <small style="color: var(--ink-faded); display: block; margin-bottom: 0.5rem;">Layer Visibility</small>
-            <div class="layer-toggle">
-                <input type="checkbox" id="toggle-political" checked>
-                <label>🏛️ Political</label>
-            </div>
-            <div class="layer-toggle">
-                <input type="checkbox" id="toggle-geographic" checked>
-                <label>🌍 Geographic</label>
-            </div>
-            <div class="layer-toggle">
-                <input type="checkbox" id="toggle-cultural" checked>
-                <label>🎭 Cultural</label>
-            </div>
-            <div class="layer-toggle">
-                <input type="checkbox" id="toggle-linguistic" checked>
-                <label>📝 Linguistic</label>
-            </div>
-        </div>
-    </div>
-
-    <!-- TIMELINE -->
-    <div class="timeline-popup pointer-events-auto">
-        <div class="timeline-header">
-            <div class="timeline-title"><span>⏱️</span><span>Timeline</span></div>
-            <button class="timeline-toggle" id="timeline-toggle" title="Toggle Timeline">▼</button>
-        </div>
-        <div class="timeline-content">
-            <div class="year-display" id="timeline-year">1000 AD</div>
-            <div class="playback-controls">
-                <button class="playback-btn" id="btn-first" title="First">⏮</button>
-                <button class="playback-btn" id="btn-prev" title="Previous">◀</button>
-                <button class="playback-btn primary" id="btn-play" title="Play/Pause">▶</button>
-                <button class="playback-btn" id="btn-next" title="Next">▶</button>
-                <button class="playback-btn" id="btn-last" title="Last">⏭</button>
-            </div>
-            <div class="timeline-slider-container">
-                <span class="year-label" id="year-start">10000 BC</span>
-                <input type="range" class="timeline-slider" id="timeline-slider" min="-10000" max="2025" value="1000" step="10">
-                <span class="year-label" id="year-end">2025 AD</span>
-            </div>
-            <div class="speed-controls">
-                <span class="speed-label">Speed:</span>
-                <button class="speed-btn" data-speed="0.5">0.5x</button>
-                <button class="speed-btn active" data-speed="1">1x</button>
-                <button class="speed-btn" data-speed="2">2x</button>
-                <button class="speed-btn" data-speed="4">4x</button>
-            </div>
-        </div>
-    </div>
-
-    <canvas id="canvas"></canvas>
-    <div class="debug-info">Year: 1000 AD | Entities: 0</div>
-
-    <script>
-        const CONFIG = { RESAMPLE_COUNT: 50, POINT_GRAB_RADIUS: 15 };
-
-        const CATEGORIES = {
-            political: {
-                name: '🏛️ Political',
-                subcategories: {
-                    country: { name: 'Country', geometryType: 'polygon' },
-                    region: { name: 'Region', geometryType: 'polygon' },
-                    city: { name: 'City', geometryType: 'point' },
-                    border: { name: 'Border', geometryType: 'line' }
-                }
-            },
-            geographic: {
-                name: '🌍 Geographic',
-                subcategories: {
-                    river: { name: 'River', geometryType: 'line' },
-                    lake: { name: 'Lake', geometryType: 'polygon' },
-                    ocean: { name: 'Ocean', geometryType: 'polygon' },
-                    mountain: { name: 'Mountain Range', geometryType: 'line' },
-                    coastline: { name: 'Coastline', geometryType: 'line' }
-                }
-            },
-            cultural: {
-                name: '🎭 Cultural',
-                subcategories: {
-                    traffic: { name: 'Traffic Direction', geometryType: 'polygon' },
-                    time_format: { name: 'Time Format', geometryType: 'polygon' },
-                    calendar: { name: 'Calendar System', geometryType: 'polygon' },
-                    writing_direction: { name: 'Writing Direction', geometryType: 'polygon' }
-                }
-            },
-            linguistic: {
-                name: '📝 Linguistic',
-                subcategories: {
-                    language: { name: 'Language', geometryType: 'polygon' },
-                    dialect: { name: 'Dialect', geometryType: 'polygon' },
-                    word: { name: 'Word Evolution', geometryType: 'polygon' },
-                    script: { name: 'Writing Script', geometryType: 'polygon' }
-                }
-            }
-        };
-
-        function formatYear(year) {
-            const rounded = Math.round(year);
-            if (rounded < 0) return `${Math.abs(rounded)} BC`;
-            else if (rounded === 0) return '1 BC';
-            else return `${rounded} AD`;
-        }
-
-        function lerp(a, b, t) { return a + (b - a) * t; }
-
-        function resampleGeometry(sourcePoints, targetCount, isClosed) {
-            if (sourcePoints.length < 2) return sourcePoints;
-            const newPoints = [];
-            const segments = isClosed ? sourcePoints.length : sourcePoints.length - 1;
-            let totalDist = 0;
-            const dists = [];
-
-            for (let i = 0; i < segments; i++) {
-                const p1 = sourcePoints[i];
-                const p2 = sourcePoints[(i + 1) % sourcePoints.length];
-                const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-                dists.push(d); totalDist += d;
-            }
-
-            if (totalDist === 0) return sourcePoints;
-            const stepDist = totalDist / targetCount;
-            let currentDist = 0, segmentIdx = 0;
-
-            for (let i = 0; i < targetCount; i++) {
-                const targetDist = i * stepDist;
-                while (segmentIdx < segments && currentDist + dists[segmentIdx] < targetDist) {
-                    currentDist += dists[segmentIdx]; segmentIdx++;
-                }
-                if (segmentIdx >= segments) { newPoints.push({...sourcePoints[sourcePoints.length - 1]}); continue; }
-                const withinSegmentDist = targetDist - currentDist;
-                const t = dists[segmentIdx] > 0 ? withinSegmentDist / dists[segmentIdx] : 0;
-                const p1 = sourcePoints[segmentIdx];
-                const p2 = sourcePoints[(segmentIdx + 1) % sourcePoints.length];
-                newPoints.push({ x: lerp(p1.x, p2.x, t), y: lerp(p1.y, p2.y, t) });
-            }
-            while(newPoints.length < targetCount) newPoints.push({...sourcePoints[sourcePoints.length-1]});
-            return newPoints;
-        }
-
-        class HistoricalEntity {
-            constructor(id, name, category, subcategory, color, parentId = null) {
-                this.id = id; this.name = name; this.category = category; this.subcategory = subcategory;
-                this.color = color; this.parentId = parentId; this.description = "";
-                this.timeline = []; this.validRange = { start: -Infinity, end: Infinity };
-                this.currentGeometry = null;
-            }
-
-            addKeyframe(year, geometry) {
-                this.timeline = this.timeline.filter(k => k.year !== year);
-                const subcat = CATEGORIES[this.category]?.subcategories[this.subcategory];
-                let resampled;
-                if (subcat?.geometryType === 'point') resampled = geometry;
-                else if (subcat?.geometryType === 'line') resampled = resampleGeometry(geometry, CONFIG.RESAMPLE_COUNT, false);
-                else resampled = resampleGeometry(geometry, CONFIG.RESAMPLE_COUNT, true);
-                this.timeline.push({ year, geometry: resampled });
-                this.timeline.sort((a, b) => a.year - b.year);
-                if(this.timeline.length > 0) {
-                    this.validRange.start = Math.min(this.timeline[0].year - 100, this.validRange.start);
-                    this.validRange.end = Math.max(this.timeline[this.timeline.length-1].year + 100, this.validRange.end);
-                }
-            }
-
-            getGeometryAtYear(targetYear) {
-                if (targetYear < this.validRange.start || targetYear > this.validRange.end || this.timeline.length === 0) return null;
-                if (this.timeline.length === 1) return this.timeline[0].geometry;
-                let prev = null, next = null;
-                for (let frame of this.timeline) {
-                    if (frame.year <= targetYear) prev = frame;
-                    if (frame.year >= targetYear && !next) next = frame;
-                }
-                if (!prev) return next ? next.geometry : null;
-                if (!next) return prev.geometry;
-                if (prev.year === next.year) return prev.geometry;
-                const t = (targetYear - prev.year) / (next.year - prev.year);
-                const interpolated = [];
-                const count = Math.max(prev.geometry.length, next.geometry.length);
-                for (let i = 0; i < count; i++) {
-                    const p1 = prev.geometry[i % prev.geometry.length];
-                    const p2 = next.geometry[i % next.geometry.length];
-                    interpolated.push({ x: lerp(p1.x, p2.x, t), y: lerp(p1.y, p2.y, t) });
-                }
-                return interpolated;
-            }
-
-            getKeyframeAtYear(year) { return this.timeline.find(k => k.year === year); }
-        }
-
-        class CanvasRenderer {
-            constructor(canvas) {
-                this.canvas = canvas; this.ctx = canvas.getContext('2d');
-                this.transform = { x: 0, y: 0, zoom: 1 };
-                this.resizeCanvas();
-                window.addEventListener('resize', () => this.resizeCanvas());
-            }
-            resizeCanvas() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
-            clear() { this.ctx.fillStyle = '#f3e9d2'; this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); }
-            worldToScreen(wx, wy) { return { x: wx * this.transform.zoom + this.transform.x, y: wy * this.transform.zoom + this.transform.y }; }
-            screenToWorld(sx, sy) { return { x: (sx - this.transform.x) / this.transform.zoom, y: (sy - this.transform.y) / this.transform.zoom }; }
-
-            draw(entities, hoveredId, selectedId, layerVisibility) {
-                this.clear();
-                this.ctx.save();
-                this.ctx.translate(this.transform.x, this.transform.y);
-                this.ctx.scale(this.transform.zoom, this.transform.zoom);
-                for (let ent of entities) {
-                    if (!layerVisibility[ent.category]) continue;
-                    if (!ent.currentGeometry || ent.currentGeometry.length < 1) continue;
-                    const subcat = CATEGORIES[ent.category]?.subcategories[ent.subcategory];
-                    if (subcat?.geometryType === 'point') this.drawPoint(ent, hoveredId, selectedId);
-                    else if (subcat?.geometryType === 'line') this.drawLine(ent, hoveredId, selectedId);
-                    else this.drawPolygon(ent, hoveredId, selectedId);
-                }
-                this.ctx.restore();
-            }
-
-            drawPolygon(ent, hoveredId, selectedId) {
-                const geo = ent.currentGeometry;
-                if (!geo || geo.length < 3) return;
-                this.ctx.fillStyle = ent.color + '40';
-                this.ctx.strokeStyle = ent.color;
-                this.ctx.lineWidth = 2;
-                if (ent.id === hoveredId) this.ctx.lineWidth = 3;
-                if (ent.id === selectedId) { this.ctx.strokeStyle = '#c5a059'; this.ctx.lineWidth = 4; }
-                this.ctx.beginPath();
-                this.ctx.moveTo(geo[0].x, geo[0].y);
-                for (let i = 1; i < geo.length; i++) this.ctx.lineTo(geo[i].x, geo[i].y);
-                this.ctx.closePath();
-                this.ctx.fill(); this.ctx.stroke();
-            }
-
-            drawLine(ent, hoveredId, selectedId) {
-                const geo = ent.currentGeometry;
-                if (!geo || geo.length < 2) return;
-                this.ctx.strokeStyle = ent.color;
-                this.ctx.lineWidth = 3;
-                if (ent.id === hoveredId) this.ctx.lineWidth = 4;
-                if (ent.id === selectedId) { this.ctx.strokeStyle = '#c5a059'; this.ctx.lineWidth = 5; }
-                this.ctx.beginPath();
-                this.ctx.moveTo(geo[0].x, geo[0].y);
-                for (let i = 1; i < geo.length; i++) this.ctx.lineTo(geo[i].x, geo[i].y);
-                this.ctx.stroke();
-            }
-
-            drawPoint(ent, hoveredId, selectedId) {
-                const geo = ent.currentGeometry;
-                if (!geo || geo.length === 0) return;
-                const pos = geo[0];
-                this.ctx.fillStyle = ent.color;
-                if (ent.id === hoveredId) this.ctx.fillStyle = '#c5a059';
-                if (ent.id === selectedId) this.ctx.fillStyle = '#8a3324';
-                this.ctx.beginPath();
-                this.ctx.arc(pos.x, pos.y, 5 / this.transform.zoom, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-
-            drawDraft(points, cursor, transform) {
-                if (points.length === 0) return;
-                this.ctx.save();
-                this.ctx.translate(transform.x, transform.y);
-                this.ctx.scale(transform.zoom, transform.zoom);
-                this.ctx.strokeStyle = '#264e86'; this.ctx.lineWidth = 2; this.ctx.setLineDash([5, 5]);
-                this.ctx.beginPath(); this.ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) this.ctx.lineTo(points[i].x, points[i].y);
-                if (cursor) this.ctx.lineTo(cursor.x, cursor.y);
-                this.ctx.stroke(); this.ctx.setLineDash([]);
-                for (let p of points) {
-                    this.ctx.fillStyle = '#264e86';
-                    this.ctx.beginPath(); this.ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); this.ctx.fill();
-                }
-                this.ctx.restore();
-            }
-
-            drawEditPoints(points, hoveredIdx, transform) {
-                if (!points || points.length === 0) return;
-                this.ctx.save();
-                this.ctx.translate(transform.x, transform.y);
-                this.ctx.scale(transform.zoom, transform.zoom);
-                for (let i = 0; i < points.length; i++) {
-                    const p = points[i];
-                    const isHovered = i === hoveredIdx;
-                    this.ctx.fillStyle = isHovered ? '#c5a059' : '#8a3324';
-                    this.ctx.strokeStyle = '#f3e9d2'; this.ctx.lineWidth = 2;
-                    this.ctx.beginPath(); this.ctx.arc(p.x, p.y, isHovered ? 8 : 6, 0, Math.PI * 2);
-                    this.ctx.fill(); this.ctx.stroke();
-                }
-                this.ctx.restore();
-            }
-        }
-
-        class IlluminarchismApp {
-            constructor() {
-                this.canvas = document.getElementById('canvas');
-                this.renderer = new CanvasRenderer(this.canvas);
-                this.entities = []; this.currentYear = 1000; this.nextId = 1;
-                this.selectedEntityId = null; this.hoveredEntityId = null;
-                this.activeTool = 'pan'; this.currentCategory = 'political'; this.currentSubcategory = 'country';
-                this.draftPoints = []; this.draftCursor = null;
-                this.layerVisibility = { political: true, geographic: true, cultural: true, linguistic: true };
-                this.isPanning = false; this.lastMouse = { x: 0, y: 0 };
-                this.editPoints = null; this.editPointHoveredIdx = -1; this.editPointDragIdx = -1;
-                this.isPlaying = false; this.playbackSpeed = 1; this.animationFrame = null; this.lastFrameTime = 0;
-                this.setupUI(); this.setupCanvas(); this.setupKeyboard(); this.setupTimeline(); this.setupDataBrowser();
-                this.updateSubcategories(); this.updateEntities(); this.render();
-            }
-
-            setupDataBrowser() {
-                const toggle = document.getElementById('data-browser-toggle');
-                const browser = document.querySelector('.data-browser');
-                toggle.addEventListener('click', () => {
-                    browser.classList.toggle('collapsed');
-                    toggle.textContent = browser.classList.contains('collapsed') ? '📊' : '✖️';
-                });
-                this.rebuildDataTree();
-            }
-
-            rebuildDataTree() {
-                const tree = document.getElementById('data-tree');
-                tree.innerHTML = '';
-                for (let [catKey, catData] of Object.entries(CATEGORIES)) {
-                    const catDiv = document.createElement('div');
-                    catDiv.className = 'tree-category';
-                    catDiv.innerHTML = `<div class="tree-category-header"><span class="tree-category-icon">▼</span>${catData.name}</div><div class="tree-subcategories"></div>`;
-                    const subContainer = catDiv.querySelector('.tree-subcategories');
-                    for (let [subKey, subData] of Object.entries(catData.subcategories)) {
-                        const subDiv = document.createElement('div');
-                        subDiv.className = 'tree-subcategory';
-                        subDiv.innerHTML = `<span>📁</span>${subData.name}<div class="tree-items"></div>`;
-                        const itemsContainer = subDiv.querySelector('.tree-items');
-                        const items = this.entities.filter(e => e.category === catKey && e.subcategory === subKey);
-                        for (let ent of items) {
-                            const itemDiv = document.createElement('div');
-                            itemDiv.className = 'tree-item';
-                            if (ent.id === this.selectedEntityId) itemDiv.classList.add('selected');
-                            itemDiv.innerHTML = `<span>📍</span><span>${ent.name}</span><span class="tree-item-id">#${ent.id}</span>`;
-                            itemDiv.addEventListener('click', (e) => { e.stopPropagation(); this.selectEntityById(ent.id); });
-                            itemsContainer.appendChild(itemDiv);
-                        }
-                        subDiv.addEventListener('click', (e) => { if(e.target === subDiv || e.target.closest('.tree-subcategory') === subDiv) subDiv.classList.toggle('collapsed'); });
-                        subContainer.appendChild(subDiv);
-                    }
-                    catDiv.querySelector('.tree-category-header').addEventListener('click', () => catDiv.classList.toggle('collapsed'));
-                    tree.appendChild(catDiv);
-                }
-            }
-
-            selectEntityById(id) {
-                this.selectedEntityId = id;
-                const ent = this.entities.find(e => e.id === id);
-                if (ent) this.populatePanel(ent);
-                this.rebuildDataTree(); this.render();
-            }
-
-            updateSubcategories() {
-                const catSelect = document.getElementById('entity-category');
-                const subSelect = document.getElementById('entity-subcategory');
-                const category = catSelect.value;
-                subSelect.innerHTML = '';
-                if (CATEGORIES[category]) {
-                    for (let [key, data] of Object.entries(CATEGORIES[category].subcategories)) {
-                        const opt = document.createElement('option');
-                        opt.value = key; opt.textContent = data.name;
-                        subSelect.appendChild(opt);
-                    }
-                }
-            }
-
-            setupTimeline() {
-                const slider = document.getElementById('timeline-slider');
-                const playBtn = document.getElementById('btn-play');
-                const firstBtn = document.getElementById('btn-first'); const prevBtn = document.getElementById('btn-prev');
-                const nextBtn = document.getElementById('btn-next'); const lastBtn = document.getElementById('btn-last');
-                const toggleBtn = document.getElementById('timeline-toggle'); const popup = document.querySelector('.timeline-popup');
-                slider.addEventListener('input', (e) => { this.currentYear = parseInt(e.target.value); this.updateYearDisplay(); this.updateEntities(); this.loadEditPoints(); this.render(); });
-                playBtn.addEventListener('click', () => this.togglePlayback());
-                firstBtn.addEventListener('click', () => this.goToYear(-10000));
-                prevBtn.addEventListener('click', () => this.stepYear(-50));
-                nextBtn.addEventListener('click', () => this.stepYear(50));
-                lastBtn.addEventListener('click', () => this.goToYear(2025));
-                document.querySelectorAll('.speed-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active'); this.playbackSpeed = parseFloat(btn.dataset.speed);
-                    });
-                });
-                toggleBtn.addEventListener('click', () => { popup.classList.toggle('collapsed'); toggleBtn.textContent = popup.classList.contains('collapsed') ? '▲' : '▼'; });
-            }
-
-            togglePlayback() {
-                this.isPlaying = !this.isPlaying;
-                const playBtn = document.getElementById('btn-play');
-                if (this.isPlaying) {
-                    playBtn.innerHTML = '⏸'; playBtn.classList.add('playing'); playBtn.title = 'Pause';
-                    this.lastFrameTime = performance.now(); this.animate();
-                } else {
-                    playBtn.innerHTML = '▶'; playBtn.classList.remove('playing'); playBtn.title = 'Play';
-                    if (this.animationFrame) { cancelAnimationFrame(this.animationFrame); this.animationFrame = null; }
-                }
-            }
-
-            animate() {
-                if (!this.isPlaying) return;
-                const now = performance.now(); const delta = now - this.lastFrameTime;
-                const yearStep = (delta / 1000) * 50 * this.playbackSpeed;
-                this.currentYear += yearStep; if (this.currentYear > 2025) this.currentYear = -10000;
-                this.lastFrameTime = now;
-                document.getElementById('timeline-slider').value = this.currentYear;
-                this.updateYearDisplay(); this.updateEntities(); this.loadEditPoints(); this.render();
-                this.animationFrame = requestAnimationFrame(() => this.animate());
-            }
-
-            goToYear(year) { this.currentYear = Math.max(-10000, Math.min(2025, year)); document.getElementById('timeline-slider').value = this.currentYear; this.updateYearDisplay(); this.updateEntities(); this.loadEditPoints(); this.render(); }
-            stepYear(delta) { this.goToYear(this.currentYear + delta); }
-            updateYearDisplay() { document.getElementById('timeline-year').textContent = formatYear(this.currentYear); }
-
-            setupUI() {
-                document.querySelectorAll('.btn-tool').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active'); this.activeTool = btn.dataset.tool;
-                        if (this.activeTool === 'edit') this.loadEditPoints();
-                        else { this.editPoints = null; if (this.activeTool !== 'draw') this.draftPoints = []; }
-                        this.render();
-                    });
-                });
-                ['political', 'geographic', 'cultural', 'linguistic'].forEach(cat => {
-                    document.getElementById('toggle-' + cat).addEventListener('change', (e) => { this.layerVisibility[cat] = e.target.checked; this.render(); });
-                });
-                document.getElementById('entity-category').addEventListener('change', () => this.updateSubcategories());
-                document.getElementById('btn-add-keyframe').addEventListener('click', () => {
-                    if (this.selectedEntityId && this.draftPoints.length > 0) {
-                        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                        if (ent) { ent.addKeyframe(this.currentYear, [...this.draftPoints]); this.draftPoints = []; this.updateEntities(); this.render(); }
-                    }
-                });
-                document.getElementById('btn-save').addEventListener('click', () => this.saveData());
-                document.getElementById('btn-load').addEventListener('click', () => document.getElementById('file-input').click());
-                document.getElementById('file-input').addEventListener('change', (e) => this.loadData(e));
-            }
-
-            loadEditPoints() {
-                if (this.activeTool !== 'edit' || !this.selectedEntityId) { this.editPoints = null; return; }
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                if (!ent) { this.editPoints = null; return; }
-                const keyframe = ent.getKeyframeAtYear(this.currentYear);
-                if (keyframe) this.editPoints = keyframe.geometry.map(p => ({...p}));
-                else this.editPoints = null;
-            }
-
-            saveEditPoints() {
-                if (!this.editPoints || !this.selectedEntityId) return;
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                if (ent) { ent.addKeyframe(this.currentYear, [...this.editPoints]); this.updateEntities(); }
-            }
-
-            setupKeyboard() {
-                document.addEventListener('keydown', (e) => {
-                    if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-                        if (e.key === 'Enter' && this.draftPoints.length >= 2) this.finishDrawing();
-                        else if (e.key === 'Escape') this.cancelDrawing();
-                        return;
-                    }
-                    if (this.activeTool === 'edit' && this.editPoints) {
-                        if (e.key === 'Delete' && this.editPointHoveredIdx >= 0 && this.editPoints.length > 3) {
-                            this.editPoints.splice(this.editPointHoveredIdx, 1); this.editPointHoveredIdx = -1;
-                            this.saveEditPoints(); this.render();
-                        } else if (e.key === 'Escape') { this.loadEditPoints(); this.render(); }
-                        return;
-                    }
-                    if (e.key === ' ') { e.preventDefault(); this.togglePlayback(); }
-                    else if (e.key === 'ArrowLeft') { e.preventDefault(); this.stepYear(-50); }
-                    else if (e.key === 'ArrowRight') { e.preventDefault(); this.stepYear(50); }
-                    else if (e.key === 'Home') { e.preventDefault(); this.goToYear(-10000); }
-                    else if (e.key === 'End') { e.preventDefault(); this.goToYear(2025); }
-                });
-            }
-
-            setupCanvas() {
-                this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-                this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-                this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-                this.canvas.addEventListener('wheel', (e) => this.onWheel(e));
-                this.canvas.addEventListener('dblclick', (e) => { e.preventDefault(); if (this.activeTool === 'draw' && this.draftPoints.length >= 2) this.finishDrawing(); });
-                this.canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); if (this.activeTool === 'draw' && this.draftPoints.length >= 2) this.finishDrawing(); });
-            }
-
-            finishDrawing() {
-                if (this.draftPoints.length < 2) { alert('Need at least 2 points'); return; }
-                if (!this.selectedEntityId) {
-                    const category = document.getElementById('entity-category').value;
-                    const subcategory = document.getElementById('entity-subcategory').value;
-                    const name = document.getElementById('entity-name').value || `New ${subcategory} ${this.nextId}`;
-                    const color = document.getElementById('entity-color').value;
-                    const parentId = document.getElementById('parent-id').value || null;
-                    const newEntity = new HistoricalEntity(this.nextId++, name, category, subcategory, color, parentId);
-                    this.entities.push(newEntity); this.selectedEntityId = newEntity.id; this.populatePanel(newEntity);
-                }
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                if (ent) {
-                    ent.addKeyframe(this.currentYear, [...this.draftPoints]); this.draftPoints = []; this.draftCursor = null;
-                    this.activeTool = 'select';
-                    document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
-                    document.querySelector('[data-tool="select"]').classList.add('active');
-                    this.updateEntities(); this.rebuildDataTree(); this.render();
-                    alert(`✓ Shape completed for ${ent.name}`);
-                }
-            }
-
-            cancelDrawing() { this.draftPoints = []; this.draftCursor = null; this.render(); }
-
-            onMouseDown(e) {
-                if (e.button !== 0) return;
-                const rect = this.canvas.getBoundingClientRect();
-                const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
-                const world = this.renderer.screenToWorld(sx, sy);
-                if (this.activeTool === 'pan') { this.isPanning = true; this.lastMouse = { x: sx, y: sy }; }
-                else if (this.activeTool === 'draw') { this.draftPoints.push(world); this.render(); }
-                else if (this.activeTool === 'select') this.selectEntityAt(world);
-                else if (this.activeTool === 'edit') {
-                    if (this.editPoints && this.editPointHoveredIdx >= 0) this.editPointDragIdx = this.editPointHoveredIdx;
-                    else this.selectEntityAt(world);
-                }
-            }
-
-            onMouseMove(e) {
-                const rect = this.canvas.getBoundingClientRect();
-                const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
-                const world = this.renderer.screenToWorld(sx, sy);
-                if (this.isPanning && this.activeTool === 'pan') {
-                    this.renderer.transform.x += sx - this.lastMouse.x;
-                    this.renderer.transform.y += sy - this.lastMouse.y;
-                    this.lastMouse = { x: sx, y: sy }; this.render();
-                } else if (this.activeTool === 'draw') { this.draftCursor = world; this.render(); }
-                else if (this.activeTool === 'edit') {
-                    if (this.editPointDragIdx >= 0 && this.editPoints) {
-                        this.editPoints[this.editPointDragIdx] = world; this.saveEditPoints(); this.render();
-                    } else if (this.editPoints) {
-                        let found = -1;
-                        for (let i = 0; i < this.editPoints.length; i++) {
-                            const p = this.editPoints[i]; const dist = Math.hypot(p.x - world.x, p.y - world.y);
-                            if (dist < CONFIG.POINT_GRAB_RADIUS / this.renderer.transform.zoom) { found = i; break; }
-                        }
-                        if (found !== this.editPointHoveredIdx) {
-                            this.editPointHoveredIdx = found;
-                            this.canvas.style.cursor = found >= 0 ? 'move' : 'crosshair'; this.render();
-                        }
-                    }
-                }
-            }
-
-            onMouseUp(e) { if (this.activeTool === 'pan') this.isPanning = false; else if (this.activeTool === 'edit') this.editPointDragIdx = -1; }
-
-            onWheel(e) {
-                e.preventDefault();
-                const rect = this.canvas.getBoundingClientRect();
-                const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
-                const worldBefore = this.renderer.screenToWorld(sx, sy);
-                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-                this.renderer.transform.zoom *= zoomFactor;
-                this.renderer.transform.zoom = Math.max(0.1, Math.min(5, this.renderer.transform.zoom));
-                const worldAfter = this.renderer.screenToWorld(sx, sy);
-                this.renderer.transform.x += (worldAfter.x - worldBefore.x) * this.renderer.transform.zoom;
-                this.renderer.transform.y += (worldAfter.y - worldBefore.y) * this.renderer.transform.zoom;
-                this.render();
-            }
-
-            selectEntityAt(world) {
-                for (let i = this.entities.length - 1; i >= 0; i--) {
-                    const ent = this.entities[i];
-                    if (!ent.currentGeometry) continue;
-                    if (this.isPointInEntity(world, ent)) {
-                        this.selectedEntityId = ent.id; this.populatePanel(ent);
-                        if (this.activeTool === 'edit') this.loadEditPoints();
-                        this.rebuildDataTree(); this.render(); return;
-                    }
-                }
-                this.selectedEntityId = null; this.editPoints = null; this.rebuildDataTree(); this.render();
-            }
-
-            isPointInEntity(pt, ent) {
-                const subcat = CATEGORIES[ent.category]?.subcategories[ent.subcategory];
-                if (subcat?.geometryType === 'point') {
-                    const pos = ent.currentGeometry[0];
-                    return Math.hypot(pt.x - pos.x, pt.y - pos.y) < 10;
-                }
-                let inside = false;
-                const geo = ent.currentGeometry;
-                for (let i = 0, j = geo.length - 1; i < geo.length; j = i++) {
-                    const xi = geo[i].x, yi = geo[i].y; const xj = geo[j].x, yj = geo[j].y;
-                    if (((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi)) inside = !inside;
-                }
-                return inside;
-            }
-
-            populatePanel(ent) {
-                document.getElementById('entity-category').value = ent.category;
-                this.updateSubcategories();
-                document.getElementById('entity-subcategory').value = ent.subcategory;
-                document.getElementById('entity-name').value = ent.name;
-                document.getElementById('entity-color').value = ent.color;
-                document.getElementById('parent-id').value = ent.parentId || '';
-                document.getElementById('entity-desc').value = ent.description;
-            }
-
-            saveData() {
-                const data = JSON.stringify({ entities: this.entities, camera: this.renderer.transform, year: this.currentYear }, null, 2);
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = 'illuminarchism_atlas.json'; a.click();
-                URL.revokeObjectURL(url);
-            }
-
-            loadData(e) {
-                const file = e.target.files[0]; if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const data = JSON.parse(ev.target.result);
-                    this.entities = data.entities.map(e => Object.assign(new HistoricalEntity(), e));
-                    if (data.camera) this.renderer.transform = data.camera;
-                    if (data.year !== undefined) {
-                        this.currentYear = data.year;
-                        document.getElementById('timeline-slider').value = this.currentYear;
-                        this.updateYearDisplay();
-                    }
-                    this.nextId = Math.max(...this.entities.map(e => e.id), 0) + 1;
-                    this.updateEntities(); this.rebuildDataTree(); this.render();
-                };
-                reader.readAsText(file);
-            }
-
-            updateEntities() {
-                let cnt = 0;
-                this.entities.forEach(ent => {
-                    ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
-                    if (ent.currentGeometry) cnt++;
-                });
-                const d = document.querySelector('.debug-info');
-                if(d) d.textContent = `Year: ${formatYear(this.currentYear)} | Active: ${cnt} | Total: ${this.entities.length}`;
-            }
-
-            render() {
-                this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.layerVisibility);
-                if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform);
-                } else if (this.activeTool === 'edit' && this.editPoints) {
-                    this.renderer.drawEditPoints(this.editPoints, this.editPointHoveredIdx, this.renderer.transform);
-                }
-            }
-        }
-
-        window.onload = () => { window.illuminarchismApp = new IlluminarchismApp(); };
-    </script>
 </body>
+
 </html>
