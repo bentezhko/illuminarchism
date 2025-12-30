@@ -10,16 +10,16 @@ A WebGL-powered historical atlas tool that lets you create, visualize, and anima
 
 ## Features
 
-- ✨ **Medieval Aesthetic**: GPU-accelerated parchment texture, ink wobble, and watercolor effects
-- 🗺️ **Temporal Cartography**: Keyframe-based geometry with smooth GPU interpolation
-- 📋 **Multi-Category System**: 🏛️ Political, 🌍 Geographic, 🎭 Cultural, 📝 Linguistic layers
-- 🌊 **Geographic Features**: Rivers, lakes, oceans, mountains, coastlines
-- 🎨 **Interactive Drawing**: Create polygons, lines, and points with fractal border generation
-- 📊 **Data Browser**: Tree-view sidebar for managing hundreds of entities by category
-- 💾 **Atlas Format**: Custom JSON format compatible with GeoJSON
-- 🚀 **High Performance**: 10,000+ polygons at 60 FPS via WebGL
-- 📁 **Git-Based Storage**: Version control your historical data
-- ⚡ **Hot-Loadable**: Add/remove atlas files without restart
+- **Medieval Aesthetic**: GPU-accelerated parchment texture, ink wobble, and watercolor effects
+- **Temporal Cartography**: Keyframe-based geometry with smooth GPU interpolation
+- **Multi-Category System**: Political, Geographic, Cultural, Linguistic layers
+- **Geographic Features**: Rivers, lakes, oceans, mountains, coastlines
+- **Interactive Drawing**: Create polygons, lines, and points with fractal border generation
+- **Data Browser**: Tree-view sidebar for managing hundreds of entities by category
+- **Atlas Format**: Custom JSON format compatible with GeoJSON
+- **High Performance**: 10,000+ polygons at 60 FPS via WebGL
+- **Git-Based Storage**: Version control your historical data
+- **Hot-Loadable**: Add/remove atlas files without restart
 
 ## Quick Start
 
@@ -39,26 +39,26 @@ open http://localhost:8000
 
 ## Categories
 
-### 🏛️ Political
+### Political
 - **Country** (polygon) - Nation states and empires
 - **Region** (polygon) - Provinces, counties, districts
 - **City** (point) - Urban centers
 - **Border** (line) - Political boundaries
 
-### 🌍 Geographic
+### Geographic
 - **River** (line) - Flowing water
 - **Lake** (polygon) - Bodies of fresh water
 - **Ocean** (polygon) - Seas and oceans
 - **Mountain Range** (line) - Mountain chains
 - **Coastline** (line) - Coastal boundaries
 
-### 🎭 Cultural
+### Cultural
 - **Traffic Direction** (polygon) - Left vs right-side driving regions
 - **Time Format** (polygon) - 12h vs 24h time systems
 - **Calendar System** (polygon) - Julian, Gregorian, Islamic, etc.
 - **Writing Direction** (polygon) - LTR vs RTL writing systems
 
-### 📝 Linguistic
+### Linguistic
 - **Language** (polygon) - Language regions
 - **Dialect** (polygon) - Regional language variants
 - **Word Evolution** (polygon) - Track individual words through time
@@ -85,15 +85,15 @@ illuminarchism/
 ### 1. Draw Your Data
 
 1. Open Illuminarchism in browser
-2. Select category (🏛️ Political, 🌍 Geographic, 🎭 Cultural, 📝 Linguistic)
+2. Select category (Political, Geographic, Cultural, Linguistic)
 3. Select subcategory (e.g., River, Country, Language)
-4. Click **🖊️ Draw** tool
+4. Click **Inscribe** tool
 5. Click to add points, press **Enter** or **double-click** to finish
 6. Edit name, color, description in right panel
 
 ### 2. Use Data Browser
 
-- Click **📊** button (bottom-left) to open Data Browser
+- Click **Registry** button to open Data Browser
 - See all entities organized by category → subcategory
 - Click any item to select and edit it
 - Each entity has a unique **ID** (#1, #2, etc.)
@@ -101,7 +101,7 @@ illuminarchism/
 
 ### 3. Export to Atlas File
 
-1. Click **💾 Save**
+1. Click **Save**
 2. Downloads `illuminarchism_atlas.json` with all entities
 3. Includes camera position and current year
 
@@ -121,11 +121,11 @@ git push
 
 ### Tools
 
-- **✋ Pan**: Click and drag to navigate, scroll to zoom
-- **🔍 Select**: Click entities to select and edit
-- **🖊️ Draw**: Click points, press Enter/double-click/right-click to finish
-- **⚒️ Edit Points**: Drag individual vertices, Delete key to remove points
-- **🎬 Add Keyframe**: Add geometry at current year for selected entity
+- **Pan**: Click and drag to navigate, scroll to zoom
+- **Seek**: Click entities to select and edit
+- **Inscribe**: Click points, press Enter/double-click/right-click to finish
+- **Edit Points**: Drag individual vertices, Delete key to remove points
+- **Add Keyframe**: Add geometry at current year for selected entity
 
 ### Keyboard Shortcuts
 
@@ -147,18 +147,18 @@ git push
 
 **Tree Structure:**
 ```
-📚 Data Browser
-  ├─ 🏛️ Political
-  │   ├─ 📁 Country
-  │   │   ├─ 📍 Roman Empire #1
-  │   │   └─ 📍 Byzantine Empire #2
-  │   └─ 📁 City
-  │       └─ 📍 Constantinople #3
-  ├─ 🌍 Geographic
-  │   ├─ 📁 River
-  │   │   └─ 📍 Danube #4
-  │   └─ 📁 Lake
-  └─ 🎭 Cultural
+Data Browser
+  +- Political
+  |   +- Country
+  |   |   +- Roman Empire #1
+  |   |   +- Byzantine Empire #2
+  |   +- City
+  |       +- Constantinople #3
+  +- Geographic
+  |   +- River
+  |   |   +- Danube #4
+  |   +- Lake
+  +- Cultural
 ```
 
 - Click category header to collapse/expand
@@ -183,16 +183,16 @@ Or use UI sliders in Ink Properties panel.
 
 Works in all modern browsers (no WebGL required - uses Canvas 2D):
 
-- ✅ Chrome 90+
-- ✅ Firefox 88+
-- ✅ Safari 14+
-- ✅ Edge 90+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
 
 ## Examples
 
 ### Track Word Evolution
 
-1. Select **📝 Linguistic** → **Word Evolution**
+1. Select **Linguistic** > **Word Evolution**
 2. Name: "water"
 3. Draw region where word="aqua" (Latin) at year 100 AD
 4. Change year to 800 AD, draw new region for "eau" (French)
@@ -200,14 +200,14 @@ Works in all modern browsers (no WebGL required - uses Canvas 2D):
 
 ### Map Traffic Rules
 
-1. Select **🎭 Cultural** → **Traffic Direction**
+1. Select **Cultural** > **Traffic Direction**
 2. Draw left-side driving regions (UK, Japan, etc.)
 3. Add keyframes at different years to show changes
 4. See how traffic rules spread historically
 
 ### Rivers Changing Course
 
-1. Select **🌍 Geographic** → **River**
+1. Select **Geographic** > **River**
 2. Draw river at year 1000 AD
 3. Change year to 1500 AD, draw new course
 4. Timeline interpolates the gradual shift
