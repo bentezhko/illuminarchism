@@ -39,8 +39,43 @@ export const DOMAINS = {
         abbr: 'GEO',
         description: 'Land cover, hydrology, topography, and physical features',
         hatchDefault: 'waves'
+    },
+    CULTURAL: {
+        id: 'cultural',
+        name: 'Cultural & Social',
+        abbr: 'CUL',
+        description: 'Cultural practices, social norms, and material culture distributions.',
+        hatchDefault: 'horizontal'
     }
 };
+
+// ============================================================================
+// LEVEL 2: CULTURAL TYPOLOGY (HRAF-aligned)
+// ============================================================================
+export const CULTURAL_TYPOLOGY = {
+    CUSTOM: {
+        id: 'custom',
+        label: 'Custom/Practice',
+        abbr: 'CST',
+        description: 'A shared social custom or practice (e.g., greeting, ritual).',
+        boundaryType: 'fuzzy',
+    },
+    NORM: {
+        id: 'norm',
+        label: 'Social Norm',
+        abbr: 'NRM',
+        description: 'A widespread social norm or pattern (e.g., sleep patterns, calendar system).',
+        boundaryType: 'fuzzy',
+    },
+    MATERIAL_CULTURE: {
+        id: 'material-culture',
+        label: 'Material Culture',
+        abbr: 'MAT',
+        description: 'Distribution of a specific artifact, technology, or style.',
+        boundaryType: 'cluster',
+    }
+};
+
 
 // ============================================================================
 // LEVEL 2: POLITICAL TYPOLOGY (Service-Fried Model)
@@ -556,6 +591,7 @@ export function getTypologiesForDomain(domainId) {
         case 'linguistic': return LINGUISTIC_TYPOLOGY;
         case 'religious': return RELIGIOUS_TYPOLOGY;
         case 'geographic': return GEOGRAPHIC_TYPOLOGY;
+        case 'cultural': return CULTURAL_TYPOLOGY;
         default: return {};
     }
 }

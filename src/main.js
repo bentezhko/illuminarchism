@@ -197,11 +197,9 @@ export default class IlluminarchismApp {
         sodaWord.addKeyframe(1900, [{ x: -200, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 0 }, { x: -200, y: 0 }], true);
         this.entities.push(sodaWord);
 
-        // This entity represents a cultural practice, which under the new ontology
-        // is mapped to a political domain with a 'chiefdom' typology as a proxy.
         const festivalZone = new HistoricalEntity('cult_fest', 'Solar Calendar Zone', {
-            domain: 'political',
-            typology: 'chiefdom',
+            domain: 'cultural',
+            typology: 'norm', // A calendar system is a social norm
             color: '#c5a059',
             hatchStyle: 'vertical'
         });
@@ -216,6 +214,18 @@ export default class IlluminarchismApp {
         });
         paganEnclave.addKeyframe(-500, [{ x: 250, y: -50 }, { x: 350, y: -50 }, { x: 350, y: 50 }, { x: 250, y: 50 }], true);
         this.entities.push(paganEnclave);
+
+        // --- NEW CULTURAL DOMAIN ENTITY ---
+        const biphasicSleep = new HistoricalEntity('cult_sleep', 'Biphasic Sleep Zone', {
+            domain: 'cultural',
+            typology: 'norm',
+            color: '#3a5f3a',
+            hatchStyle: 'horizontal'
+        });
+        // Represents the pre-industrial world, fading out by the early 20th century
+        biphasicSleep.addKeyframe(-10000, [{ x: -500, y: -500 }, { x: 800, y: -500 }, { x: 800, y: 500 }, { x: -500, y: 500 }], true);
+        biphasicSleep.addKeyframe(1900, [{ x: -500, y: -500 }, { x: 800, y: -500 }, { x: 800, y: 500 }, { x: -500, y: 500 }], false); // Fade out
+        this.entities.push(biphasicSleep);
     }
 
     formatYear(year) {
