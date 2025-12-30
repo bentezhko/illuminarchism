@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "Historical Atlas Editor",
   "scripts": {
-    "build": "mkdir -p dist && cp -r index.html _headers atlases dist/ || true"
+    "build": "mkdir -p dist && cp -r index.html src _headers atlases dist/ || true"
   },
-  "keywords": ["atlas", "history", "map"],
+  "keywords": [
+    "atlas",
+    "history",
+    "map"
+  ],
   "author": "bentezhko",
   "license": "MIT"
 }
