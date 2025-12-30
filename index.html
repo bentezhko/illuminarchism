@@ -23,21 +23,21 @@
         <header class="pointer-events-auto">
             <h1>Illumin<span>archism</span></h1>
             <div class="view-switch">
-                <button class="view-btn active" id="btn-view-map">🗺️ Map</button>
-                <button class="view-btn" id="btn-view-timeline">⏳ Timeline</button>
+                <button class="view-btn active" id="btn-view-map">Map</button>
+                <button class="view-btn" id="btn-view-timeline">Timeline</button>
             </div>
 
             <div class="file-controls">
-                <button class="btn-text" id="btn-save" title="Download .atlas JSON">💾 Save</button>
-                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">📂 Load</button>
-                <button id="btn-ontology" title="View Taxonomy">?</button>
+                <button class="btn-text" id="btn-save" title="Download .atlas JSON">Save</button>
+                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">Load</button>
+                <button id="btn-ontology" title="View Taxonomy">Help</button>
                 <input type="file" id="file-input" accept=".json,.atlas">
             </div>
         </header>
 
         <div id="toolbar" class="pointer-events-auto">
-            <button class="tool-btn active" data-tool="pan" title="Pan Hand">✋</button>
-            <button class="tool-btn" data-tool="inspect" title="Inspect Region">🔍</button>
+            <button class="tool-btn active" data-tool="pan" title="Pan Hand">Pan</button>
+            <button class="tool-btn" data-tool="inspect" title="Inspect Region">Seek</button>
             <div style="border-top: 1px solid var(--ink-faded); width: 100%; margin: 0.2rem 0;"></div>
 
             <!-- NEW: The Entity Dial (Triple Wheel) -->
@@ -56,15 +56,15 @@
                 </div>
             </div>
 
-            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">✎</button>
-            <button class="tool-btn" data-tool="vertex-edit" title="Edit Points">☷</button>
-            <button class="tool-btn" data-tool="transform" title="Transform (Move/Scale)">✥</button>
-            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
+            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">Inscribe</button>
+            <button class="tool-btn" data-tool="vertex-edit" title="Edit Points">Edit</button>
+            <button class="tool-btn" data-tool="transform" title="Transform (Move/Scale)">Shift</button>
+            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">Scrape</button>
         </div>
 
     </div>
 
-    <button id="btn-toggle-registry" title="Open Atlas Registry">📜</button>
+    <button id="btn-toggle-registry" title="Open Atlas Registry">Registry</button>
 
     <!-- Use strict display:none to hide timeline initially -->
     <div id="view-timeline" class="pointer-events-auto" style="display:none;">
@@ -76,14 +76,14 @@
         <div class="registry-header">
             <span>Atlas Registry</span>
             <span style="font-size:0.8rem; cursor:pointer;"
-                onclick="document.getElementById('atlas-registry').classList.remove('open')">✖</span>
+                onclick="document.getElementById('atlas-registry').classList.remove('open')">X</span>
         </div>
         <div id="registry-content"></div>
     </div>
 
     <!-- Ontology InfoCard -->
     <div id="ontology-modal" class="pointer-events-auto">
-        <span id="modal-close">✖</span>
+        <span id="modal-close">X</span>
         <h2 style="border-bottom: 2px solid var(--rubric-red); padding-bottom:0.5rem;">The Cartographic Ontology
         </h2>
         <div class="ontology-section">
@@ -160,9 +160,9 @@
             </div>
         </div>
         <div class="timeline-wrapper">
-            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">⏮</button>
-            <button id="btn-play" title="Play History">▶</button>
-            <button id="btn-next-key" class="time-btn" title="Next Keyframe">⏭</button>
+            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">Prev</button>
+            <button id="btn-play" title="Play History">Play</button>
+            <button id="btn-next-key" class="time-btn" title="Next Keyframe">Next</button>
 
             <div class="speed-control" title="Temporal Velocity (Years/Tick)">
                 <div class="speed-btn-group">

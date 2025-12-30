@@ -241,6 +241,14 @@ MIT License - See LICENSE file
 **AI Assistant**: Perplexity Pro, Claude  
 **Fonts**: Cinzel, IM Fell English (Google Fonts)  
 
+## Style Guidelines
+
+To maintain the authentic "Medieval Chronicle" aesthetic:
+
+1.  **No Emojis**: Do not use emojis in the UI or code. Use text labels or neutral unicode symbols (like `▼` or `X`).
+2.  **Typography**: Use 'Cinzel' for headers and 'IM Fell English' for body text.
+3.  **Language**: Use period-appropriate terminology (e.g., "Inscribe" instead of "Draw", "Registry" instead of "List").
+
 ## Contributing
 
 Contributions welcome! Please:
