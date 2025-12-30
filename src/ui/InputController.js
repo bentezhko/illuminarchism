@@ -48,6 +48,7 @@ export default class InputController {
         const c = this.renderer.canvas;
         c.addEventListener('wheel', (e) => {
             e.preventDefault();
+            if (this.app.currentView !== 'map') return;
             const d = -Math.sign(e.deltaY);
             const s = 1 + (d * 0.1);
             const t = this.renderer.transform;
@@ -174,6 +175,7 @@ export default class InputController {
         // Context Menu (Right Click)
         c.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            if (this.app.currentView !== 'map') return;
 
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
@@ -201,6 +203,7 @@ export default class InputController {
         });
 
         window.addEventListener('mousemove', (e) => {
+            if (this.app.currentView !== 'map') return;
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
             // Handle Transform (Move/Resize)
@@ -270,9 +273,87 @@ export default class InputController {
                 this.app.togglePlay();
             }
 
+            // FOCUS KEYBIND
+            if (e.code === 'KeyF') {
+                this.app.focusSelectedEntity();
+            }
+
             if (this.app.activeTool === 'draw') {
                 if (e.key === 'Enter') this.app.commitDraft();
                 if (e.key === 'Escape') this.app.cancelDraft();
+            }
+        });
+
+        // Timeline Interaction Listeners
+        this.initTimelineInteraction();
+    }
+
+    initTimelineInteraction() {
+        const tlContainer = document.getElementById('view-timeline');
+        let isDraggingBar = false;
+        let dragTarget = null;
+        let dragType = null; // 'move', 'start', 'end'
+        let startX = 0;
+        let initialStartYear = 0;
+        let initialEndYear = 0;
+
+        tlContainer.addEventListener('mousedown', (e) => {
+            if (e.target.classList.contains('timeline-bar') || e.target.classList.contains('timeline-handle')) {
+                isDraggingBar = true;
+                if (e.target.classList.contains('handle-l')) {
+                    dragType = 'start';
+                    dragTarget = e.target.parentElement.dataset.id;
+                } else if (e.target.classList.contains('handle-r')) {
+                    dragType = 'end';
+                    dragTarget = e.target.parentElement.dataset.id;
+                } else {
+                    dragType = 'move';
+                    dragTarget = e.target.dataset.id;
+                }
+                startX = e.clientX;
+                const ent = this.app.entities.find(en => en.id === dragTarget);
+                if (ent) {
+                    initialStartYear = ent.validRange.start;
+                    initialEndYear = ent.validRange.end;
+                }
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDraggingBar || !dragTarget) return;
+
+            const trackWidth = document.querySelector('.timeline-bar-track').offsetWidth;
+            const epochStart = parseInt(document.getElementById('epoch-start').value);
+            const epochEnd = parseInt(document.getElementById('epoch-end').value);
+            const totalYears = epochEnd - epochStart;
+
+            const deltaPixels = e.clientX - startX;
+            const deltaYears = Math.round((deltaPixels / trackWidth) * totalYears);
+
+            const ent = this.app.entities.find(en => en.id === dragTarget);
+            if (!ent) return;
+
+            if (dragType === 'move') {
+                const duration = initialEndYear - initialStartYear;
+                let newStart = initialStartYear + deltaYears;
+                let newEnd = newStart + duration;
+                ent.validRange.start = newStart;
+                ent.validRange.end = newEnd;
+            } else if (dragType === 'start') {
+                ent.validRange.start = Math.min(initialStartYear + deltaYears, ent.validRange.end - 1);
+            } else if (dragType === 'end') {
+                ent.validRange.end = Math.max(initialEndYear + deltaYears, ent.validRange.start + 1);
+            }
+
+            this.app.renderTimelineView();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDraggingBar) {
+                isDraggingBar = false;
+                dragTarget = null;
+                this.app.updateInfoPanel(); // Refresh UI if open
+                this.app.render(); // Refresh map
             }
         });
     }

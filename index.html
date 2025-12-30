@@ -22,6 +22,11 @@
     <div id="ui-layer">
         <header class="pointer-events-auto">
             <h1>Illumin<span>archism</span></h1>
+            <div class="view-switch">
+                <button class="view-btn active" id="btn-view-map">🗺️ Map</button>
+                <button class="view-btn" id="btn-view-timeline">⏳ Timeline</button>
+            </div>
+
             <div class="file-controls">
                 <button class="btn-text" id="btn-save" title="Download .atlas JSON">💾 Save</button>
                 <button class="btn-text" id="btn-load" title="Upload .atlas JSON">📂 Load</button>
@@ -57,117 +62,128 @@
             <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
         </div>
 
-        <button id="btn-toggle-registry" title="Open Atlas Registry">📜</button>
+    </div>
 
-        <!-- The Illuminated Registry (Sidebar) -->
-        <div id="atlas-registry" class="pointer-events-auto">
-            <div class="registry-header">
-                <span>Atlas Registry</span>
-                <span style="font-size:0.8rem; cursor:pointer;"
-                    onclick="document.getElementById('atlas-registry').classList.remove('open')">✖</span>
-            </div>
-            <div id="registry-content"></div>
+    <button id="btn-toggle-registry" title="Open Atlas Registry">📜</button>
+
+    <!-- Use strict display:none to hide timeline initially -->
+    <div id="view-timeline" class="pointer-events-auto" style="display:none;">
+        <!-- Timeline API content injected here -->
+    </div>
+
+    <!-- The Illuminated Registry (Sidebar) -->
+    <div id="atlas-registry" class="pointer-events-auto">
+        <div class="registry-header">
+            <span>Atlas Registry</span>
+            <span style="font-size:0.8rem; cursor:pointer;"
+                onclick="document.getElementById('atlas-registry').classList.remove('open')">✖</span>
+        </div>
+        <div id="registry-content"></div>
+    </div>
+
+    <!-- Ontology InfoCard -->
+    <div id="ontology-modal" class="pointer-events-auto">
+        <span id="modal-close">✖</span>
+        <h2 style="border-bottom: 2px solid var(--rubric-red); padding-bottom:0.5rem;">The Cartographic Ontology
+        </h2>
+        <div class="ontology-section">
+            <div class="ontology-title">I. Domain (Category)</div>
+            <p>The high-level context.</p>
+        </div>
+        <div class="ontology-section">
+            <div class="ontology-title">III. Form (Type)</div>
+            <p>The geometric representation.</p>
+        </div>
+        <div class="ontology-section">
+            <div class="ontology-title">III. Rank (Class)</div>
+            <p>The hierarchical status (e.g. Kingdom vs Duchy).</p>
+        </div>
+    </div>
+
+    <div id="info-panel" class="pointer-events-auto">
+        <input type="text" id="info-name-input" class="info-input" value="Region Name">
+        <div class="info-row">
+            <span>Category:</span>
+            <span id="info-cat" style="font-weight:bold;">Political</span>
+        </div>
+        <div class="info-row">
+            <span>Type:</span>
+            <span id="info-type" style="font-weight:bold;">Polity</span>
+        </div>
+        <div class="info-row">
+            <span>Pigment:</span>
+            <input type="color" id="info-color-input" title="Change Color">
         </div>
 
-        <!-- Ontology InfoCard -->
-        <div id="ontology-modal" class="pointer-events-auto">
-            <span id="modal-close">✖</span>
-            <h2 style="border-bottom: 2px solid var(--rubric-red); padding-bottom:0.5rem;">The Cartographic Ontology
-            </h2>
-            <div class="ontology-section">
-                <div class="ontology-title">I. Domain (Category)</div>
-                <p>The high-level context.</p>
-            </div>
-            <div class="ontology-section">
-                <div class="ontology-title">III. Form (Type)</div>
-                <p>The geometric representation.</p>
-            </div>
-            <div class="ontology-section">
-                <div class="ontology-title">III. Rank (Class)</div>
-                <p>The hierarchical status (e.g. Kingdom vs Duchy).</p>
-            </div>
+        <div class="info-row">
+            <span>Texture:</span>
+            <select id="info-hatch-input">
+                <option value="solid">Solid</option>
+                <option value="diagonal-right">Diagonal (Right)</option>
+                <option value="diagonal-left">Diagonal (Left)</option>
+                <option value="vertical">Vertical</option>
+                <option value="horizontal">Horizontal</option>
+                <option value="cross">Cross Hatch</option>
+                <option value="saltire">Saltire (X)</option>
+                <option value="stipple">Stipple (Dots)</option>
+                <option value="waves">Undy (Waves)</option>
+            </select>
         </div>
 
-        <div id="info-panel" class="pointer-events-auto">
-            <input type="text" id="info-name-input" class="info-input" value="Region Name">
-            <div class="info-row">
-                <span>Category:</span>
-                <span id="info-cat" style="font-weight:bold;">Political</span>
-            </div>
-            <div class="info-row">
-                <span>Type:</span>
-                <span id="info-type" style="font-weight:bold;">Polity</span>
-            </div>
-            <div class="info-row">
-                <span>Pigment:</span>
-                <input type="color" id="info-color-input" title="Change Color">
-            </div>
+        <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
+        <div class="info-row" id="info-parent-row" style="display:none;">
+            <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
+        </div>
+        <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years:</div>
+        <div id="keyframe-list"></div>
+        <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
+            <button class="small-btn" id="btn-update-meta" style="flex:1;">Update</button>
+            <button class="small-btn" id="btn-deselect">Close</button>
+        </div>
+    </div>
 
-            <div class="info-row">
-                <span>Texture:</span>
-                <select id="info-hatch-input">
-                    <option value="solid">Solid</option>
-                    <option value="diagonal-right">Diagonal (Right)</option>
-                    <option value="diagonal-left">Diagonal (Left)</option>
-                    <option value="vertical">Vertical</option>
-                    <option value="horizontal">Horizontal</option>
-                    <option value="cross">Cross Hatch</option>
-                    <option value="saltire">Saltire (X)</option>
-                    <option value="stipple">Stipple (Dots)</option>
-                    <option value="waves">Undy (Waves)</option>
-                </select>
-            </div>
+    <div id="draw-hint"></div>
+    <button id="btn-reset-view" title="Reset View to Center">⌖</button>
 
-            <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
-            <div class="info-row" id="info-parent-row" style="display:none;">
-                <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
+    <div id="temporal-controls" class="pointer-events-auto">
+        <div id="year-display">1000 AD</div>
+        <div
+            style="display:flex; justify-content:space-between; width:100%; max-width:900px; margin-bottom:0.5rem; font-size:0.8rem; color:var(--rubric-red);">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span>Epoch Start:</span>
+                <input type="number" id="epoch-start" value="-10000" class="epoch-input">
             </div>
-            <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years:</div>
-            <div id="keyframe-list"></div>
-            <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
-                <button class="small-btn" id="btn-update-meta" style="flex:1;">Update</button>
-                <button class="small-btn" id="btn-deselect">Close</button>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span>Epoch End:</span>
+                <input type="number" id="epoch-end" value="2025" class="epoch-input">
             </div>
         </div>
+        <div class="timeline-wrapper">
+            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">⏮</button>
+            <button id="btn-play" title="Play History">▶</button>
+            <button id="btn-next-key" class="time-btn" title="Next Keyframe">⏭</button>
 
-        <div id="draw-hint"></div>
-        <button id="btn-reset-view" title="Reset View to Center">⌖</button>
-
-        <div id="temporal-controls" class="pointer-events-auto">
-            <div id="year-display">1000 AD</div>
-            <div
-                style="display:flex; justify-content:space-between; width:100%; max-width:900px; margin-bottom:0.5rem; font-size:0.8rem; color:var(--rubric-red);">
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <span>Epoch Start:</span>
-                    <input type="number" id="epoch-start" value="-10000" class="epoch-input">
+            <div class="speed-control" title="Temporal Velocity (Years/Tick)">
+                <div class="speed-btn-group">
+                    <button class="speed-btn" data-speed="5">0.5x</button>
+                    <button class="speed-btn active" data-speed="10">1x</button>
+                    <button class="speed-btn" data-speed="20">2x</button>
+                    <button class="speed-btn" data-speed="40">4x</button>
+                    <button class="speed-btn" data-speed="80">8x</button>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                    <span>Epoch End:</span>
-                    <input type="number" id="epoch-end" value="2025" class="epoch-input">
-                </div>
             </div>
-            <div class="timeline-wrapper">
-                <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">⏮</button>
-                <button id="btn-play" title="Play History">▶</button>
-                <button id="btn-next-key" class="time-btn" title="Next Keyframe">⏭</button>
 
-                <div class="speed-control" title="Temporal Velocity (Years/Tick)">
-                    <span style="font-size:1rem;">🐢</span>
-                    <input type="range" id="speed-slider" min="1" max="100" value="10" step="1">
-                    <span style="font-size:1rem;">🐇</span>
-                </div>
-
-                <div id="timeline-track-container">
-                    <div id="keyframe-notches"></div>
-                    <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
-                </div>
+            <div id="timeline-track-container">
+                <div id="keyframe-notches"></div>
+                <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
             </div>
-            <div style="font-size: 0.8rem; color: var(--ink-faded);">The Chronometer</div>
         </div>
+        <div style="font-size: 0.8rem; color: var(--ink-faded);">The Chronometer</div>
+    </div>
 
-        <div class="debug-info pointer-events-auto">
-            Render: Watercolor/Ink | Mode: Interactive | Entities: Loading...
-        </div>
+    <div class="debug-info pointer-events-auto">
+        Render: Watercolor/Ink | Mode: Interactive | Entities: Loading...
+    </div>
     </div>
 
     <canvas id="map-canvas"></canvas>

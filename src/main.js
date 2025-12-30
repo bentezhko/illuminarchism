@@ -43,7 +43,9 @@ export default class IlluminarchismApp {
         this.drawCategory = 'political';
         this.drawType = 'polity';
         this.playbackSpeed = 10;
+        this.playbackSpeed = 10;
         this.highlightedVertexIndex = null;
+        this.currentView = 'map'; // map | timeline
 
         this.uiRefs = {}; // Store UI elements here
 
@@ -284,8 +286,13 @@ export default class IlluminarchismApp {
                 if (this.uiRefs.display) this.uiRefs.display.textContent = this.formatYear(this.currentYear);
                 this.updateEntities();
                 this.render();
+                this.renderTimelineView(); // Update timeline if active
             });
         }
+
+        // Add listeners for view switching
+        this.safeAddListener('btn-view-map', 'click', () => this.switchView('map'));
+        this.safeAddListener('btn-view-timeline', 'click', () => this.switchView('timeline'));
 
         // Add keyframe navigation buttons safely
         this.safeAddListener('btn-prev-key', 'click', () => this.jumpToKeyframe(-1));
@@ -315,14 +322,20 @@ export default class IlluminarchismApp {
                 this.updateEntities();
                 this.renderTimelineNotches(); // Update notches on bound change
                 this.render();
+                this.renderTimelineView();
             }
         };
 
         this.safeAddListener('epoch-start', 'change', updateTimelineBounds);
         this.safeAddListener('epoch-end', 'change', updateTimelineBounds);
 
-        this.safeAddListener('speed-slider', 'input', (e) => {
-            this.playbackSpeed = parseInt(e.target.value);
+        // Speed Buttons
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.playbackSpeed = parseInt(e.target.dataset.speed);
+                document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+            });
         });
 
         if (this.uiRefs.playBtn) {
@@ -475,6 +488,216 @@ export default class IlluminarchismApp {
             catDiv.appendChild(list);
             container.appendChild(catDiv);
         }
+    }
+
+    checkHover(wp) {
+        if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
+        let fid = null;
+
+        const visibleEntities = this.entities.filter(e => e.visible);
+
+        // Reverse Sort (Top -> Bottom)
+        const sorted = [...visibleEntities].sort((a, b) => {
+            // Cities > Overlays (Cult/Ling) > Water > Land
+            const typeScore = (type) => {
+                if (type === 'city') return 100;
+                if (type === 'water') return 50;
+                return 0;
+            };
+            const catScore = (cat) => {
+                if (cat === 'linguistic' || cat === 'cultural') return 80;
+                return 0;
+            };
+            return (catScore(a.category) + typeScore(a.type)) - (catScore(b.category) + typeScore(b.type));
+        });
+
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const e = sorted[i];
+            if (!e.currentGeometry) continue;
+
+            let hit = false;
+            if (e.type === 'city') {
+                if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
+            } else if (e.type === 'river') {
+                const pts = e.currentGeometry;
+                for (let j = 0; j < pts.length - 1; j++) {
+                    if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
+                }
+            } else {
+                if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+            }
+
+            if (hit) { fid = e.id; break; }
+        }
+
+        if (fid !== this.hoveredEntityId) {
+            this.hoveredEntityId = fid;
+            this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
+            this.render();
+        }
+    }
+
+    focusSelectedEntity() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
+            let c = { x: 0, y: 0 };
+            if (ent.type === 'city') {
+                c = ent.currentGeometry[0];
+            } else {
+                c = getCentroid(ent.currentGeometry);
+            }
+            // Animate or set transform
+            this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
+            this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
+            this.render();
+        }
+    }
+
+    switchView(viewName) {
+        this.currentView = viewName;
+
+        const mapCanvas = document.getElementById('map-canvas');
+        const timelineDiv = document.getElementById('view-timeline');
+        const toolbar = document.getElementById('toolbar');
+
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+
+        if (viewName === 'map') {
+            document.getElementById('btn-view-map').classList.add('active');
+            if (mapCanvas) mapCanvas.style.display = 'block';
+            if (timelineDiv) {
+                timelineDiv.classList.remove('active');
+                timelineDiv.style.display = 'none'; // Explicitly hide
+            }
+            if (toolbar) toolbar.style.display = 'flex';
+            this.render();
+        } else {
+            document.getElementById('btn-view-timeline').classList.add('active');
+            if (mapCanvas) mapCanvas.style.display = 'none';
+            if (timelineDiv) {
+                timelineDiv.classList.add('active');
+                timelineDiv.style.display = 'block'; // Explicitly show
+            }
+            if (toolbar) toolbar.style.display = 'none';
+            this.renderTimelineView();
+        }
+    }
+
+    renderTimelineView() {
+        const container = document.getElementById('view-timeline');
+        if (!container || this.currentView !== 'timeline') return;
+
+        // Clear content
+        container.innerHTML = '';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'timeline-header';
+        container.appendChild(header);
+
+        // Draw ticks
+        const epochStart = parseInt(document.getElementById('epoch-start').value);
+        const epochEnd = parseInt(document.getElementById('epoch-end').value);
+        const totalYears = epochEnd - epochStart;
+
+        for (let i = 0; i <= 10; i++) {
+            const tick = document.createElement('div');
+            tick.className = 'timeline-ruler-tick';
+            tick.style.left = `${i * 10}%`;
+            tick.textContent = Math.round(epochStart + (totalYears * (i / 10)));
+            header.appendChild(tick);
+        }
+
+        const currentPercent = ((this.currentYear - epochStart) / totalYears) * 100;
+
+        // Group by Domain
+        const grouped = {};
+        this.entities.forEach(ent => {
+            if (!grouped[ent.category]) grouped[ent.category] = [];
+            grouped[ent.category].push(ent);
+        });
+
+        for (const cat in grouped) {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'timeline-group open'; // Default open
+
+            const groupHeader = document.createElement('div');
+            groupHeader.className = 'timeline-group-header';
+            groupHeader.innerHTML = `<span class="group-arrow">▶</span> ${cat.charAt(0).toUpperCase() + cat.slice(1)}`;
+            groupHeader.onclick = () => {
+                groupDiv.classList.toggle('open');
+            };
+            groupDiv.appendChild(groupHeader);
+
+            const groupContent = document.createElement('div');
+            groupContent.className = 'timeline-group-content';
+
+            // Sort entities alphabetically within group
+            grouped[cat].sort((a, b) => a.name.localeCompare(b.name));
+
+            grouped[cat].forEach(ent => {
+                const row = document.createElement('div');
+                row.className = 'timeline-row';
+
+                const label = document.createElement('div');
+                label.className = 'timeline-label';
+                label.textContent = ent.name;
+                row.appendChild(label);
+
+                const track = document.createElement('div');
+                track.className = 'timeline-bar-track';
+
+                const startP = Math.max(0, ((ent.validRange.start - epochStart) / totalYears) * 100);
+                const endP = Math.min(100, ((ent.validRange.end - epochStart) / totalYears) * 100);
+                const widthP = endP - startP;
+
+                if (widthP > 0) {
+                    const bar = document.createElement('div');
+                    bar.className = 'timeline-bar';
+                    bar.style.left = `${startP}%`;
+                    bar.style.width = `${widthP}%`;
+                    bar.style.backgroundColor = ent.color;
+                    bar.dataset.id = ent.id;
+
+                    const handleL = document.createElement('div');
+                    handleL.className = 'timeline-handle handle-l';
+                    bar.appendChild(handleL);
+
+                    const handleR = document.createElement('div');
+                    handleR.className = 'timeline-handle handle-r';
+                    bar.appendChild(handleR);
+
+                    track.appendChild(bar);
+                }
+                row.appendChild(track);
+                groupContent.appendChild(row);
+            });
+
+            groupDiv.appendChild(groupContent);
+            container.appendChild(groupDiv);
+        }
+
+        // Add Red Line
+        const lineContainer = document.createElement('div');
+        lineContainer.style.position = 'absolute';
+        lineContainer.style.top = '70px';
+        lineContainer.style.bottom = '20px';
+        lineContainer.style.left = '232px';
+        lineContainer.style.right = '32px';
+        lineContainer.style.pointerEvents = 'none';
+
+        const redLine = document.createElement('div');
+        redLine.style.position = 'absolute';
+        redLine.style.left = `${currentPercent}%`;
+        redLine.style.top = 0;
+        redLine.style.bottom = 0;
+        redLine.style.width = '2px';
+        redLine.style.backgroundColor = 'var(--rubric-red)';
+        redLine.style.zIndex = 20;
+
+        lineContainer.appendChild(redLine);
+        container.appendChild(lineContainer);
     }
 
     renderTimelineNotches() {
