@@ -223,8 +223,8 @@ export default class IlluminarchismApp {
             hatchStyle: 'horizontal'
         });
         // Represents the pre-industrial world, fading out by the early 20th century
-        biphasicSleep.addKeyframe(-10000, [{ x: -500, y: -500 }, { x: 800, y: -500 }, { x: 800, y: 500 }, { x: -500, y: 500 }], true);
-        biphasicSleep.addKeyframe(1900, [{ x: -500, y: -500 }, { x: 800, y: -500 }, { x: 800, y: 500 }, { x: -500, y: 500 }], false); // Fade out
+        biphasicSleep.addKeyframe(-10000, [{ x: -400, y: -300 }, { x: 400, y: -300 }, { x: 400, y: 300 }, { x: -400, y: 300 }], true);
+        biphasicSleep.addKeyframe(1900, [{ x: -400, y: -300 }, { x: 400, y: -300 }, { x: 400, y: 300 }, { x: -400, y: 300 }], false); // Fade out
         this.entities.push(biphasicSleep);
     }
 
