@@ -329,6 +329,11 @@ export default class IlluminarchismApp {
         this.safeAddListener('epoch-start', 'change', updateTimelineBounds);
         this.safeAddListener('epoch-end', 'change', updateTimelineBounds);
 
+        // Toggle Timeline Panel
+        this.safeAddListener('btn-toggle-time-panel', 'click', () => {
+            document.body.classList.toggle('panel-collapsed');
+        });
+
         // Speed Buttons
         document.querySelectorAll('.speed-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -401,10 +406,7 @@ export default class IlluminarchismApp {
             fileInput.addEventListener('change', (e) => this.loadAtlas(e));
         }
 
-        this.safeAddListener('btn-reset-view', 'click', () => {
-            this.renderer.transform = { x: this.renderer.width / 2, y: this.renderer.height / 2, k: 1 };
-            this.render();
-        });
+
 
         // Initial render of notches if anything selected (unlikely on load but good practice)
         this.renderTimelineNotches();
