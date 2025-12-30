@@ -588,7 +588,7 @@ export default class IlluminarchismApp {
 
             // Domain Content Container
             const domainContent = document.createElement('div');
-            domainContent.className = 'registry-list';
+            domainContent.className = 'registry-list open';
 
             // Get sorted typology keys
             const sortedTypologies = Object.keys(domainGroups[domainId]).sort((a, b) => {
@@ -627,7 +627,7 @@ export default class IlluminarchismApp {
 
                 // Entity List (Level 3)
                 const typeList = document.createElement('div');
-                typeList.className = 'registry-list';
+                typeList.className = 'registry-list open';
                 typeList.style.marginLeft = '0.5rem';
 
                 // Sort entities alphabetically by name

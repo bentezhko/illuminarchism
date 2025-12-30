@@ -317,6 +317,7 @@ h1 span {
     display: flex;
     flex-direction: column;
     pointer-events: auto;
+    z-index: 20;
     /* Ensure clicks work */
 }
 
