@@ -9,8 +9,6 @@ export default class IlluminarchismApp {
         // Build taxonomy from Ontology module (4-domain, 3-level hierarchy)
         this.ontologyTaxonomy = buildTaxonomyForUI();
 
-        // Legacy taxonomy format for backward compatibility with existing UI
-        this.taxonomy = this._buildLegacyTaxonomy();
 
         this.renderer = new MedievalRenderer('map-canvas');
         this.input = new InputController(this);
@@ -113,61 +111,121 @@ export default class IlluminarchismApp {
     }
 
     initData() {
-        // Geographical
-        const seaNorth = new HistoricalEntity('sea_north', 'Mare Borealis', 'geographical', 'water', '#264e86', null, 'waves');
+        // Create entities using the new config-object format for constructor
+        const seaNorth = new HistoricalEntity('sea_north', 'Mare Borealis', {
+            domain: 'geographic',
+            typology: 'aquatic',
+            color: '#264e86',
+            hatchStyle: 'waves'
+        });
         seaNorth.addKeyframe(-10000, [{ x: 0, y: -400 }, { x: 500, y: -400 }, { x: 500, y: 0 }, { x: 0, y: 0 }], true);
         seaNorth.addKeyframe(2025, [{ x: -10, y: -410 }, { x: 510, y: -410 }, { x: 510, y: 10 }, { x: -10, y: 10 }], true);
         this.entities.push(seaNorth);
 
-        const seaSouth = new HistoricalEntity('sea_south', 'Mare Australis', 'geographical', 'water', '#264e86', null, 'waves');
+        const seaSouth = new HistoricalEntity('sea_south', 'Mare Australis', {
+            domain: 'geographic',
+            typology: 'aquatic',
+            color: '#264e86',
+            hatchStyle: 'waves'
+        });
         seaSouth.addKeyframe(-10000, [{ x: 0, y: -100 }, { x: 500, y: -100 }, { x: 500, y: 300 }, { x: 0, y: 300 }], true);
         seaSouth.addKeyframe(2025, [{ x: -10, y: -110 }, { x: 510, y: -110 }, { x: 510, y: 310 }, { x: -10, y: 310 }], true);
         this.entities.push(seaSouth);
 
-        // Political
-        const mainland = new HistoricalEntity('mainland', 'Regnum Magna', 'political', 'polity', '#264e86', null, 'diagonal-right');
+        const mainland = new HistoricalEntity('mainland', 'Regnum Magna', {
+            domain: 'political',
+            typology: 'nation-state',
+            color: '#264e86',
+            hatchStyle: 'diagonal-right'
+        });
         mainland.addKeyframe(-2000, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
         mainland.addKeyframe(2025, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
         this.entities.push(mainland);
 
-        const island = new HistoricalEntity('island', 'Insula Minor', 'political', 'polity', '#264e86', null, 'diagonal-left');
+        const island = new HistoricalEntity('island', 'Insula Minor', {
+            domain: 'political',
+            typology: 'nation-state',
+            color: '#264e86',
+            hatchStyle: 'diagonal-left'
+        });
         island.addKeyframe(-2000, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
         island.addKeyframe(2025, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
         this.entities.push(island);
 
-        const bridge = new HistoricalEntity('bridge', 'The Causeway', 'political', 'polity', '#8a3324', null, 'vertical');
+        const bridge = new HistoricalEntity('bridge', 'The Causeway', {
+            domain: 'political',
+            typology: 'nation-state',
+            color: '#8a3324',
+            hatchStyle: 'vertical'
+        });
         bridge.addKeyframe(-2000, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
         bridge.addKeyframe(2025, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
         this.entities.push(bridge);
 
-        const city = new HistoricalEntity('city_capital', 'Urbs Aeterna', 'political', 'city', '#000000');
+        const city = new HistoricalEntity('city_capital', 'Urbs Aeterna', {
+            domain: 'political',
+            typology: 'city',
+            color: '#000000'
+        });
         city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
         this.entities.push(city);
 
-        // Linguistic
-        const oldTongue = new HistoricalEntity('lang_old', 'Lingua Antiqua', 'linguistic', 'language', '#5c3c92', null, 'cross');
+        const oldTongue = new HistoricalEntity('lang_old', 'Lingua Antiqua', {
+            domain: 'linguistic',
+            typology: 'language',
+            color: '#5c3c92',
+            hatchStyle: 'cross'
+        });
         oldTongue.addKeyframe(800, [{ x: -280, y: -80 }, { x: -120, y: -80 }, { x: -120, y: 80 }, { x: -280, y: 80 }], true);
         this.entities.push(oldTongue);
 
-        // NEW ENTITIES FROM SNIPPET
-        const thSound = new HistoricalEntity('sound_th', 'Theta Isogloss', 'linguistic', 'sound', '#800080', null, 'stipple');
+        const thSound = new HistoricalEntity('sound_th', 'Theta Isogloss', {
+            domain: 'linguistic',
+            typology: 'sound-isogloss',
+            color: '#800080',
+            hatchStyle: 'stipple'
+        });
         thSound.addKeyframe(1200, [{ x: -250, y: -50 }, { x: -150, y: -50 }, { x: -150, y: 50 }, { x: -250, y: 50 }], true);
         this.entities.push(thSound);
 
-        const sodaWord = new HistoricalEntity('word_soda', 'Soda/Pop Line', 'linguistic', 'word', '#FF4500', null, 'stipple');
+        const sodaWord = new HistoricalEntity('word_soda', 'Soda/Pop Line', {
+            domain: 'linguistic',
+            typology: 'word-isogloss',
+            color: '#FF4500',
+            hatchStyle: 'stipple'
+        });
         sodaWord.addKeyframe(1900, [{ x: -200, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 0 }, { x: -200, y: 0 }], true);
         this.entities.push(sodaWord);
 
-
-        // Cultural
-        const festivalZone = new HistoricalEntity('cult_fest', 'Solar Calendar Zone', 'cultural', 'practice', '#c5a059', null, 'vertical');
+        const festivalZone = new HistoricalEntity('cult_fest', 'Solar Calendar Zone', {
+            domain: 'cultural',
+            typology: 'norm', // A calendar system is a social norm
+            color: '#c5a059',
+            hatchStyle: 'vertical'
+        });
         festivalZone.addKeyframe(900, [{ x: -290, y: -90 }, { x: 100, y: -90 }, { x: 100, y: 90 }, { x: -290, y: 90 }], true);
         this.entities.push(festivalZone);
 
-        // Faith
-        const paganEnclave = new HistoricalEntity('faith_pagan', 'Old Gods', 'faith', 'religion', '#228B22', null, 'stipple');
+        const paganEnclave = new HistoricalEntity('faith_pagan', 'Old Gods', {
+            domain: 'religious',
+            typology: 'ethnic', // More appropriate than 'universalizing' for "Old Gods"
+            color: '#228B22',
+            hatchStyle: 'stipple'
+        });
         paganEnclave.addKeyframe(-500, [{ x: 250, y: -50 }, { x: 350, y: -50 }, { x: 350, y: 50 }, { x: 250, y: 50 }], true);
         this.entities.push(paganEnclave);
+
+        // --- NEW CULTURAL DOMAIN ENTITY ---
+        const biphasicSleep = new HistoricalEntity('cult_sleep', 'Biphasic Sleep Zone', {
+            domain: 'cultural',
+            typology: 'norm',
+            color: '#3a5f3a',
+            hatchStyle: 'horizontal'
+        });
+        // Represents the pre-industrial world, fading out by the early 20th century
+        biphasicSleep.addKeyframe(-10000, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true);
+        biphasicSleep.addKeyframe(1900, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], false); // Fade out
+        this.entities.push(biphasicSleep);
     }
 
     formatYear(year) {
@@ -175,49 +233,6 @@ export default class IlluminarchismApp {
         return `${year} AD`;
     }
 
-    /**
-     * Build legacy taxonomy format from new ontology for backward compatibility
-     * Maps new 4-domain structure to legacy 5-category structure
-     */
-    _buildLegacyTaxonomy() {
-        const legacy = {
-            'political': [],
-            'geographical': [],
-            'cultural': [],
-            'linguistic': [],
-            'faith': []
-        };
-
-        // Map ontology domains to legacy categories
-        const domainToLegacy = {
-            'political': 'political',
-            'linguistic': 'linguistic',
-            'religious': 'faith',
-            'geographic': 'geographical'
-        };
-
-        for (const [domainId, domainData] of Object.entries(this.ontologyTaxonomy)) {
-            const legacyCat = domainToLegacy[domainId];
-            if (legacyCat && legacy[legacyCat]) {
-                for (const type of domainData.types) {
-                    legacy[legacyCat].push({
-                        value: type.value,
-                        label: type.label,
-                        abbr: type.abbr,
-                        boundaryType: type.boundaryType,
-                        geometryType: type.geometryType
-                    });
-                }
-            }
-        }
-
-        // Add cultural category (not in new ontology, kept for legacy)
-        legacy['cultural'] = [
-            { value: 'practice', label: 'Custom/Practice', abbr: 'CST' }
-        ];
-
-        return legacy;
-    }
 
     // --- NEW: Helper to update the dial state using new ontology ---
     updateDialDisplay() {
@@ -245,14 +260,11 @@ export default class IlluminarchismApp {
             if (currentTypology) {
                 formEl.textContent = currentTypology.abbr;
             } else {
-                // Fallback to first typology or legacy
-                formEl.textContent = '---';
+                // Fallback to the first available typology in the domain
+                formEl.textContent = domainData.types.length > 0 ? domainData.types[0].abbr : '---';
             }
         } else {
-            // Legacy fallback
-            const types = this.taxonomy[this.drawCategory];
-            const currentTypeObj = types ? types.find(t => t.value === this.drawType) : null;
-            formEl.textContent = currentTypeObj ? currentTypeObj.abbr : '---';
+            formEl.textContent = '---';
         }
 
         // 3. Rank/Subtype (Level 3) - Show admin levels when available
@@ -387,27 +399,6 @@ export default class IlluminarchismApp {
         } else {
             console.warn(`Element with ID '${id}' not found. Event '${event}' not bound.`);
         }
-    }
-
-    // Moved updateTypeDropdown here for clarity and safety
-    updateTypeDropdown() {
-        // No longer used, but kept for logic consistency if referenced
-        const cat = this.drawCategory;
-        const select = document.getElementById('draw-type-select');
-        if (!select) return; // Guard clause
-        select.innerHTML = ''; // Clear existing
-
-        const options = this.taxonomy[cat];
-        options.forEach(opt => {
-            const el = document.createElement('option');
-            el.value = opt.value;
-            el.textContent = opt.label;
-            select.appendChild(el);
-        });
-
-        // Reset current type to the first option of the new category
-        this.drawType = options[0].value;
-        select.value = this.drawType;
     }
 
     initUI() {
@@ -560,42 +551,69 @@ export default class IlluminarchismApp {
 
     renderRegistry() {
         const container = document.getElementById('registry-content');
+        if (!container) return; // Guard against missing element
         container.innerHTML = '';
 
-        // Group by domain -> typology -> entities (2-level tree)
+        // Group by the new ontology: domain -> typology -> entities
         const domainGroups = {};
         this.entities.forEach(ent => {
-            const domain = ent.domain || ent.category || 'unknown';
-            const typology = ent.typology || ent.type || 'unknown';
+            // Use the primary ontology fields. Fallback to 'unknown' if somehow missing.
+            const domain = ent.domain || 'unknown';
+            const typology = ent.typology || 'unknown';
 
-            if (!domainGroups[domain]) domainGroups[domain] = {};
-            if (!domainGroups[domain][typology]) domainGroups[domain][typology] = [];
+            if (!domainGroups[domain]) {
+                domainGroups[domain] = {};
+            }
+            if (!domainGroups[domain][typology]) {
+                domainGroups[domain][typology] = [];
+            }
             domainGroups[domain][typology].push(ent);
         });
 
+        // Get sorted domain keys to render in a consistent order
+        const sortedDomains = Object.keys(domainGroups).sort((a, b) => {
+            const nameA = this.ontologyTaxonomy[a]?.domain.name || a;
+            const nameB = this.ontologyTaxonomy[b]?.domain.name || b;
+            return nameA.localeCompare(nameB);
+        });
+
         // Render domain -> typology -> entity tree
-        for (const domain in domainGroups) {
+        for (const domainId of sortedDomains) {
+            const domainData = this.ontologyTaxonomy[domainId];
+            const domainLabel = domainData ? domainData.domain.name : (domainId.charAt(0).toUpperCase() + domainId.slice(1));
+
             const domainDiv = document.createElement('div');
             domainDiv.className = 'registry-category';
 
             // Domain Header (Level 1)
             const domainTitle = document.createElement('div');
             domainTitle.className = 'registry-cat-title';
-            const domainLabel = domain.charAt(0).toUpperCase() + domain.slice(1);
             domainTitle.textContent = `▶ ${domainLabel}`;
             domainTitle.onclick = () => {
                 const content = domainTitle.nextElementSibling;
-                content.classList.toggle('open');
-                domainTitle.textContent = content.classList.contains('open') ? `▼ ${domainLabel}` : `▶ ${domainLabel}`;
+                const isOpen = content.classList.toggle('open');
+                domainTitle.textContent = isOpen ? `▼ ${domainLabel}` : `▶ ${domainLabel}`;
             };
             domainDiv.appendChild(domainTitle);
 
             // Domain Content Container
             const domainContent = document.createElement('div');
-            domainContent.className = 'registry-list';
+            domainContent.className = 'registry-list open';
+
+            // Get sorted typology keys
+            const sortedTypologies = Object.keys(domainGroups[domainId]).sort((a, b) => {
+                const labelA = domainData?.types.find(t => t.value === a)?.label || a;
+                const labelB = domainData?.types.find(t => t.value === b)?.label || b;
+                return labelA.localeCompare(labelB);
+            });
 
             // Typology Groups (Level 2)
-            for (const typology in domainGroups[domain]) {
+            for (const typologyId of sortedTypologies) {
+                const typologyData = domainData?.types.find(t => t.value === typologyId);
+                const typeLabel = typologyData ? typologyData.label : (typologyId.charAt(0).toUpperCase() + typologyId.slice(1).replace(/-/g, ' '));
+                const entities = domainGroups[domainId][typologyId];
+                const count = entities.length;
+
                 const typeDiv = document.createElement('div');
                 typeDiv.className = 'registry-typology';
                 typeDiv.style.marginLeft = '0.5rem';
@@ -608,25 +626,29 @@ export default class IlluminarchismApp {
                 typeTitle.style.fontStyle = 'italic';
                 typeTitle.style.color = 'var(--ink-faded)';
                 typeTitle.style.fontSize = '0.85rem';
-                const typeLabel = typology.charAt(0).toUpperCase() + typology.slice(1).replace(/-/g, ' ');
-                const count = domainGroups[domain][typology].length;
                 typeTitle.textContent = `▶ ${typeLabel} (${count})`;
                 typeTitle.onclick = (e) => {
                     e.stopPropagation();
                     const typeList = typeTitle.nextElementSibling;
-                    typeList.classList.toggle('open');
-                    typeTitle.textContent = typeList.classList.contains('open') ? `▼ ${typeLabel} (${count})` : `▶ ${typeLabel} (${count})`;
+                    const isOpen = typeList.classList.toggle('open');
+                    typeTitle.textContent = isOpen ? `▼ ${typeLabel} (${count})` : `▶ ${typeLabel} (${count})`;
                 };
                 typeDiv.appendChild(typeTitle);
 
                 // Entity List (Level 3)
                 const typeList = document.createElement('div');
-                typeList.className = 'registry-list';
+                typeList.className = 'registry-list open';
                 typeList.style.marginLeft = '0.5rem';
 
-                domainGroups[domain][typology].forEach(ent => {
+                // Sort entities alphabetically by name
+                entities.sort((a, b) => a.name.localeCompare(b.name));
+
+                entities.forEach(ent => {
                     const item = document.createElement('div');
                     item.className = 'registry-item';
+                    if (ent.id === this.selectedEntityId) {
+                        item.classList.add('selected');
+                    }
 
                     const left = document.createElement('div');
                     left.style.display = 'flex';
@@ -653,12 +675,16 @@ export default class IlluminarchismApp {
                     goTo.innerHTML = '⌖';
                     goTo.title = 'Go to location';
                     goTo.style.fontSize = '0.8rem';
+                    goTo.style.cursor = 'pointer';
 
                     item.onclick = () => {
-                        this.selectEntity(ent.id, false);
+                        this.selectEntity(ent.id, true); // Select and show panel
+
+                        // Also focus camera
                         if (ent.currentGeometry && ent.currentGeometry.length > 0) {
                             let c = { x: 0, y: 0 };
-                            if (ent.type === 'city' || ent.typology === 'city') {
+                            const isPoint = ent.typology === 'city' || ent.typology === 'sacred-site';
+                            if (isPoint) {
                                 c = ent.currentGeometry[0];
                             } else {
                                 c = getCentroid(ent.currentGeometry);
@@ -667,6 +693,7 @@ export default class IlluminarchismApp {
                             this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
                             this.render();
                         }
+                        this.renderRegistry(); // Re-render to show selection highlight
                     };
                     item.appendChild(goTo);
                     typeList.appendChild(item);
@@ -779,8 +806,7 @@ export default class IlluminarchismApp {
         const container = document.getElementById('view-timeline');
         if (!container || this.currentView !== 'timeline') return;
 
-        // Clear content
-        container.innerHTML = '';
+        container.innerHTML = ''; // Clear content
 
         // Header
         const header = document.createElement('div');
@@ -802,32 +828,46 @@ export default class IlluminarchismApp {
 
         const currentPercent = ((this.currentYear - epochStart) / totalYears) * 100;
 
-        // Group by Domain
+        // Group by Domain using the new ontology
         const grouped = {};
         this.entities.forEach(ent => {
-            if (!grouped[ent.category]) grouped[ent.category] = [];
-            grouped[ent.category].push(ent);
+            const domainId = ent.domain || 'unknown';
+            if (!grouped[domainId]) {
+                grouped[domainId] = [];
+            }
+            grouped[domainId].push(ent);
         });
 
-        for (const cat in grouped) {
+        const sortedDomains = Object.keys(grouped).sort((a, b) => {
+            const nameA = this.ontologyTaxonomy[a]?.domain.name || a;
+            const nameB = this.ontologyTaxonomy[b]?.domain.name || b;
+            return nameA.localeCompare(nameB);
+        });
+
+        for (const domainId of sortedDomains) {
+            const domainData = this.ontologyTaxonomy[domainId];
+            const domainLabel = domainData ? domainData.domain.name : (domainId.charAt(0).toUpperCase() + domainId.slice(1));
+            const entities = grouped[domainId];
+
             const groupDiv = document.createElement('div');
             groupDiv.className = 'timeline-group open'; // Default open
 
             const groupHeader = document.createElement('div');
             groupHeader.className = 'timeline-group-header';
-            groupHeader.innerHTML = `<span class="group-arrow">▶</span> ${cat.charAt(0).toUpperCase() + cat.slice(1)}`;
+            groupHeader.innerHTML = `<span class="group-arrow">▼</span> ${domainLabel}`;
             groupHeader.onclick = () => {
-                groupDiv.classList.toggle('open');
+                const isOpen = groupDiv.classList.toggle('open');
+                const arrow = groupHeader.querySelector('.group-arrow');
+                if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
             };
             groupDiv.appendChild(groupHeader);
 
             const groupContent = document.createElement('div');
             groupContent.className = 'timeline-group-content';
 
-            // Sort entities alphabetically within group
-            grouped[cat].sort((a, b) => a.name.localeCompare(b.name));
+            entities.sort((a, b) => a.name.localeCompare(b.name));
 
-            grouped[cat].forEach(ent => {
+            entities.forEach(ent => {
                 const row = document.createElement('div');
                 row.className = 'timeline-row';
 
@@ -877,15 +917,15 @@ export default class IlluminarchismApp {
         lineContainer.style.left = '232px';
         lineContainer.style.right = '32px';
         lineContainer.style.pointerEvents = 'none';
+        lineContainer.style.zIndex = '10'; // Ensure it's above the content
 
         const redLine = document.createElement('div');
         redLine.style.position = 'absolute';
         redLine.style.left = `${currentPercent}%`;
-        redLine.style.top = 0;
-        redLine.style.bottom = 0;
+        redLine.style.top = '0';
+        redLine.style.bottom = '0';
         redLine.style.width = '2px';
         redLine.style.backgroundColor = 'var(--rubric-red)';
-        redLine.style.zIndex = 20;
 
         lineContainer.appendChild(redLine);
         container.appendChild(lineContainer);
