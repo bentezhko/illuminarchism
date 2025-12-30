@@ -2,34 +2,15 @@ import MedievalRenderer from './renderer/MedievalRenderer.js';
 import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
 import { distance, getCentroid, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
+import { DOMAINS, buildTaxonomyForUI, getTypologiesForDomain } from './core/Ontology.js';
 
 export default class IlluminarchismApp {
     constructor() {
-        // FORCE TAXONOMY DEFINITION FIRST
-        this.taxonomy = {
-            'political': [
-                { value: 'polity', label: 'Realm/Polity', abbr: 'RLM' },
-                { value: 'city', label: 'Settlement/City', abbr: 'CIT' },
-                { value: 'vassal', label: 'Vassal/Subject', abbr: 'VSL' }
-            ],
-            'geographical': [
-                { value: 'water', label: 'Water Body', abbr: 'SEA' },
-                { value: 'river', label: 'River', abbr: 'RIV' }
-            ],
-            'cultural': [
-                { value: 'practice', label: 'Custom/Practice', abbr: 'CST' }
-            ],
-            'linguistic': [
-                { value: 'language', label: 'Language Area', abbr: 'LNG' },
-                { value: 'word', label: 'Word/Lexicon', abbr: 'WRD' },
-                { value: 'sound', label: 'Sound/Phoneme', abbr: 'SND' }
-            ],
-            'faith': [
-                { value: 'religion', label: 'Religion', abbr: 'REL' },
-                { value: 'sect', label: 'Sect', abbr: 'SCT' },
-                { value: 'diaspora', label: 'Diaspora', abbr: 'DSP' }
-            ]
-        };
+        // Build taxonomy from Ontology module (4-domain, 3-level hierarchy)
+        this.ontologyTaxonomy = buildTaxonomyForUI();
+
+        // Legacy taxonomy format for backward compatibility with existing UI
+        this.taxonomy = this._buildLegacyTaxonomy();
 
         this.renderer = new MedievalRenderer('map-canvas');
         this.input = new InputController(this);
@@ -40,6 +21,12 @@ export default class IlluminarchismApp {
         this.draftPoints = [];
         this.draftCursor = null;
         this.activeTool = 'pan';
+
+        // New ontology-aware drawing state
+        this.drawDomain = 'political';  // Level 1: Domain
+        this.drawTypology = 'nation-state';  // Level 2: Typology
+
+        // Legacy aliases for backward compatibility
         this.drawCategory = 'political';
         this.drawType = 'polity';
         this.playbackSpeed = 10;
@@ -187,56 +174,155 @@ export default class IlluminarchismApp {
         return `${year} AD`;
     }
 
-    // --- NEW: Helper to update the dial state ---
+    /**
+     * Build legacy taxonomy format from new ontology for backward compatibility
+     * Maps new 4-domain structure to legacy 5-category structure
+     */
+    _buildLegacyTaxonomy() {
+        const legacy = {
+            'political': [],
+            'geographical': [],
+            'cultural': [],
+            'linguistic': [],
+            'faith': []
+        };
+
+        // Map ontology domains to legacy categories
+        const domainToLegacy = {
+            'political': 'political',
+            'linguistic': 'linguistic',
+            'religious': 'faith',
+            'geographic': 'geographical'
+        };
+
+        for (const [domainId, domainData] of Object.entries(this.ontologyTaxonomy)) {
+            const legacyCat = domainToLegacy[domainId];
+            if (legacyCat && legacy[legacyCat]) {
+                for (const type of domainData.types) {
+                    legacy[legacyCat].push({
+                        value: type.value,
+                        label: type.label,
+                        abbr: type.abbr,
+                        boundaryType: type.boundaryType,
+                        geometryType: type.geometryType
+                    });
+                }
+            }
+        }
+
+        // Add cultural category (not in new ontology, kept for legacy)
+        legacy['cultural'] = [
+            { value: 'practice', label: 'Custom/Practice', abbr: 'CST' }
+        ];
+
+        return legacy;
+    }
+
+    // --- NEW: Helper to update the dial state using new ontology ---
     updateDialDisplay() {
         const domainEl = document.getElementById('val-domain');
         const formEl = document.getElementById('val-form');
         const rankEl = document.getElementById('val-rank');
 
-        // 1. Get Abbr for current category
-        let catKey = this.drawCategory;
-        const catAbbrMap = {
-            'political': 'POL', 'geographical': 'GEO', 'cultural': 'CUL',
-            'linguistic': 'LIN', 'faith': 'FAI'
-        };
-
-        domainEl.textContent = catAbbrMap[catKey] || 'UNK';
-
-        // 2. Get Abbr for current type
-        const types = this.taxonomy[catKey];
-        const currentTypeObj = types.find(t => t.value === this.drawType);
-
-        if (currentTypeObj) {
-            formEl.textContent = currentTypeObj.abbr;
+        // 1. Get Domain abbreviation from ontology
+        const domainData = this.ontologyTaxonomy[this.drawDomain];
+        if (domainData && domainData.domain) {
+            domainEl.textContent = domainData.domain.abbr;
         } else {
-            // Fallback if type mismatch (e.g. switching category)
-            formEl.textContent = '---';
+            // Fallback to legacy category map
+            const catAbbrMap = {
+                'political': 'POL', 'geographical': 'GEO', 'cultural': 'CUL',
+                'linguistic': 'LIN', 'faith': 'FAI', 'religious': 'REL',
+                'geographic': 'GEO'
+            };
+            domainEl.textContent = catAbbrMap[this.drawDomain] || catAbbrMap[this.drawCategory] || 'UNK';
         }
 
-        // 3. Rank is placeholder for now
+        // 2. Get Typology abbreviation
+        if (domainData && domainData.types) {
+            const currentTypology = domainData.types.find(t => t.value === this.drawTypology);
+            if (currentTypology) {
+                formEl.textContent = currentTypology.abbr;
+            } else {
+                // Fallback to first typology or legacy
+                formEl.textContent = '---';
+            }
+        } else {
+            // Legacy fallback
+            const types = this.taxonomy[this.drawCategory];
+            const currentTypeObj = types ? types.find(t => t.value === this.drawType) : null;
+            formEl.textContent = currentTypeObj ? currentTypeObj.abbr : '---';
+        }
+
+        // 3. Rank/Subtype (placeholder - Level 3)
         rankEl.textContent = '---';
+
+        // Sync legacy properties
+        this.drawCategory = this._domainToCategory(this.drawDomain);
+        this.drawType = this._typologyToType(this.drawTypology);
     }
 
-    // --- NEW: Advance dial to next option ---
+    /**
+     * Map domain ID to legacy category
+     */
+    _domainToCategory(domain) {
+        const map = {
+            'political': 'political',
+            'linguistic': 'linguistic',
+            'religious': 'faith',
+            'geographic': 'geographical'
+        };
+        return map[domain] || domain;
+    }
+
+    /**
+     * Map typology ID to legacy type
+     */
+    _typologyToType(typology) {
+        // Most typologies map directly, but some need translation
+        const map = {
+            'nation-state': 'polity',
+            'empire': 'polity',
+            'chiefdom': 'polity',
+            'archaic-state': 'polity',
+            'band': 'polity',
+            'tribe': 'polity',
+            'supranational': 'polity',
+            'aquatic': 'water',
+            'word-isogloss': 'word',
+            'sound-isogloss': 'sound',
+            'universalizing': 'religion',
+            'ethnic': 'religion'
+        };
+        return map[typology] || typology;
+    }
+
+    // --- Advance dial to next option (using new ontology) ---
     cycleDial(wheel) {
         if (wheel === 'domain') {
-            const cats = Object.keys(this.taxonomy);
-            let idx = cats.indexOf(this.drawCategory);
-            idx = (idx + 1) % cats.length;
-            this.drawCategory = cats[idx];
+            // Cycle through domains from ontology
+            const domains = Object.keys(this.ontologyTaxonomy);
+            let idx = domains.indexOf(this.drawDomain);
+            idx = (idx + 1) % domains.length;
+            this.drawDomain = domains[idx];
 
-            // Auto-select first type of new category
-            this.drawType = this.taxonomy[this.drawCategory][0].value;
+            // Auto-select first typology of new domain
+            const domainData = this.ontologyTaxonomy[this.drawDomain];
+            if (domainData && domainData.types.length > 0) {
+                this.drawTypology = domainData.types[0].value;
+            }
         }
         else if (wheel === 'form') {
-            const types = this.taxonomy[this.drawCategory];
-            let idx = types.findIndex(t => t.value === this.drawType);
-            idx = (idx + 1) % types.length;
-            this.drawType = types[idx].value;
+            // Cycle through typologies within current domain
+            const domainData = this.ontologyTaxonomy[this.drawDomain];
+            if (domainData && domainData.types) {
+                let idx = domainData.types.findIndex(t => t.value === this.drawTypology);
+                idx = (idx + 1) % domainData.types.length;
+                this.drawTypology = domainData.types[idx].value;
+            }
         }
 
         this.updateDialDisplay();
-        // If draw tool active, reset logic? Not strictly needed as we read state directly
     }
 
     // NEW HELPER: Safe Add Listener
@@ -873,16 +959,29 @@ export default class IlluminarchismApp {
 
     commitDraft() {
         if (this.draftPoints.length === 0) return;
-        if (this.drawType !== 'city' && this.draftPoints.length < 2) return;
 
-        const isAnnex = this.drawType === 'vassal';
+        // Check if current typology requires specific geometry (e.g., city = point)
+        const domainData = this.ontologyTaxonomy[this.drawDomain];
+        const typologyData = domainData?.types?.find(t => t.value === this.drawTypology);
+        const isPointGeometry = typologyData?.geometryType === 'Point' || this.drawTypology === 'city' || this.drawTypology === 'sacred-site';
+
+        if (!isPointGeometry && this.draftPoints.length < 2) return;
+
+        const isAnnex = this.drawTypology === 'vassal';
 
         if (this.selectedEntityId) {
             const ent = this.entities.find(e => e.id === this.selectedEntityId);
             if (ent) {
                 if (isAnnex) {
                     const id = 'vassal_' + Date.now();
-                    const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", this.drawCategory, this.drawType, ent.color, ent.id);
+                    // Create vassal using new ontology config format
+                    const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
+                        domain: this.drawDomain,
+                        typology: this.drawTypology,
+                        color: ent.color,
+                        parentId: ent.id,
+                        boundaryConfidence: 0.8
+                    });
                     // New shape creation (no resampling)
                     newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
                     newEnt.validRange.start = this.currentYear;
@@ -900,12 +999,23 @@ export default class IlluminarchismApp {
             const id = 'ent_' + Date.now();
             const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
             const color = colors[Math.floor(Math.random() * colors.length)];
-            let name = "New Territory";
-            if (this.drawType === 'city') name = "New Settlement";
-            if (this.drawType === 'river') name = "New River";
-            if (this.drawType === 'water') name = "New Sea/Lake";
 
-            const newEnt = new HistoricalEntity(id, name, this.drawCategory, this.drawType, color);
+            // Generate descriptive name based on typology
+            let name = "New Territory";
+            if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') name = "New Settlement";
+            else if (this.drawTypology === 'river' || this.drawTypology === 'coast') name = "New River";
+            else if (this.drawTypology === 'aquatic') name = "New Sea/Lake";
+            else if (this.drawDomain === 'linguistic') name = "New Language Zone";
+            else if (this.drawDomain === 'religious') name = "New Faith Zone";
+            else if (typologyData) name = `New ${typologyData.label}`;
+
+            // Create entity using new ontology config format
+            const newEnt = new HistoricalEntity(id, name, {
+                domain: this.drawDomain,
+                typology: this.drawTypology,
+                color: color,
+                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
+            });
             // New shape creation (no resampling)
             newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
             newEnt.validRange.start = this.currentYear - 200;
