@@ -379,6 +379,23 @@ h1 span {
     color: var(--rubric-red);
 }
 
+.registry-typology {
+    margin-bottom: 0.2rem;
+}
+
+.registry-type-title {
+    transition: color 0.2s;
+}
+
+.registry-type-title:hover {
+    color: var(--gold-leaf) !important;
+}
+
+.registry-list .registry-list {
+    border-left: 1px dashed var(--ink-faded);
+    margin-top: 0.2rem;
+}
+
 .toggle-vis {
     margin-right: 0.5rem;
     cursor: pointer;

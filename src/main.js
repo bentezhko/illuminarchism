@@ -25,6 +25,7 @@ export default class IlluminarchismApp {
         // New ontology-aware drawing state
         this.drawDomain = 'political';  // Level 1: Domain
         this.drawTypology = 'nation-state';  // Level 2: Typology
+        this.drawSubtype = null;        // Level 3: Subtype/Admin level
 
         // Legacy aliases for backward compatibility
         this.drawCategory = 'political';
@@ -254,8 +255,14 @@ export default class IlluminarchismApp {
             formEl.textContent = currentTypeObj ? currentTypeObj.abbr : '---';
         }
 
-        // 3. Rank/Subtype (placeholder - Level 3)
-        rankEl.textContent = '---';
+        // 3. Rank/Subtype (Level 3) - Show admin levels when available
+        const subtypes = this._getSubtypesForTypology(this.drawTypology);
+        if (subtypes && subtypes.length > 0) {
+            const currentSubtype = subtypes.find(s => s.value === this.drawSubtype);
+            rankEl.textContent = currentSubtype ? currentSubtype.abbr : subtypes[0].abbr;
+        } else {
+            rankEl.textContent = '---';
+        }
 
         // Sync legacy properties
         this.drawCategory = this._domainToCategory(this.drawDomain);
@@ -320,9 +327,56 @@ export default class IlluminarchismApp {
                 idx = (idx + 1) % domainData.types.length;
                 this.drawTypology = domainData.types[idx].value;
             }
+            this.drawSubtype = null; // Reset subtype when type changes
+        }
+        else if (wheel === 'rank') {
+            const subtypes = this._getSubtypesForTypology(this.drawTypology);
+            if (subtypes && subtypes.length > 0) {
+                let idx = subtypes.findIndex(s => s.value === this.drawSubtype);
+                idx = (idx + 1) % subtypes.length;
+                this.drawSubtype = subtypes[idx].value;
+            }
         }
 
         this.updateDialDisplay();
+    }
+
+    /**
+     * Get available subtypes for a typology (admin levels, denominations, etc.)
+     */
+    _getSubtypesForTypology(typology) {
+        // Admin levels for political typologies that support nesting
+        const adminTypologies = ['empire', 'nation-state', 'supranational', 'archaic-state'];
+        if (adminTypologies.includes(typology)) {
+            return [
+                { value: 'sovereign', label: 'Sovereign', abbr: 'SOV' },
+                { value: 'first-order', label: 'First-Order Division', abbr: 'L1' },
+                { value: 'second-order', label: 'Second-Order Division', abbr: 'L2' },
+                { value: 'third-order', label: 'Third-Order Division', abbr: 'L3' }
+            ];
+        }
+
+        // Denominational hierarchy for religious typologies
+        if (typology === 'universalizing' || typology === 'ethnic') {
+            return [
+                { value: 'tradition', label: 'Tradition', abbr: 'TRD' },
+                { value: 'branch', label: 'Branch', abbr: 'BRN' },
+                { value: 'denomination', label: 'Denomination', abbr: 'DEN' },
+                { value: 'sect', label: 'Sect', abbr: 'SCT' }
+            ];
+        }
+
+        // Language hierarchy for linguistic typologies
+        if (typology === 'family' || typology === 'branch' || typology === 'language') {
+            return [
+                { value: 'family', label: 'Family', abbr: 'FAM' },
+                { value: 'branch', label: 'Branch', abbr: 'BRN' },
+                { value: 'language', label: 'Language', abbr: 'LNG' },
+                { value: 'dialect', label: 'Dialect', abbr: 'DIA' }
+            ];
+        }
+
+        return null;
     }
 
     // NEW HELPER: Safe Add Listener
@@ -451,6 +505,12 @@ export default class IlluminarchismApp {
             this.cycleDial('form');
         });
 
+        // --- NEW: Dial Rank (Level 3) Listener ---
+        this.safeAddListener('dial-rank', 'mousedown', (e) => {
+            e.preventDefault();
+            this.cycleDial('rank');
+        });
+
         // Initialize Dial
         this.updateDialDisplay();
 
@@ -502,79 +562,122 @@ export default class IlluminarchismApp {
         const container = document.getElementById('registry-content');
         container.innerHTML = '';
 
-        const grouped = {};
+        // Group by domain -> typology -> entities (2-level tree)
+        const domainGroups = {};
         this.entities.forEach(ent => {
-            if (!grouped[ent.category]) grouped[ent.category] = [];
-            grouped[ent.category].push(ent);
+            const domain = ent.domain || ent.category || 'unknown';
+            const typology = ent.typology || ent.type || 'unknown';
+
+            if (!domainGroups[domain]) domainGroups[domain] = {};
+            if (!domainGroups[domain][typology]) domainGroups[domain][typology] = [];
+            domainGroups[domain][typology].push(ent);
         });
 
-        for (const cat in grouped) {
-            const catDiv = document.createElement('div');
-            catDiv.className = 'registry-category';
+        // Render domain -> typology -> entity tree
+        for (const domain in domainGroups) {
+            const domainDiv = document.createElement('div');
+            domainDiv.className = 'registry-category';
 
-            const title = document.createElement('div');
-            title.className = 'registry-cat-title';
-            title.textContent = `▶ ${cat.charAt(0).toUpperCase() + cat.slice(1)}`;
-            title.onclick = () => {
-                const list = title.nextElementSibling;
-                list.classList.toggle('open');
-                title.textContent = list.classList.contains('open') ? `▼ ${cat.charAt(0).toUpperCase() + cat.slice(1)}` : `▶ ${cat.charAt(0).toUpperCase() + cat.slice(1)}`;
+            // Domain Header (Level 1)
+            const domainTitle = document.createElement('div');
+            domainTitle.className = 'registry-cat-title';
+            const domainLabel = domain.charAt(0).toUpperCase() + domain.slice(1);
+            domainTitle.textContent = `▶ ${domainLabel}`;
+            domainTitle.onclick = () => {
+                const content = domainTitle.nextElementSibling;
+                content.classList.toggle('open');
+                domainTitle.textContent = content.classList.contains('open') ? `▼ ${domainLabel}` : `▶ ${domainLabel}`;
             };
-            catDiv.appendChild(title);
+            domainDiv.appendChild(domainTitle);
 
-            const list = document.createElement('div');
-            list.className = 'registry-list';
+            // Domain Content Container
+            const domainContent = document.createElement('div');
+            domainContent.className = 'registry-list';
 
-            grouped[cat].forEach(ent => {
-                const item = document.createElement('div');
-                item.className = 'registry-item';
+            // Typology Groups (Level 2)
+            for (const typology in domainGroups[domain]) {
+                const typeDiv = document.createElement('div');
+                typeDiv.className = 'registry-typology';
+                typeDiv.style.marginLeft = '0.5rem';
+                typeDiv.style.borderLeft = '1px solid var(--ink-faded)';
+                typeDiv.style.paddingLeft = '0.5rem';
 
-                const left = document.createElement('div');
-                left.style.display = 'flex'; left.style.alignItems = 'center';
-
-                const toggle = document.createElement('input');
-                toggle.type = 'checkbox';
-                toggle.className = 'toggle-vis';
-                toggle.checked = ent.visible;
-                toggle.onclick = (e) => {
+                const typeTitle = document.createElement('div');
+                typeTitle.className = 'registry-type-title';
+                typeTitle.style.cursor = 'pointer';
+                typeTitle.style.fontStyle = 'italic';
+                typeTitle.style.color = 'var(--ink-faded)';
+                typeTitle.style.fontSize = '0.85rem';
+                const typeLabel = typology.charAt(0).toUpperCase() + typology.slice(1).replace(/-/g, ' ');
+                const count = domainGroups[domain][typology].length;
+                typeTitle.textContent = `▶ ${typeLabel} (${count})`;
+                typeTitle.onclick = (e) => {
                     e.stopPropagation();
-                    ent.visible = toggle.checked;
-                    this.render();
+                    const typeList = typeTitle.nextElementSibling;
+                    typeList.classList.toggle('open');
+                    typeTitle.textContent = typeList.classList.contains('open') ? `▼ ${typeLabel} (${count})` : `▶ ${typeLabel} (${count})`;
                 };
-                left.appendChild(toggle);
+                typeDiv.appendChild(typeTitle);
 
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = ent.name;
-                left.appendChild(nameSpan);
+                // Entity List (Level 3)
+                const typeList = document.createElement('div');
+                typeList.className = 'registry-list';
+                typeList.style.marginLeft = '0.5rem';
 
-                item.appendChild(left);
+                domainGroups[domain][typology].forEach(ent => {
+                    const item = document.createElement('div');
+                    item.className = 'registry-item';
 
-                const goTo = document.createElement('span');
-                goTo.innerHTML = '⌖';
-                goTo.title = "Go to location";
-                goTo.style.fontSize = '0.8rem';
+                    const left = document.createElement('div');
+                    left.style.display = 'flex';
+                    left.style.alignItems = 'center';
 
-                item.onclick = () => {
-                    this.selectEntity(ent.id, false); // Jump to it, don't open panel
-                    // Pan to entity
-                    if (ent.currentGeometry && ent.currentGeometry.length > 0) {
-                        let c = { x: 0, y: 0 };
-                        if (ent.type === 'city') {
-                            c = ent.currentGeometry[0];
-                        } else {
-                            c = getCentroid(ent.currentGeometry);
-                        }
-                        this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
-                        this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
+                    const toggle = document.createElement('input');
+                    toggle.type = 'checkbox';
+                    toggle.className = 'toggle-vis';
+                    toggle.checked = ent.visible;
+                    toggle.onclick = (e) => {
+                        e.stopPropagation();
+                        ent.visible = toggle.checked;
                         this.render();
-                    }
-                };
-                item.appendChild(goTo);
-                list.appendChild(item);
-            });
+                    };
+                    left.appendChild(toggle);
 
-            catDiv.appendChild(list);
-            container.appendChild(catDiv);
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = ent.name;
+                    left.appendChild(nameSpan);
+
+                    item.appendChild(left);
+
+                    const goTo = document.createElement('span');
+                    goTo.innerHTML = '⌖';
+                    goTo.title = 'Go to location';
+                    goTo.style.fontSize = '0.8rem';
+
+                    item.onclick = () => {
+                        this.selectEntity(ent.id, false);
+                        if (ent.currentGeometry && ent.currentGeometry.length > 0) {
+                            let c = { x: 0, y: 0 };
+                            if (ent.type === 'city' || ent.typology === 'city') {
+                                c = ent.currentGeometry[0];
+                            } else {
+                                c = getCentroid(ent.currentGeometry);
+                            }
+                            this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
+                            this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
+                            this.render();
+                        }
+                    };
+                    item.appendChild(goTo);
+                    typeList.appendChild(item);
+                });
+
+                typeDiv.appendChild(typeList);
+                domainContent.appendChild(typeDiv);
+            }
+
+            domainDiv.appendChild(domainContent);
+            container.appendChild(domainDiv);
         }
     }
 
@@ -978,6 +1081,7 @@ export default class IlluminarchismApp {
                     const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
                         domain: this.drawDomain,
                         typology: this.drawTypology,
+                        subtype: this.drawSubtype,
                         color: ent.color,
                         parentId: ent.id,
                         boundaryConfidence: 0.8
@@ -1013,6 +1117,7 @@ export default class IlluminarchismApp {
             const newEnt = new HistoricalEntity(id, name, {
                 domain: this.drawDomain,
                 typology: this.drawTypology,
+                subtype: this.drawSubtype,
                 color: color,
                 boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
             });
