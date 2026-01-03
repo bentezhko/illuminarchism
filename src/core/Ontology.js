@@ -172,74 +172,28 @@ export const POLITICAL_TYPOLOGY = {
 // LEVEL 2: LINGUISTIC TYPOLOGY (WALS-aligned)
 // ============================================================================
 
+// ============================================================================
+// LEVEL 2: LINGUISTIC TYPOLOGY (WALS-aligned)
+// ============================================================================
+
 export const LINGUISTIC_TYPOLOGY = {
-    // Genealogical classification
-    MACRO_PHYLUM: {
-        id: 'macro-phylum',
-        label: 'Macro-Phylum',
-        abbr: 'MPH',
-        description: 'Hypothetical deep-time language grouping (e.g., Nostratic)',
-        classType: 'genealogical'
+    GENEALOGICAL: {
+        id: 'genealogical',
+        label: 'Genealogical Unit',
+        abbr: 'GEN',
+        description: 'Unit defined by biological ancestry/descent'
     },
-    FAMILY: {
-        id: 'family',
-        label: 'Language Family',
-        abbr: 'FAM',
-        description: 'Established language family (e.g., Indo-European)',
-        classType: 'genealogical'
+    AREAL: {
+        id: 'areal',
+        label: 'Areal Unit',
+        abbr: 'ARL',
+        description: 'Unit defined by contact and convergence (Sprachbund)'
     },
-    BRANCH: {
-        id: 'branch',
-        label: 'Language Branch',
-        abbr: 'BRN',
-        description: 'Sub-division of a family (e.g., Germanic)',
-        classType: 'genealogical'
-    },
-    LANGUAGE: {
-        id: 'language',
-        label: 'Language',
-        abbr: 'LNG',
-        description: 'Individual language (e.g., English)',
-        classType: 'genealogical'
-    },
-    DIALECT: {
-        id: 'dialect',
-        label: 'Dialect',
-        abbr: 'DIA',
-        description: 'Regional variety of a language',
-        classType: 'genealogical'
-    },
-
-    // Areal/Contact classification
-    SPRACHBUND: {
-        id: 'sprachbund',
-        label: 'Sprachbund (Areal)',
-        abbr: 'SPB',
-        description: 'Languages sharing features through contact, not ancestry',
-        classType: 'areal'
-    },
-
-    // Typological features (WALS-based isoglosses)
-    ISOGLOSS: {
-        id: 'isogloss',
-        label: 'Isogloss/Feature',
-        abbr: 'ISO',
-        description: 'Boundary of a specific linguistic feature',
-        classType: 'typological'
-    },
-    WORD_ISOGLOSS: {
-        id: 'word-isogloss',
-        label: 'Lexical Isogloss',
-        abbr: 'WRD',
-        description: 'Distribution of a specific word/lexeme',
-        classType: 'typological'
-    },
-    SOUND_ISOGLOSS: {
-        id: 'sound-isogloss',
-        label: 'Phonological Isogloss',
-        abbr: 'SND',
-        description: 'Distribution of a sound change or phoneme',
-        classType: 'typological'
+    TYPOLOGICAL: {
+        id: 'typological',
+        label: 'Typological Feature',
+        abbr: 'TYP',
+        description: 'Unit defined by shared structural features (Isogloss)'
     }
 };
 
@@ -323,27 +277,27 @@ export const RELIGIOUS_TYPOLOGY = {
 // ============================================================================
 
 export const GEOGRAPHIC_TYPOLOGY = {
-    // Land cover (FAO LCCS)
     CULTIVATED: {
         id: 'cultivated',
         label: 'Cultivated/Managed',
-        abbr: 'CUL',
-        description: 'Areas shaped by human agriculture/pastoralism',
+        abbr: 'CLT',
+        description: 'Agriculture, forestry, managed lands',
         faoClass: 'A1'
     },
     NATURAL: {
         id: 'natural',
         label: 'Natural/Semi-Natural',
         abbr: 'NAT',
-        description: 'Areas dominated by natural vegetation',
+        description: 'Forests, grasslands, wetlands',
         faoClass: 'A2'
     },
     AQUATIC: {
         id: 'aquatic',
-        label: 'Aquatic/Water Body',
+        label: 'Aquatic/Flooded',
         abbr: 'AQU',
-        description: 'Seas, lakes, rivers, wetlands',
-        faoClass: 'A3'
+        description: 'Water bodies, marshes, reefs',
+        faoClass: 'A3',
+        boundaryType: 'hard' // Default for water bodies
     },
     ARTIFICIAL: {
         id: 'artificial',
@@ -358,34 +312,6 @@ export const GEOGRAPHIC_TYPOLOGY = {
         abbr: 'BAR',
         description: 'Deserts, glaciers, rock, bare soil',
         faoClass: 'A5'
-    },
-
-    // Physical features
-    RIVER: {
-        id: 'river',
-        label: 'River/Waterway',
-        abbr: 'RIV',
-        description: 'Linear water feature',
-        geometryType: 'LineString'
-    },
-    MOUNTAIN: {
-        id: 'mountain',
-        label: 'Mountain/Highland',
-        abbr: 'MTN',
-        description: 'Mountainous or highland region'
-    },
-    COAST: {
-        id: 'coast',
-        label: 'Coastline',
-        abbr: 'CST',
-        description: 'Coastal zone',
-        geometryType: 'LineString'
-    },
-    ISLAND: {
-        id: 'island',
-        label: 'Island',
-        abbr: 'ISL',
-        description: 'Island or archipelago'
     }
 };
 
@@ -450,36 +376,114 @@ export const BOUNDARY_TYPES = {
     },
     HARD: {
         id: 'hard',
-        label: 'Hard Boundary',
-        description: 'Defined frontier (walls, forts)',
+        label: 'Hard Border',
+        description: 'Demarcated line, typical for nation-states',
         renderStyle: 'solid',
         confidenceDefault: 0.9
-    },
-    LEGAL: {
-        id: 'legal',
-        label: 'Legal/Treaty',
-        description: 'Precise lines defined by treaty coordinates',
-        renderStyle: 'solid',
-        confidenceDefault: 1.0
-    },
-    CONTAINER: {
-        id: 'container',
-        label: 'Container',
-        description: 'Outer boundary containing nested subdivisions',
-        renderStyle: 'thick'
-    },
-    AGGREGATE: {
-        id: 'aggregate',
-        label: 'Aggregate',
-        description: 'Union of member polygons',
-        renderStyle: 'double'
-    },
-    POINT: {
-        id: 'point',
-        label: 'Point Feature',
-        description: 'Single location (city, site)',
-        renderStyle: 'marker'
     }
+};
+
+// ============================================================================
+// LEVEL 3: POLITICAL SUBTYPES (Admin Levels)
+// ============================================================================
+
+export const POLITICAL_SUBTYPES = {
+    SOVEREIGN: {
+        id: 'sovereign',
+        label: 'Sovereign Unit',
+        abbr: 'SOV',
+        description: 'Independent political entity'
+    },
+    ...ADMIN_LEVELS
+};
+
+// ============================================================================
+// LEVEL 3: LINGUISTIC SUBTYPES (Specific Units)
+// ============================================================================
+
+export const LINGUISTIC_SUBTYPES = {
+    MACRO_PHYLUM: {
+        id: 'macro-phylum',
+        label: 'Macro-Phylum',
+        abbr: 'MPH'
+    },
+    FAMILY: {
+        id: 'family',
+        label: 'Language Family',
+        abbr: 'FAM'
+    },
+    BRANCH: {
+        id: 'branch',
+        label: 'Language Branch',
+        abbr: 'BRN'
+    },
+    LANGUAGE: {
+        id: 'language',
+        label: 'Language',
+        abbr: 'LNG'
+    },
+    DIALECT: {
+        id: 'dialect',
+        label: 'Dialect',
+        abbr: 'DIA'
+    }
+};
+
+// ============================================================================
+// LEVEL 3: RELIGIOUS SUBTYPES (Denominations)
+// ============================================================================
+
+export const RELIGIOUS_SUBTYPES = {
+    TRADITION: { id: 'tradition', label: 'Tradition', abbr: 'TRD' },
+    BRANCH: { id: 'branch', label: 'Branch', abbr: 'BRN' },
+    DENOMINATION: { id: 'denomination', label: 'Denomination', abbr: 'DEN' },
+    SECT: { id: 'sect', label: 'Sect', abbr: 'SCT' }
+};
+
+// ============================================================================
+// LEVEL 3: GEOGRAPHIC SUBTYPES (Features)
+// ============================================================================
+
+export const GEOGRAPHIC_SUBTYPES = {
+    RIVER: { id: 'river', label: 'River', abbr: 'RIV', geometryType: 'LineString' },
+    LAKE: { id: 'lake', label: 'Lake', abbr: 'LAK' },
+    OCEAN: { id: 'ocean', label: 'Ocean', abbr: 'OCN' },
+    MOUNTAIN: { id: 'mountain', label: 'Mountain', abbr: 'MTN' },
+    ISLAND: { id: 'island', label: 'Island', abbr: 'ISL' },
+    DESERT: { id: 'desert', label: 'Desert', abbr: 'DST' }
+};,
+HARD: {
+    id: 'hard',
+        label: 'Hard Boundary',
+            description: 'Defined frontier (walls, forts)',
+                renderStyle: 'solid',
+                    confidenceDefault: 0.9
+},
+LEGAL: {
+    id: 'legal',
+        label: 'Legal/Treaty',
+            description: 'Precise lines defined by treaty coordinates',
+                renderStyle: 'solid',
+                    confidenceDefault: 1.0
+},
+CONTAINER: {
+    id: 'container',
+        label: 'Container',
+            description: 'Outer boundary containing nested subdivisions',
+                renderStyle: 'thick'
+},
+AGGREGATE: {
+    id: 'aggregate',
+        label: 'Aggregate',
+            description: 'Union of member polygons',
+                renderStyle: 'double'
+},
+POINT: {
+    id: 'point',
+        label: 'Point Feature',
+            description: 'Single location (city, site)',
+                renderStyle: 'marker'
+}
 };
 
 // ============================================================================
@@ -733,5 +737,11 @@ export default {
     getOCMCode,
     buildTaxonomyForUI,
     validateEntity,
-    migrateFromLegacy
+    buildTaxonomyForUI,
+    validateEntity,
+    migrateFromLegacy,
+    POLITICAL_SUBTYPES,
+    LINGUISTIC_SUBTYPES,
+    RELIGIOUS_SUBTYPES,
+    GEOGRAPHIC_SUBTYPES
 };
