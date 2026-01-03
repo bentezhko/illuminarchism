@@ -334,11 +334,24 @@ export default class InputController {
             if (!ent) return;
 
             if (dragType === 'move') {
-                const duration = initialEndYear - initialStartYear;
-                let newStart = initialStartYear + deltaYears;
-                let newEnd = newStart + duration;
-                ent.validRange.start = newStart;
-                ent.validRange.end = newEnd;
+                // Handle infinite ranges
+                if (!Number.isFinite(initialStartYear) && !Number.isFinite(initialEndYear)) {
+                    // Both infinite: Cannot move eternity
+                    return;
+                } else if (!Number.isFinite(initialStartYear)) {
+                    // Start is infinite: Shift end only
+                    ent.validRange.end = initialEndYear + deltaYears;
+                } else if (!Number.isFinite(initialEndYear)) {
+                    // End is infinite: Shift start only
+                    ent.validRange.start = initialStartYear + deltaYears;
+                } else {
+                    // Standard move
+                    const duration = initialEndYear - initialStartYear;
+                    let newStart = initialStartYear + deltaYears;
+                    let newEnd = newStart + duration;
+                    ent.validRange.start = newStart;
+                    ent.validRange.end = newEnd;
+                }
             } else if (dragType === 'start') {
                 ent.validRange.start = Math.min(initialStartYear + deltaYears, ent.validRange.end - 1);
             } else if (dragType === 'end') {

@@ -891,13 +891,17 @@ export default class IlluminarchismApp {
                     bar.style.backgroundColor = ent.color;
                     bar.dataset.id = ent.id;
 
-                    const handleL = document.createElement('div');
-                    handleL.className = 'timeline-handle handle-l';
-                    bar.appendChild(handleL);
+                    if (Number.isFinite(ent.validRange.start)) {
+                        const handleL = document.createElement('div');
+                        handleL.className = 'timeline-handle handle-l';
+                        bar.appendChild(handleL);
+                    }
 
-                    const handleR = document.createElement('div');
-                    handleR.className = 'timeline-handle handle-r';
-                    bar.appendChild(handleR);
+                    if (Number.isFinite(ent.validRange.end)) {
+                        const handleR = document.createElement('div');
+                        handleR.className = 'timeline-handle handle-r';
+                        bar.appendChild(handleR);
+                    }
 
                     track.appendChild(bar);
                 }
