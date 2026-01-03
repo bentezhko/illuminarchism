@@ -2,7 +2,7 @@ import MedievalRenderer from './renderer/MedievalRenderer.js';
 import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
 import { distance, getCentroid, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
-import { DOMAINS, buildTaxonomyForUI, getTypologiesForDomain } from './core/Ontology.js';
+import { DOMAINS, buildTaxonomyForUI, getTypologiesForDomain, POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC_SUBTYPES } from './core/Ontology.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -166,7 +166,8 @@ export default class IlluminarchismApp {
 
         const city = new HistoricalEntity('city_capital', 'Urbs Aeterna', {
             domain: 'political',
-            typology: 'city',
+            typology: 'archaic-state',
+            subtype: 'sovereign',
             color: '#000000'
         });
         city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
@@ -174,7 +175,8 @@ export default class IlluminarchismApp {
 
         const oldTongue = new HistoricalEntity('lang_old', 'Lingua Antiqua', {
             domain: 'linguistic',
-            typology: 'language',
+            typology: 'genealogical',
+            subtype: 'language',
             color: '#5c3c92',
             hatchStyle: 'cross'
         });
@@ -183,7 +185,8 @@ export default class IlluminarchismApp {
 
         const thSound = new HistoricalEntity('sound_th', 'Theta Isogloss', {
             domain: 'linguistic',
-            typology: 'sound-isogloss',
+            typology: 'typological',
+            subtype: 'feature',
             color: '#800080',
             hatchStyle: 'stipple'
         });
@@ -192,7 +195,8 @@ export default class IlluminarchismApp {
 
         const sodaWord = new HistoricalEntity('word_soda', 'Soda/Pop Line', {
             domain: 'linguistic',
-            typology: 'word-isogloss',
+            typology: 'typological',
+            subtype: 'feature',
             color: '#FF4500',
             hatchStyle: 'stipple'
         });
@@ -200,8 +204,8 @@ export default class IlluminarchismApp {
         this.entities.push(sodaWord);
 
         const festivalZone = new HistoricalEntity('cult_fest', 'Solar Calendar Zone', {
-            domain: 'cultural',
-            typology: 'norm', // A calendar system is a social norm
+            domain: 'political', // Mapped to Political/Band for "Shared Use" activity zone
+            typology: 'band',
             color: '#c5a059',
             hatchStyle: 'vertical'
         });
@@ -210,7 +214,7 @@ export default class IlluminarchismApp {
 
         const paganEnclave = new HistoricalEntity('faith_pagan', 'Old Gods', {
             domain: 'religious',
-            typology: 'ethnic', // More appropriate than 'universalizing' for "Old Gods"
+            typology: 'ethnic',
             color: '#228B22',
             hatchStyle: 'stipple'
         });
@@ -219,8 +223,8 @@ export default class IlluminarchismApp {
 
         // --- NEW CULTURAL DOMAIN ENTITY ---
         const biphasicSleep = new HistoricalEntity('cult_sleep', 'Biphasic Sleep Zone', {
-            domain: 'cultural',
-            typology: 'norm',
+            domain: 'political', // Mapped to Political/Band
+            typology: 'band',
             color: '#3a5f3a',
             hatchStyle: 'horizontal',
             validRange: { start: -10000, end: 1900 }
@@ -360,35 +364,35 @@ export default class IlluminarchismApp {
      * Get available subtypes for a typology (admin levels, denominations, etc.)
      */
     _getSubtypesForTypology(typology) {
-        // Admin levels for political typologies that support nesting
+        // Political Levels
         const adminTypologies = ['empire', 'nation-state', 'supranational', 'archaic-state'];
         if (adminTypologies.includes(typology)) {
-            return [
-                { value: 'sovereign', label: 'Sovereign', abbr: 'SOV' },
-                { value: 'first-order', label: 'First-Order Division', abbr: 'L1' },
-                { value: 'second-order', label: 'Second-Order Division', abbr: 'L2' },
-                { value: 'third-order', label: 'Third-Order Division', abbr: 'L3' }
-            ];
+            return Object.values(POLITICAL_SUBTYPES).map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
         }
 
-        // Denominational hierarchy for religious typologies
-        if (typology === 'universalizing' || typology === 'ethnic') {
-            return [
-                { value: 'tradition', label: 'Tradition', abbr: 'TRD' },
-                { value: 'branch', label: 'Branch', abbr: 'BRN' },
-                { value: 'denomination', label: 'Denomination', abbr: 'DEN' },
-                { value: 'sect', label: 'Sect', abbr: 'SCT' }
-            ];
+        // Religious Hierarchy
+        if (typology === 'universalizing' || typology === 'ethnic' || typology === 'syncretic') {
+            return Object.values(RELIGIOUS_SUBTYPES).map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
         }
 
-        // Language hierarchy for linguistic typologies
-        if (typology === 'family' || typology === 'branch' || typology === 'language') {
+        // Linguistic Hierarchy
+        if (typology === 'genealogical') {
             return [
-                { value: 'family', label: 'Family', abbr: 'FAM' },
-                { value: 'branch', label: 'Branch', abbr: 'BRN' },
-                { value: 'language', label: 'Language', abbr: 'LNG' },
-                { value: 'dialect', label: 'Dialect', abbr: 'DIA' }
-            ];
+                LINGUISTIC_SUBTYPES.MACRO_PHYLUM,
+                LINGUISTIC_SUBTYPES.FAMILY,
+                LINGUISTIC_SUBTYPES.BRANCH,
+                LINGUISTIC_SUBTYPES.LANGUAGE,
+                LINGUISTIC_SUBTYPES.DIALECT
+            ].map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
+        }
+
+        if (typology === 'typological' || typology === 'areal') {
+            return [{ value: 'feature', label: 'Feature', abbr: 'FEA' }];
+        }
+
+        // Geographic
+        if (typology === 'natural' || typology === 'bare') {
+            return Object.values(GEOGRAPHIC_SUBTYPES).map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
         }
 
         return null;
@@ -1202,12 +1206,32 @@ export default class IlluminarchismApp {
         this.selectedEntityId = id;
         const ent = this.entities.find(e => e.id === id);
         if (ent) {
+            // --- SYNC DIAL ---
+            // If the entity's domain is valid in current ontology, sync the dial
+            if (this.ontologyTaxonomy[ent.domain]) {
+                this.drawDomain = ent.domain;
+                // If the typology exists in that domain (or maybe it was legacy), try to sync
+                // If typology is valid:
+                const domainData = this.ontologyTaxonomy[ent.domain];
+                const typeExists = domainData.types.some(t => t.value === ent.typology);
+                if (typeExists) {
+                    this.drawTypology = ent.typology;
+                } else {
+                    // Fallback to first? Or leave as is if invalid?
+                    // Better to just keep what we have or default
+                    if (domainData.types.length > 0) this.drawTypology = domainData.types[0].value;
+                }
+
+                this.drawSubtype = ent.subtype || null;
+                this.updateDialDisplay();
+            }
+
             if (showPanel) {
                 const p = document.getElementById('info-panel');
                 p.style.display = 'block';
                 document.getElementById('info-name-input').value = ent.name;
-                document.getElementById('info-type').textContent = ent.type;
-                document.getElementById('info-cat').textContent = ent.category;
+                document.getElementById('info-type').textContent = ent.typology; // updated to match property name
+                document.getElementById('info-cat').textContent = ent.domain; // updated to match property name
                 document.getElementById('info-color-input').value = ent.color;
                 document.getElementById('info-hatch-input').value = ent.hatchStyle; // SYNC DROPDOWN
                 document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
