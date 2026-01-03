@@ -554,821 +554,801 @@ export default class IlluminarchismApp {
 
     renderRegistry() {
         const container = document.getElementById('registry-content');
-        if (!container) return; // Guard against missing element
+        if (!container) return;
         container.innerHTML = '';
 
-        // Group by the new ontology: domain -> typology -> entities
-        const domainGroups = {};
+        // 1. Group existing entities by Domain -> Typology
+        const entityMap = {};
         this.entities.forEach(ent => {
-            // Use the primary ontology fields. Fallback to 'unknown' if somehow missing.
-            const domain = ent.domain || 'unknown';
-            const typology = ent.typology || 'unknown';
-
-            if (!domainGroups[domain]) {
-                domainGroups[domain] = {};
-            }
-            if (!domainGroups[domain][typology]) {
-                domainGroups[domain][typology] = [];
-            }
-            domainGroups[domain][typology].push(ent);
+            const d = ent.domain || 'unknown';
+            const t = ent.typology || 'unknown';
+            if (!entityMap[d]) entityMap[d] = {};
+            if (!entityMap[d][t]) entityMap[d][t] = [];
+            entityMap[d][t].push(ent);
         });
 
-        // Get sorted domain keys to render in a consistent order
-        const sortedDomains = Object.keys(domainGroups).sort((a, b) => {
+        // 2. Iterate OFFICIAL ONTOLOGY to build the tree (ensures empty cats show)
+        // Sort domains by name if desired, or use defined order
+        // Use keys from taxonomy (political, linguistic, etc.)
+        const domainIds = Object.keys(this.ontologyTaxonomy);
+
+        domainIds.forEach(domainId => {
+            const domainData = this.ontologyTaxonomy[domainId];
+            if (!domainData) return;
+
+            const domainLabel = domainData.domain.name;
+            const domainAbbr = domainData.domain.abbr;
+
+            const domainDiv = document.createElement('div');
+            domainDiv.className = 'registry-category';
+
+            // Domain Header
+            const domainTitle = document.createElement('div');
+            domainTitle.className = 'registry-cat-title';
+            domainTitle.textContent = `▶ ${domainLabel} (${domainAbbr})`;
+            domainTitle.onclick = () => {
+                const content = domainTitle.nextElementSibling;
+                content.classList.toggle('open');
+                domainTitle.textContent = content.classList.contains('open') ? `▼ ${domainLabel} (${domainAbbr})` : `▶ ${domainLabel} (${domainAbbr})`;
+            };
+            domainDiv.appendChild(domainTitle);
+
+            // Domain Content
+            const domainContent = document.createElement('div');
+            domainContent.className = 'registry-list';
+
+            // Iterate Typologies defined in Ontology
+            if (domainData.types) {
+                domainData.types.forEach(typeDef => {
+                    const typeId = typeDef.value;
+                    const typeLabel = typeDef.label;
+                    const existingEnts = (entityMap[domainId] && entityMap[domainId][typeId]) ? entityMap[domainId][typeId] : [];
+                    const count = existingEnts.length;
+
+                    // Typology Header
+                    const typeDiv = document.createElement('div');
+                    typeDiv.className = 'registry-typology';
+                    typeDiv.style.marginLeft = '0.5rem';
+                    typeDiv.style.borderLeft = '1px solid var(--ink-faded)';
+                    typeDiv.style.paddingLeft = '0.5rem';
+
+                    const typeTitle = document.createElement('div');
+                    typeTitle.className = 'registry-type-title';
+                    typeTitle.style.cursor = 'pointer';
+                    typeTitle.style.fontStyle = 'italic';
+                    typeTitle.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)'; // Dim if empty
+                    typeTitle.style.fontSize = '0.85rem';
+                    typeTitle.textContent = `▶ ${typeLabel} (${count})`;
+
+                    typeTitle.onclick = (e) => {
+                        e.stopPropagation();
+                        const typeList = typeTitle.nextElementSibling;
+                        typeList.classList.toggle('open');
+                        typeTitle.textContent = typeList.classList.contains('open') ? `▼ ${typeLabel} (${count})` : `▶ ${typeLabel} (${count})`;
+                    };
+                    typeDiv.appendChild(typeTitle);
+
+                    // Entity List
+                    const typeList = document.createElement('div');
+                    typeList.className = 'registry-list';
+                    typeList.style.marginLeft = '0.5rem';
+
+                    if (count > 0) {
+                        existingEnts.forEach(ent => {
+                            const item = document.createElement('div');
+                            item.className = 'registry-item';
+
+                            const left = document.createElement('div');
+                            left.style.display = 'flex';
+                            left.style.alignItems = 'center';
+
+                            const toggle = document.createElement('input');
+                            toggle.type = 'checkbox';
+                            toggle.className = 'toggle-vis';
+                            toggle.checked = ent.visible;
+                            toggle.onclick = (e) => {
+                                e.stopPropagation();
+                                ent.visible = toggle.checked;
+                                this.render();
+                            };
+                            left.appendChild(toggle);
+
+                            const nameSpan = document.createElement('span');
+                            nameSpan.textContent = ent.name;
+                            left.appendChild(nameSpan);
+
+                            item.appendChild(left);
+
+                            const goTo = document.createElement('span');
+                            goTo.innerHTML = '⌖';
+                            goTo.title = 'Go to location';
+                            goTo.style.fontSize = '0.8rem';
+                            goTo.style.cursor = 'pointer';
+
+                            item.onclick = () => {
+                                this.selectEntity(ent.id, false);
+                                if (ent.currentGeometry && ent.currentGeometry.length > 0) {
+                                    let c = { x: 0, y: 0 };
+                                    if (ent.type === 'city' || ent.typology === 'city') {
+                                        c = ent.currentGeometry[0];
+                                    } else {
+                                        c = getCentroid(ent.currentGeometry);
+                                    }
+                                    if (this.renderer && this.renderer.transform) {
+                                        this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
+                                        this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
+                                        this.render();
+                                    }
+                                }
+                            };
+                            item.appendChild(goTo);
+                            typeList.appendChild(item);
+                        });
+                    } else {
+                        // Empty state indicator
+                        const emptyMsg = document.createElement('div');
+                        emptyMsg.style.fontStyle = 'italic';
+                        emptyMsg.style.fontSize = '0.7rem';
+                        emptyMsg.style.color = 'var(--ink-faded)';
+                        emptyMsg.style.padding = '0.2rem 0.5rem';
+                        emptyMsg.textContent = '(No entities)';
+                        typeList.appendChild(emptyMsg);
+                    }
+
+                    typeDiv.appendChild(typeList);
+                    domainContent.appendChild(typeDiv);
+                });
+            }
+
+            domainDiv.appendChild(domainContent);
+            container.appendChild(domainDiv);
+        });
+    }
+
+    checkHover(wp) {
+        if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
+        let fid = null;
+
+        const visibleEntities = this.entities.filter(e => e.visible);
+
+        // Reverse Sort (Top -> Bottom)
+        const sorted = [...visibleEntities].sort((a, b) => {
+            // Cities > Overlays (Cult/Ling) > Water > Land
+            const typeScore = (type) => {
+                if (type === 'city') return 100;
+                if (type === 'water') return 50;
+                return 0;
+            };
+            const catScore = (cat) => {
+                if (cat === 'linguistic' || cat === 'cultural') return 80;
+                return 0;
+            };
+            return (catScore(a.category) + typeScore(a.type)) - (catScore(b.category) + typeScore(b.type));
+        });
+
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const e = sorted[i];
+            if (!e.currentGeometry) continue;
+
+            let hit = false;
+            if (e.type === 'city') {
+                if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
+            } else if (e.type === 'river') {
+                const pts = e.currentGeometry;
+                for (let j = 0; j < pts.length - 1; j++) {
+                    if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
+                }
+            } else {
+                if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+            }
+
+            if (hit) { fid = e.id; break; }
+        }
+
+        if (fid !== this.hoveredEntityId) {
+            this.hoveredEntityId = fid;
+            this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
+            this.render();
+        }
+    }
+
+    focusSelectedEntity() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
+            let c = { x: 0, y: 0 };
+            if (ent.type === 'city') {
+                c = ent.currentGeometry[0];
+            } else {
+                c = getCentroid(ent.currentGeometry);
+            }
+            // Animate or set transform
+            this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
+            this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
+            this.render();
+        }
+    }
+
+    switchView(viewName) {
+        this.currentView = viewName;
+
+        const mapCanvas = document.getElementById('map-canvas');
+        const timelineDiv = document.getElementById('view-timeline');
+        const toolbar = document.getElementById('toolbar');
+
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+
+        if (viewName === 'map') {
+            document.getElementById('btn-view-map').classList.add('active');
+            if (mapCanvas) mapCanvas.style.display = 'block';
+            if (timelineDiv) {
+                timelineDiv.classList.remove('active');
+                timelineDiv.style.display = 'none'; // Explicitly hide
+            }
+            if (toolbar) toolbar.style.display = 'flex';
+            this.render();
+        } else {
+            document.getElementById('btn-view-timeline').classList.add('active');
+            if (mapCanvas) mapCanvas.style.display = 'none';
+            if (timelineDiv) {
+                timelineDiv.classList.add('active');
+                timelineDiv.style.display = 'block'; // Explicitly show
+            }
+            if (toolbar) toolbar.style.display = 'none';
+            this.renderTimelineView();
+        }
+    }
+
+    renderTimelineView() {
+        const container = document.getElementById('view-timeline');
+        if (!container || this.currentView !== 'timeline') return;
+
+        container.innerHTML = ''; // Clear content
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'timeline-header';
+        container.appendChild(header);
+
+        // Draw ticks
+        const epochStart = parseInt(document.getElementById('epoch-start').value);
+        const epochEnd = parseInt(document.getElementById('epoch-end').value);
+        const totalYears = epochEnd - epochStart;
+
+        for (let i = 0; i <= 10; i++) {
+            const tick = document.createElement('div');
+            tick.className = 'timeline-ruler-tick';
+            tick.style.left = `${i * 10}%`;
+            tick.textContent = Math.round(epochStart + (totalYears * (i / 10)));
+            header.appendChild(tick);
+        }
+
+        const currentPercent = ((this.currentYear - epochStart) / totalYears) * 100;
+
+        // Group by Domain using the new ontology
+        const grouped = {};
+        this.entities.forEach(ent => {
+            const domainId = ent.domain || 'unknown';
+            if (!grouped[domainId]) {
+                grouped[domainId] = [];
+            }
+            grouped[domainId].push(ent);
+        });
+
+        const sortedDomains = Object.keys(grouped).sort((a, b) => {
             const nameA = this.ontologyTaxonomy[a]?.domain.name || a;
             const nameB = this.ontologyTaxonomy[b]?.domain.name || b;
             return nameA.localeCompare(nameB);
         });
 
-        // Render domain -> typology -> entity tree
         for (const domainId of sortedDomains) {
             const domainData = this.ontologyTaxonomy[domainId];
-            // 1. Group existing entities by Domain -> Typology
-            const entityMap = {};
-            this.entities.forEach(ent => {
-                const d = ent.domain || 'unknown';
-                const t = ent.typology || 'unknown';
-                if (!entityMap[d]) entityMap[d] = {};
-                if (!entityMap[d][t]) entityMap[d][t] = [];
-                entityMap[d][t].push(ent);
-            });
+            const domainLabel = domainData ? domainData.domain.name : (domainId.charAt(0).toUpperCase() + domainId.slice(1));
+            const entities = grouped[domainId];
 
-            // 2. Iterate OFICIAL ONTOLOGY to build the tree (ensures empty cats show)
-            // Sort domains by name if desired, or use defined order
-            const domainIds = Object.keys(this.ontologyTaxonomy);
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'timeline-group open'; // Default open
 
-            domainIds.forEach(domainId => {
-                const domainData = this.ontologyTaxonomy[domainId];
-                const domainLabel = domainData.domain.name;
-                const domainAbbr = domainData.domain.abbr;
+            const groupHeader = document.createElement('div');
+            groupHeader.className = 'timeline-group-header';
+            groupHeader.innerHTML = `<span class="group-arrow">▼</span> ${domainLabel}`;
+            groupHeader.onclick = () => {
+                const isOpen = groupDiv.classList.toggle('open');
+                const arrow = groupHeader.querySelector('.group-arrow');
+                if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
+            };
+            groupDiv.appendChild(groupHeader);
 
-                const domainDiv = document.createElement('div');
-                domainDiv.className = 'registry-category';
+            const groupContent = document.createElement('div');
+            groupContent.className = 'timeline-group-content';
 
-                // Domain Header
-                const domainTitle = document.createElement('div');
-                domainTitle.className = 'registry-cat-title';
-                domainTitle.textContent = `▶ ${domainLabel} (${domainAbbr})`;
-                domainTitle.onclick = () => {
-                    const content = domainTitle.nextElementSibling;
-                    content.classList.toggle('open');
-                    domainTitle.textContent = content.classList.contains('open') ? `▼ ${domainLabel} (${domainAbbr})` : `▶ ${domainLabel} (${domainAbbr})`;
-                };
-                domainDiv.appendChild(domainTitle);
+            entities.sort((a, b) => a.name.localeCompare(b.name));
 
-                // Domain Content
-                const domainContent = document.createElement('div');
-                domainContent.className = 'registry-list';
+            entities.forEach(ent => {
+                const row = document.createElement('div');
+                row.className = 'timeline-row';
 
-                // Iterate Typologies defined in Ontology
-                if (domainData.types) {
-                    domainData.types.forEach(typeDef => {
-                        const typeId = typeDef.value;
-                        const typeLabel = typeDef.label;
-                        const existingEnts = (entityMap[domainId] && entityMap[domainId][typeId]) ? entityMap[domainId][typeId] : [];
-                        const count = existingEnts.length;
+                const label = document.createElement('div');
+                label.className = 'timeline-label';
+                label.textContent = ent.name;
+                row.appendChild(label);
 
-                        // Typology Header
-                        const typeDiv = document.createElement('div');
-                        typeDiv.className = 'registry-typology';
-                        typeDiv.style.marginLeft = '0.5rem';
-                        typeDiv.style.borderLeft = '1px solid var(--ink-faded)';
-                        typeDiv.style.paddingLeft = '0.5rem';
+                const track = document.createElement('div');
+                track.className = 'timeline-bar-track';
 
-                        const typeTitle = document.createElement('div');
-                        typeTitle.className = 'registry-type-title';
-                        typeTitle.style.cursor = 'pointer';
-                        typeTitle.style.fontStyle = 'italic';
-                        typeTitle.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)'; // Dim if empty
-                        typeTitle.style.fontSize = '0.85rem';
-                        typeTitle.textContent = `▶ ${typeLabel} (${count})`;
+                const startP = Math.max(0, ((ent.validRange.start - epochStart) / totalYears) * 100);
+                const endP = Math.min(100, ((ent.validRange.end - epochStart) / totalYears) * 100);
+                const widthP = endP - startP;
 
-                        typeTitle.onclick = (e) => {
-                            e.stopPropagation();
-                            const typeList = typeTitle.nextElementSibling;
-                            typeList.classList.toggle('open');
-                            typeTitle.textContent = typeList.classList.contains('open') ? `▼ ${typeLabel} (${count})` : `▶ ${typeLabel} (${count})`;
-                        };
-                        typeDiv.appendChild(typeTitle);
+                if (widthP > 0) {
+                    const bar = document.createElement('div');
+                    bar.className = 'timeline-bar';
+                    bar.style.left = `${startP}%`;
+                    bar.style.width = `${widthP}%`;
+                    bar.style.backgroundColor = ent.color;
+                    bar.dataset.id = ent.id;
 
-                        // Entity List
-                        const typeList = document.createElement('div');
-                        typeList.className = 'registry-list';
-                        typeList.style.marginLeft = '0.5rem';
-
-                        if (count > 0) {
-                            existingEnts.forEach(ent => {
-                                const item = document.createElement('div');
-                                item.className = 'registry-item';
-
-                                const left = document.createElement('div');
-                                left.style.display = 'flex';
-                                left.style.alignItems = 'center';
-
-                                const toggle = document.createElement('input');
-                                toggle.type = 'checkbox';
-                                toggle.className = 'toggle-vis';
-                                toggle.checked = ent.visible;
-                                toggle.onclick = (e) => {
-                                    e.stopPropagation();
-                                    ent.visible = toggle.checked;
-                                    this.render();
-                                };
-                                left.appendChild(toggle);
-
-                                const nameSpan = document.createElement('span');
-                                nameSpan.textContent = ent.name;
-                                left.appendChild(nameSpan);
-
-                                item.appendChild(left);
-
-                                const goTo = document.createElement('span');
-                                goTo.innerHTML = '⌖';
-                                goTo.title = 'Go to location';
-                                goTo.style.fontSize = '0.8rem';
-
-                                item.onclick = () => {
-                                    this.selectEntity(ent.id, false);
-                                    if (ent.currentGeometry && ent.currentGeometry.length > 0) {
-                                        let c = { x: 0, y: 0 };
-                                        if (ent.type === 'city' || ent.typology === 'city') {
-                                            c = ent.currentGeometry[0];
-                                        } else {
-                                            c = getCentroid(ent.currentGeometry);
-                                        }
-                                        this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
-                                        this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
-                                        this.render();
-                                    }
-                                };
-                                item.appendChild(goTo);
-                                typeList.appendChild(item);
-                            });
-                        } else {
-                            // Empty state indicator
-                            const emptyMsg = document.createElement('div');
-                            emptyMsg.style.fontStyle = 'italic';
-                            emptyMsg.style.fontSize = '0.7rem';
-                            emptyMsg.style.color = 'var(--ink-faded)';
-                            emptyMsg.style.padding = '0.2rem 0.5rem';
-                            emptyMsg.textContent = '(No entities)';
-                            typeList.appendChild(emptyMsg);
-                        }
-
-                        typeDiv.appendChild(typeList);
-                        domainContent.appendChild(typeDiv);
-                    });
-                }
-
-                domainDiv.appendChild(domainContent);
-                container.appendChild(domainDiv);
-            });
-        }
-
-        checkHover(wp) {
-            if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
-            let fid = null;
-
-            const visibleEntities = this.entities.filter(e => e.visible);
-
-            // Reverse Sort (Top -> Bottom)
-            const sorted = [...visibleEntities].sort((a, b) => {
-                // Cities > Overlays (Cult/Ling) > Water > Land
-                const typeScore = (type) => {
-                    if (type === 'city') return 100;
-                    if (type === 'water') return 50;
-                    return 0;
-                };
-                const catScore = (cat) => {
-                    if (cat === 'linguistic' || cat === 'cultural') return 80;
-                    return 0;
-                };
-                return (catScore(a.category) + typeScore(a.type)) - (catScore(b.category) + typeScore(b.type));
-            });
-
-            for (let i = sorted.length - 1; i >= 0; i--) {
-                const e = sorted[i];
-                if (!e.currentGeometry) continue;
-
-                let hit = false;
-                if (e.type === 'city') {
-                    if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
-                } else if (e.type === 'river') {
-                    const pts = e.currentGeometry;
-                    for (let j = 0; j < pts.length - 1; j++) {
-                        if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
+                    if (Number.isFinite(ent.validRange.start)) {
+                        const handleL = document.createElement('div');
+                        handleL.className = 'timeline-handle handle-l';
+                        bar.appendChild(handleL);
                     }
-                } else {
-                    if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
-                }
 
-                if (hit) { fid = e.id; break; }
-            }
-
-            if (fid !== this.hoveredEntityId) {
-                this.hoveredEntityId = fid;
-                this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
-                this.render();
-            }
-        }
-
-        focusSelectedEntity() {
-            if (!this.selectedEntityId) return;
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
-            if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
-                let c = { x: 0, y: 0 };
-                if (ent.type === 'city') {
-                    c = ent.currentGeometry[0];
-                } else {
-                    c = getCentroid(ent.currentGeometry);
-                }
-                // Animate or set transform
-                this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
-                this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
-                this.render();
-            }
-        }
-
-        switchView(viewName) {
-            this.currentView = viewName;
-
-            const mapCanvas = document.getElementById('map-canvas');
-            const timelineDiv = document.getElementById('view-timeline');
-            const toolbar = document.getElementById('toolbar');
-
-            document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-
-            if (viewName === 'map') {
-                document.getElementById('btn-view-map').classList.add('active');
-                if (mapCanvas) mapCanvas.style.display = 'block';
-                if (timelineDiv) {
-                    timelineDiv.classList.remove('active');
-                    timelineDiv.style.display = 'none'; // Explicitly hide
-                }
-                if (toolbar) toolbar.style.display = 'flex';
-                this.render();
-            } else {
-                document.getElementById('btn-view-timeline').classList.add('active');
-                if (mapCanvas) mapCanvas.style.display = 'none';
-                if (timelineDiv) {
-                    timelineDiv.classList.add('active');
-                    timelineDiv.style.display = 'block'; // Explicitly show
-                }
-                if (toolbar) toolbar.style.display = 'none';
-                this.renderTimelineView();
-            }
-        }
-
-        renderTimelineView() {
-            const container = document.getElementById('view-timeline');
-            if (!container || this.currentView !== 'timeline') return;
-
-            container.innerHTML = ''; // Clear content
-
-            // Header
-            const header = document.createElement('div');
-            header.className = 'timeline-header';
-            container.appendChild(header);
-
-            // Draw ticks
-            const epochStart = parseInt(document.getElementById('epoch-start').value);
-            const epochEnd = parseInt(document.getElementById('epoch-end').value);
-            const totalYears = epochEnd - epochStart;
-
-            for (let i = 0; i <= 10; i++) {
-                const tick = document.createElement('div');
-                tick.className = 'timeline-ruler-tick';
-                tick.style.left = `${i * 10}%`;
-                tick.textContent = Math.round(epochStart + (totalYears * (i / 10)));
-                header.appendChild(tick);
-            }
-
-            const currentPercent = ((this.currentYear - epochStart) / totalYears) * 100;
-
-            // Group by Domain using the new ontology
-            const grouped = {};
-            this.entities.forEach(ent => {
-                const domainId = ent.domain || 'unknown';
-                if (!grouped[domainId]) {
-                    grouped[domainId] = [];
-                }
-                grouped[domainId].push(ent);
-            });
-
-            const sortedDomains = Object.keys(grouped).sort((a, b) => {
-                const nameA = this.ontologyTaxonomy[a]?.domain.name || a;
-                const nameB = this.ontologyTaxonomy[b]?.domain.name || b;
-                return nameA.localeCompare(nameB);
-            });
-
-            for (const domainId of sortedDomains) {
-                const domainData = this.ontologyTaxonomy[domainId];
-                const domainLabel = domainData ? domainData.domain.name : (domainId.charAt(0).toUpperCase() + domainId.slice(1));
-                const entities = grouped[domainId];
-
-                const groupDiv = document.createElement('div');
-                groupDiv.className = 'timeline-group open'; // Default open
-
-                const groupHeader = document.createElement('div');
-                groupHeader.className = 'timeline-group-header';
-                groupHeader.innerHTML = `<span class="group-arrow">▼</span> ${domainLabel}`;
-                groupHeader.onclick = () => {
-                    const isOpen = groupDiv.classList.toggle('open');
-                    const arrow = groupHeader.querySelector('.group-arrow');
-                    if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
-                };
-                groupDiv.appendChild(groupHeader);
-
-                const groupContent = document.createElement('div');
-                groupContent.className = 'timeline-group-content';
-
-                entities.sort((a, b) => a.name.localeCompare(b.name));
-
-                entities.forEach(ent => {
-                    const row = document.createElement('div');
-                    row.className = 'timeline-row';
-
-                    const label = document.createElement('div');
-                    label.className = 'timeline-label';
-                    label.textContent = ent.name;
-                    row.appendChild(label);
-
-                    const track = document.createElement('div');
-                    track.className = 'timeline-bar-track';
-
-                    const startP = Math.max(0, ((ent.validRange.start - epochStart) / totalYears) * 100);
-                    const endP = Math.min(100, ((ent.validRange.end - epochStart) / totalYears) * 100);
-                    const widthP = endP - startP;
-
-                    if (widthP > 0) {
-                        const bar = document.createElement('div');
-                        bar.className = 'timeline-bar';
-                        bar.style.left = `${startP}%`;
-                        bar.style.width = `${widthP}%`;
-                        bar.style.backgroundColor = ent.color;
-                        bar.dataset.id = ent.id;
-
-                        if (Number.isFinite(ent.validRange.start)) {
-                            const handleL = document.createElement('div');
-                            handleL.className = 'timeline-handle handle-l';
-                            bar.appendChild(handleL);
-                        }
-
-                        if (Number.isFinite(ent.validRange.end)) {
-                            const handleR = document.createElement('div');
-                            handleR.className = 'timeline-handle handle-r';
-                            bar.appendChild(handleR);
-                        }
-
-                        track.appendChild(bar);
+                    if (Number.isFinite(ent.validRange.end)) {
+                        const handleR = document.createElement('div');
+                        handleR.className = 'timeline-handle handle-r';
+                        bar.appendChild(handleR);
                     }
-                    row.appendChild(track);
-                    groupContent.appendChild(row);
-                });
 
-                groupDiv.appendChild(groupContent);
-                container.appendChild(groupDiv);
-            }
+                    track.appendChild(bar);
+                }
+                row.appendChild(track);
+                groupContent.appendChild(row);
+            });
 
-            // Add Red Line
-            const lineContainer = document.createElement('div');
-            lineContainer.style.position = 'absolute';
-            lineContainer.style.top = '70px';
-            lineContainer.style.bottom = '20px';
-            lineContainer.style.left = '232px';
-            lineContainer.style.right = '32px';
-            lineContainer.style.pointerEvents = 'none';
-            lineContainer.style.zIndex = '10'; // Ensure it's above the content
-
-            const redLine = document.createElement('div');
-            redLine.style.position = 'absolute';
-            redLine.style.left = `${currentPercent}%`;
-            redLine.style.top = '0';
-            redLine.style.bottom = '0';
-            redLine.style.width = '2px';
-            redLine.style.backgroundColor = 'var(--rubric-red)';
-
-            lineContainer.appendChild(redLine);
-            container.appendChild(lineContainer);
+            groupDiv.appendChild(groupContent);
+            container.appendChild(groupDiv);
         }
 
-        renderTimelineNotches() {
-            const container = document.getElementById('keyframe-notches');
-            container.innerHTML = '';
+        // Add Red Line
+        const lineContainer = document.createElement('div');
+        lineContainer.style.position = 'absolute';
+        lineContainer.style.top = '70px';
+        lineContainer.style.bottom = '20px';
+        lineContainer.style.left = '232px';
+        lineContainer.style.right = '32px';
+        lineContainer.style.pointerEvents = 'none';
+        lineContainer.style.zIndex = '10'; // Ensure it's above the content
 
-            if (!this.selectedEntityId) return;
+        const redLine = document.createElement('div');
+        redLine.style.position = 'absolute';
+        redLine.style.left = `${currentPercent}%`;
+        redLine.style.top = '0';
+        redLine.style.bottom = '0';
+        redLine.style.width = '2px';
+        redLine.style.backgroundColor = 'var(--rubric-red)';
 
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
-            if (!ent) return;
+        lineContainer.appendChild(redLine);
+        container.appendChild(lineContainer);
+    }
 
+    renderTimelineNotches() {
+        const container = document.getElementById('keyframe-notches');
+        container.innerHTML = '';
+
+        if (!this.selectedEntityId) return;
+
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (!ent) return;
+
+        const min = parseInt(this.uiRefs.slider.min);
+        const max = parseInt(this.uiRefs.slider.max);
+        const range = max - min;
+
+        ent.timeline.forEach(kf => {
+            if (kf.year >= min && kf.year <= max) {
+                const percent = ((kf.year - min) / range) * 100;
+                const notch = document.createElement('div');
+                notch.className = 'keyframe-notch';
+                notch.style.left = `${percent}%`;
+                notch.title = `Keyframe: ${this.formatYear(kf.year)}`;
+                container.appendChild(notch);
+            }
+        });
+    }
+
+    jumpToKeyframe(direction) {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (!ent || ent.timeline.length === 0) return;
+
+        let targetYear = null;
+
+        // Sort timeline just in case
+        const sortedTimeline = [...ent.timeline].sort((a, b) => a.year - b.year);
+
+        if (direction === -1) { // Previous
+            // Find largest year strictly less than current
+            for (let i = sortedTimeline.length - 1; i >= 0; i--) {
+                if (sortedTimeline[i].year < this.currentYear) {
+                    targetYear = sortedTimeline[i].year;
+                    break;
+                }
+            }
+        } else { // Next
+            // Find smallest year strictly greater than current
+            for (let i = 0; i < sortedTimeline.length; i++) {
+                if (sortedTimeline[i].year > this.currentYear) {
+                    targetYear = sortedTimeline[i].year;
+                    break;
+                }
+            }
+        }
+
+        if (targetYear !== null) {
+            // Update State
+            this.currentYear = targetYear;
+
+            // Update UI (Slider + Display)
+            // Check bounds first to avoid weird UI states
             const min = parseInt(this.uiRefs.slider.min);
             const max = parseInt(this.uiRefs.slider.max);
-            const range = max - min;
-
-            ent.timeline.forEach(kf => {
-                if (kf.year >= min && kf.year <= max) {
-                    const percent = ((kf.year - min) / range) * 100;
-                    const notch = document.createElement('div');
-                    notch.className = 'keyframe-notch';
-                    notch.style.left = `${percent}%`;
-                    notch.title = `Keyframe: ${this.formatYear(kf.year)}`;
-                    container.appendChild(notch);
-                }
-            });
-        }
-
-        jumpToKeyframe(direction) {
-            if (!this.selectedEntityId) return;
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
-            if (!ent || ent.timeline.length === 0) return;
-
-            let targetYear = null;
-
-            // Sort timeline just in case
-            const sortedTimeline = [...ent.timeline].sort((a, b) => a.year - b.year);
-
-            if (direction === -1) { // Previous
-                // Find largest year strictly less than current
-                for (let i = sortedTimeline.length - 1; i >= 0; i--) {
-                    if (sortedTimeline[i].year < this.currentYear) {
-                        targetYear = sortedTimeline[i].year;
-                        break;
-                    }
-                }
-            } else { // Next
-                // Find smallest year strictly greater than current
-                for (let i = 0; i < sortedTimeline.length; i++) {
-                    if (sortedTimeline[i].year > this.currentYear) {
-                        targetYear = sortedTimeline[i].year;
-                        break;
-                    }
-                }
-            }
-
-            if (targetYear !== null) {
-                // Update State
-                this.currentYear = targetYear;
-
-                // Update UI (Slider + Display)
-                // Check bounds first to avoid weird UI states
-                const min = parseInt(this.uiRefs.slider.min);
-                const max = parseInt(this.uiRefs.slider.max);
-                if (targetYear >= min && targetYear <= max) {
-                    this.uiRefs.slider.value = targetYear;
-                    this.uiRefs.display.textContent = this.formatYear(this.currentYear);
-                    this.updateEntities();
-                    this.render();
-                }
-            }
-        }
-
-        togglePlay() {
-            if (this.isPlaying) {
-                this.isPlaying = false;
-                clearInterval(this.playInterval);
-                this.uiRefs.playBtn.textContent = '▶';
-            } else {
-                this.isPlaying = true;
-                this.uiRefs.playBtn.textContent = '⏸';
-                this.playInterval = setInterval(() => {
-                    let y = parseInt(this.uiRefs.slider.value) + this.playbackSpeed;
-
-                    // Loop within EPOCH BOUNDS not slider bounds
-                    const min = parseInt(this.uiRefs.slider.min);
-                    const max = parseInt(this.uiRefs.slider.max);
-
-                    if (y > max) y = min;
-
-                    this.uiRefs.slider.value = y;
-                    this.currentYear = y;
-                    this.uiRefs.display.textContent = this.formatYear(y);
-                    this.updateEntities();
-                    this.render();
-                }, 50);
-            }
-        }
-
-        saveAtlas() {
-            const data = JSON.stringify(this.entities, null, 2);
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = `atlas_backup_${new Date().toISOString().slice(0, 10)}.atlas`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        loadAtlas(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const rawData = JSON.parse(e.target.result);
-                    this.entities = rawData.map(obj => HistoricalEntity.fromJSON(obj));
-                    this.updateEntities();
-                    this.renderRegistry();
-                    this.render();
-                    alert('Atlas loaded successfully.');
-                } catch (err) { console.error(err); alert('Failed to parse atlas file.'); }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-
-        setTool(name) {
-            this.activeTool = name;
-            this.cancelDraft();
-
-            const hint = document.getElementById('draw-hint');
-            const isAnnex = this.drawType === 'vassal'; // Implicit annex mode for vassals
-
-            if (name === 'draw') {
-                hint.classList.add('visible');
-                if (this.selectedEntityId && isAnnex) {
-                    const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                    hint.textContent = `VASSAL MODE: Create NEW ${this.drawCategory} entity linked to ${ent.name}.`;
-                } else if (this.selectedEntityId) {
-                    const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                    hint.textContent = `EDITING: Redrawing geometry for ${ent.name} in ${this.currentYear}.`;
-                } else {
-                    if (this.drawType === 'city') hint.textContent = "Click once to place City.";
-                    else hint.textContent = `Click to draw new ${this.drawCategory} ${this.drawType}. Double-click to finish.`;
-                }
-            } else if (name === 'transform') {
-                hint.classList.add('visible');
-                hint.textContent = "TRANSFORM: Drag corners to Resize (Hold Shift for Aspect Ratio). Drag center to Move.";
-            } else {
-                hint.classList.remove('visible');
-            }
-
-            const c = this.renderer.canvas;
-            c.style.cursor = 'default';
-            if (name === 'pan') c.style.cursor = 'grab';
-            else if (name === 'draw') c.style.cursor = 'crosshair';
-            else if (name === 'erase') c.style.cursor = 'not-allowed';
-            else if (name === 'vertex-edit') c.style.cursor = 'alias';
-
-            this.render();
-        }
-
-        addDraftPoint(p) {
-            const last = this.draftPoints[this.draftPoints.length - 1];
-            if (last && Math.abs(last.x - p.x) < 2 && Math.abs(last.y - p.y) < 2) return;
-            this.draftPoints.push(p);
-            this.render();
-        }
-
-        updateDraftCursor(p) { this.draftCursor = p; this.render(); }
-
-        commitDraft() {
-            if (this.draftPoints.length === 0) return;
-
-            // Check if current typology requires specific geometry (e.g., city = point)
-            const domainData = this.ontologyTaxonomy[this.drawDomain];
-            const typologyData = domainData?.types?.find(t => t.value === this.drawTypology);
-            const isPointGeometry = typologyData?.geometryType === 'Point' || this.drawTypology === 'city' || this.drawTypology === 'sacred-site';
-
-            if (!isPointGeometry && this.draftPoints.length < 2) return;
-
-            const isAnnex = this.drawTypology === 'vassal';
-
-            if (this.selectedEntityId) {
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
-                if (ent) {
-                    if (isAnnex) {
-                        const id = 'vassal_' + Date.now();
-                        // Create vassal using new ontology config format
-                        const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
-                            domain: this.drawDomain,
-                            typology: this.drawTypology,
-                            subtype: this.drawSubtype,
-                            color: ent.color,
-                            parentId: ent.id,
-                            boundaryConfidence: 0.8
-                        });
-                        // New shape creation (no resampling)
-                        newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
-                        newEnt.validRange.start = this.currentYear;
-                        newEnt.validRange.end = this.currentYear + 200;
-                        this.entities.push(newEnt);
-                        this.selectEntity(id);
-                        this.renderRegistry();
-                    } else {
-                        // Updating existing shape (no resampling to preserve corners)
-                        ent.addKeyframe(this.currentYear, [...this.draftPoints], true);
-                        this.updateInfoPanel(ent);
-                    }
-                }
-            } else {
-                const id = 'ent_' + Date.now();
-                const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
-                const color = colors[Math.floor(Math.random() * colors.length)];
-
-                // Generate descriptive name based on typology
-                let name = "New Territory";
-                if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') name = "New Settlement";
-                else if (this.drawTypology === 'river' || this.drawTypology === 'coast') name = "New River";
-                else if (this.drawTypology === 'aquatic') name = "New Sea/Lake";
-                else if (this.drawDomain === 'linguistic') name = "New Language Zone";
-                else if (this.drawDomain === 'religious') name = "New Faith Zone";
-                else if (typologyData) name = `New ${typologyData.label}`;
-
-                // Create entity using new ontology config format
-                const newEnt = new HistoricalEntity(id, name, {
-                    domain: this.drawDomain,
-                    typology: this.drawTypology,
-                    subtype: this.drawSubtype,
-                    color: color,
-                    boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
-                });
-                // New shape creation (no resampling)
-                newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
-                newEnt.validRange.start = this.currentYear - 200;
-                newEnt.validRange.end = this.currentYear + 200;
-
-                this.entities.push(newEnt);
-                this.selectEntity(id);
-                this.renderRegistry();
-            }
-
-            this.draftPoints = [];
-            this.draftCursor = null;
-            this.updateEntities();
-            this.render();
-            if (this.activeTool === 'draw') this.setTool('draw');
-        }
-
-        cancelDraft() { this.draftPoints = []; this.draftCursor = null; this.render(); }
-
-        deleteEntity(id) {
-            this.entities = this.entities.filter(e => e.id !== id);
-            if (this.selectedEntityId === id) this.deselect();
-            this.hoveredEntityId = null;
-            this.updateEntities();
-            this.renderRegistry();
-            this.render();
-        }
-
-        deselect() {
-            this.selectedEntityId = null;
-            document.getElementById('info-panel').style.display = 'none';
-            this.renderTimelineNotches(); // Clear notches
-            if (this.activeTool === 'draw') this.setTool('draw');
-            this.render();
-        }
-
-        selectEntity(id, showPanel = true) {
-            this.selectedEntityId = id;
-            const ent = this.entities.find(e => e.id === id);
-            if (ent) {
-                if (showPanel) {
-                    const p = document.getElementById('info-panel');
-                    p.style.display = 'block';
-                    document.getElementById('info-name-input').value = ent.name;
-                    document.getElementById('info-type').textContent = ent.type;
-                    document.getElementById('info-cat').textContent = ent.category;
-                    document.getElementById('info-color-input').value = ent.color;
-                    document.getElementById('info-hatch-input').value = ent.hatchStyle; // SYNC DROPDOWN
-                    document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
-
-                    const parentRow = document.getElementById('info-parent-row');
-                    if (ent.parentId) {
-                        const parent = this.entities.find(e => e.id === ent.parentId) || { name: 'Unknown' };
-                        document.getElementById('info-parent').textContent = parent.name;
-                        parentRow.style.display = 'flex';
-                    } else {
-                        parentRow.style.display = 'none';
-                    }
-
-                    this.updateInfoPanel(ent);
-                }
-                this.renderTimelineNotches(); // Update timeline notches for selected entity
-            }
-            this.render();
-        }
-
-        updateSelectedMetadata() {
-            if (!this.selectedEntityId) return;
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
-            if (ent) {
-                ent.name = document.getElementById('info-name-input').value;
-                ent.color = document.getElementById('info-color-input').value;
-                ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
-                this.renderRegistry();
+            if (targetYear >= min && targetYear <= max) {
+                this.uiRefs.slider.value = targetYear;
+                this.uiRefs.display.textContent = this.formatYear(this.currentYear);
+                this.updateEntities();
                 this.render();
-            }
-        }
-
-        // Vertex Editing Logic
-        editVertex(index, newPos) {
-            if (!this.selectedEntityId) return;
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
-            if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
-                ent.currentGeometry[index] = newPos;
-                this.render();
-            }
-        }
-
-        highlightVertex(index) {
-            this.highlightedVertexIndex = index;
-            this.render();
-        }
-
-        finishVertexEdit() {
-            if (!this.selectedEntityId) return;
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
-            if (ent) {
-                // Commit change to timeline (preventResampling = true)
-                ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
-                this.updateInfoPanel(ent);
-                this.renderTimelineNotches(); // Update notches as keyframes changed
-            }
-        }
-
-        updateInfoPanel(ent) {
-            const list = document.getElementById('keyframe-list');
-            if (!list) return; // Safety check for missing element
-
-            list.innerHTML = '';
-            ent.timeline.forEach(kf => {
-                const div = document.createElement('div');
-                div.textContent = `• ${kf.year} AD`;
-                div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
-                list.appendChild(div);
-            });
-        }
-
-        checkHover(wp) {
-            if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
-            let fid = null;
-
-            const visibleEntities = this.entities.filter(e => e.visible);
-
-            // Reverse Sort (Top -> Bottom)
-            const sorted = [...visibleEntities].sort((a, b) => {
-                // Cities > Overlays (Cult/Ling) > Water > Land
-                const typeScore = (type) => {
-                    if (type === 'city') return 100;
-                    if (type === 'water') return 50;
-                    return 0;
-                };
-                const catScore = (cat) => {
-                    if (cat === 'linguistic' || cat === 'cultural') return 80;
-                    return 0;
-                };
-                return (catScore(a.category) + typeScore(a.type)) - (catScore(b.category) + typeScore(b.type));
-            });
-
-            for (let i = sorted.length - 1; i >= 0; i--) {
-                const e = sorted[i];
-                if (!e.currentGeometry) continue;
-
-                let hit = false;
-                if (e.type === 'city') {
-                    if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
-                } else if (e.type === 'river') {
-                    const pts = e.currentGeometry;
-                    for (let j = 0; j < pts.length - 1; j++) {
-                        if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
-                    }
-                } else {
-                    if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
-                }
-
-                if (hit) { fid = e.id; break; }
-            }
-
-            if (fid !== this.hoveredEntityId) {
-                this.hoveredEntityId = fid;
-                this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
-                this.render();
-            }
-        }
-
-        updateEntities() {
-            let cnt = 0;
-            this.entities.forEach(ent => {
-                ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
-                if (ent.currentGeometry) cnt++;
-            });
-            const d = document.querySelector('.debug-info');
-            if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
-        }
-
-        render() {
-            this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
-
-            // Add safety check for drawDraft function existence
-            if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-                if (typeof this.renderer.drawDraft === 'function') {
-                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
-                }
             }
         }
     }
 
+    togglePlay() {
+        if (this.isPlaying) {
+            this.isPlaying = false;
+            clearInterval(this.playInterval);
+            this.uiRefs.playBtn.textContent = '▶';
+        } else {
+            this.isPlaying = true;
+            this.uiRefs.playBtn.textContent = '⏸';
+            this.playInterval = setInterval(() => {
+                let y = parseInt(this.uiRefs.slider.value) + this.playbackSpeed;
+
+                // Loop within EPOCH BOUNDS not slider bounds
+                const min = parseInt(this.uiRefs.slider.min);
+                const max = parseInt(this.uiRefs.slider.max);
+
+                if (y > max) y = min;
+
+                this.uiRefs.slider.value = y;
+                this.currentYear = y;
+                this.uiRefs.display.textContent = this.formatYear(y);
+                this.updateEntities();
+                this.render();
+            }, 50);
+        }
+    }
+
+    saveAtlas() {
+        const data = JSON.stringify(this.entities, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `atlas_backup_${new Date().toISOString().slice(0, 10)}.atlas`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    loadAtlas(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const rawData = JSON.parse(e.target.result);
+                this.entities = rawData.map(obj => HistoricalEntity.fromJSON(obj));
+                this.updateEntities();
+                this.renderRegistry();
+                this.render();
+                alert('Atlas loaded successfully.');
+            } catch (err) { console.error(err); alert('Failed to parse atlas file.'); }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    setTool(name) {
+        this.activeTool = name;
+        this.cancelDraft();
+
+        const hint = document.getElementById('draw-hint');
+        const isAnnex = this.drawType === 'vassal'; // Implicit annex mode for vassals
+
+        if (name === 'draw') {
+            hint.classList.add('visible');
+            if (this.selectedEntityId && isAnnex) {
+                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                hint.textContent = `VASSAL MODE: Create NEW ${this.drawCategory} entity linked to ${ent.name}.`;
+            } else if (this.selectedEntityId) {
+                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                hint.textContent = `EDITING: Redrawing geometry for ${ent.name} in ${this.currentYear}.`;
+            } else {
+                if (this.drawType === 'city') hint.textContent = "Click once to place City.";
+                else hint.textContent = `Click to draw new ${this.drawCategory} ${this.drawType}. Double-click to finish.`;
+            }
+        } else if (name === 'transform') {
+            hint.classList.add('visible');
+            hint.textContent = "TRANSFORM: Drag corners to Resize (Hold Shift for Aspect Ratio). Drag center to Move.";
+        } else {
+            hint.classList.remove('visible');
+        }
+
+        const c = this.renderer.canvas;
+        c.style.cursor = 'default';
+        if (name === 'pan') c.style.cursor = 'grab';
+        else if (name === 'draw') c.style.cursor = 'crosshair';
+        else if (name === 'erase') c.style.cursor = 'not-allowed';
+        else if (name === 'vertex-edit') c.style.cursor = 'alias';
+
+        this.render();
+    }
+
+    addDraftPoint(p) {
+        const last = this.draftPoints[this.draftPoints.length - 1];
+        if (last && Math.abs(last.x - p.x) < 2 && Math.abs(last.y - p.y) < 2) return;
+        this.draftPoints.push(p);
+        this.render();
+    }
+
+    updateDraftCursor(p) { this.draftCursor = p; this.render(); }
+
+    commitDraft() {
+        if (this.draftPoints.length === 0) return;
+
+        // Check if current typology requires specific geometry (e.g., city = point)
+        const domainData = this.ontologyTaxonomy[this.drawDomain];
+        const typologyData = domainData?.types?.find(t => t.value === this.drawTypology);
+        const isPointGeometry = typologyData?.geometryType === 'Point' || this.drawTypology === 'city' || this.drawTypology === 'sacred-site';
+
+        if (!isPointGeometry && this.draftPoints.length < 2) return;
+
+        const isAnnex = this.drawTypology === 'vassal';
+
+        if (this.selectedEntityId) {
+            const ent = this.entities.find(e => e.id === this.selectedEntityId);
+            if (ent) {
+                if (isAnnex) {
+                    const id = 'vassal_' + Date.now();
+                    // Create vassal using new ontology config format
+                    const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
+                        domain: this.drawDomain,
+                        typology: this.drawTypology,
+                        subtype: this.drawSubtype,
+                        color: ent.color,
+                        parentId: ent.id,
+                        boundaryConfidence: 0.8
+                    });
+                    // New shape creation (no resampling)
+                    newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
+                    newEnt.validRange.start = this.currentYear;
+                    newEnt.validRange.end = this.currentYear + 200;
+                    this.entities.push(newEnt);
+                    this.selectEntity(id);
+                    this.renderRegistry();
+                } else {
+                    // Updating existing shape (no resampling to preserve corners)
+                    ent.addKeyframe(this.currentYear, [...this.draftPoints], true);
+                    this.updateInfoPanel(ent);
+                }
+            }
+        } else {
+            const id = 'ent_' + Date.now();
+            const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            // Generate descriptive name based on typology
+            let name = "New Territory";
+            if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') name = "New Settlement";
+            else if (this.drawTypology === 'river' || this.drawTypology === 'coast') name = "New River";
+            else if (this.drawTypology === 'aquatic') name = "New Sea/Lake";
+            else if (this.drawDomain === 'linguistic') name = "New Language Zone";
+            else if (this.drawDomain === 'religious') name = "New Faith Zone";
+            else if (typologyData) name = `New ${typologyData.label}`;
+
+            // Create entity using new ontology config format
+            const newEnt = new HistoricalEntity(id, name, {
+                domain: this.drawDomain,
+                typology: this.drawTypology,
+                subtype: this.drawSubtype,
+                color: color,
+                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
+            });
+            // New shape creation (no resampling)
+            newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
+            newEnt.validRange.start = this.currentYear - 200;
+            newEnt.validRange.end = this.currentYear + 200;
+
+            this.entities.push(newEnt);
+            this.selectEntity(id);
+            this.renderRegistry();
+        }
+
+        this.draftPoints = [];
+        this.draftCursor = null;
+        this.updateEntities();
+        this.render();
+        if (this.activeTool === 'draw') this.setTool('draw');
+    }
+
+    cancelDraft() { this.draftPoints = []; this.draftCursor = null; this.render(); }
+
+    deleteEntity(id) {
+        this.entities = this.entities.filter(e => e.id !== id);
+        if (this.selectedEntityId === id) this.deselect();
+        this.hoveredEntityId = null;
+        this.updateEntities();
+        this.renderRegistry();
+        this.render();
+    }
+
+    deselect() {
+        this.selectedEntityId = null;
+        document.getElementById('info-panel').style.display = 'none';
+        this.renderTimelineNotches(); // Clear notches
+        if (this.activeTool === 'draw') this.setTool('draw');
+        this.render();
+    }
+
+    selectEntity(id, showPanel = true) {
+        this.selectedEntityId = id;
+        const ent = this.entities.find(e => e.id === id);
+        if (ent) {
+            if (showPanel) {
+                const p = document.getElementById('info-panel');
+                p.style.display = 'block';
+                document.getElementById('info-name-input').value = ent.name;
+                document.getElementById('info-type').textContent = ent.type;
+                document.getElementById('info-cat').textContent = ent.category;
+                document.getElementById('info-color-input').value = ent.color;
+                document.getElementById('info-hatch-input').value = ent.hatchStyle; // SYNC DROPDOWN
+                document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
+
+                const parentRow = document.getElementById('info-parent-row');
+                if (ent.parentId) {
+                    const parent = this.entities.find(e => e.id === ent.parentId) || { name: 'Unknown' };
+                    document.getElementById('info-parent').textContent = parent.name;
+                    parentRow.style.display = 'flex';
+                } else {
+                    parentRow.style.display = 'none';
+                }
+
+                this.updateInfoPanel(ent);
+            }
+            this.renderTimelineNotches(); // Update timeline notches for selected entity
+        }
+        this.render();
+    }
+
+    updateSelectedMetadata() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+            ent.name = document.getElementById('info-name-input').value;
+            ent.color = document.getElementById('info-color-input').value;
+            ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
+            this.renderRegistry();
+            this.render();
+        }
+    }
+
+    // Vertex Editing Logic
+    editVertex(index, newPos) {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
+            ent.currentGeometry[index] = newPos;
+            this.render();
+        }
+    }
+
+    highlightVertex(index) {
+        this.highlightedVertexIndex = index;
+        this.render();
+    }
+
+    finishVertexEdit() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+            // Commit change to timeline (preventResampling = true)
+            ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
+            this.updateInfoPanel(ent);
+            this.renderTimelineNotches(); // Update notches as keyframes changed
+        }
+    }
+
+    updateInfoPanel(ent) {
+        const list = document.getElementById('keyframe-list');
+        if (!list) return; // Safety check for missing element
+
+        list.innerHTML = '';
+        ent.timeline.forEach(kf => {
+            const div = document.createElement('div');
+            div.textContent = `• ${kf.year} AD`;
+            div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
+            list.appendChild(div);
+        });
+    }
+
+    checkHover(wp) {
+        if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
+        let fid = null;
+
+        const visibleEntities = this.entities.filter(e => e.visible);
+
+        // Reverse Sort (Top -> Bottom)
+        const sorted = [...visibleEntities].sort((a, b) => {
+            // Cities > Overlays (Cult/Ling) > Water > Land
+            const typeScore = (type) => {
+                if (type === 'city') return 100;
+                if (type === 'water') return 50;
+                return 0;
+            };
+            const catScore = (cat) => {
+                if (cat === 'linguistic' || cat === 'cultural') return 80;
+                return 0;
+            };
+            return (catScore(a.category) + typeScore(a.type)) - (catScore(b.category) + typeScore(b.type));
+        });
+
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const e = sorted[i];
+            if (!e.currentGeometry) continue;
+
+            let hit = false;
+            if (e.type === 'city') {
+                if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
+            } else if (e.type === 'river') {
+                const pts = e.currentGeometry;
+                for (let j = 0; j < pts.length - 1; j++) {
+                    if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
+                }
+            } else {
+                if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+            }
+
+            if (hit) { fid = e.id; break; }
+        }
+
+        if (fid !== this.hoveredEntityId) {
+            this.hoveredEntityId = fid;
+            this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
+            this.render();
+        }
+    }
+
+    updateEntities() {
+        let cnt = 0;
+        this.entities.forEach(ent => {
+            ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
+            if (ent.currentGeometry) cnt++;
+        });
+        const d = document.querySelector('.debug-info');
+        if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
+    }
+
+    render() {
+        this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+
+        // Add safety check for drawDraft function existence
+        if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
+            if (typeof this.renderer.drawDraft === 'function') {
+                this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+            }
+        }
+    }
+}
+
 // Global hook
 window.onload = () => {
-        window.illuminarchismApp = new IlluminarchismApp();
-    };
+    window.illuminarchismApp = new IlluminarchismApp();
+};
