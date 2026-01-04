@@ -2,7 +2,9 @@ import MedievalRenderer from './renderer/MedievalRenderer.js';
 import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
 import { distance, getCentroid, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
+
 import { DOMAINS, buildTaxonomyForUI, getTypologiesForDomain, POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC_SUBTYPES } from './core/Ontology.js';
+import { Quadtree } from './core/SpatialIndex.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -13,6 +15,8 @@ export default class IlluminarchismApp {
         this.renderer = new MedievalRenderer('map-canvas');
         this.input = new InputController(this);
         this.entities = [];
+        this.spatialIndex = null; // Quadtree instance
+        this.currentWorldBounds = { x: -5000, y: -5000, w: 10000, h: 10000 };
         this.hoveredEntityId = null;
         this.selectedEntityId = null;
         this.currentYear = 1000;
@@ -1307,21 +1311,33 @@ export default class IlluminarchismApp {
         if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
         let fid = null;
 
-        const visibleEntities = this.entities.filter(e => e.visible);
+        // Use Spatial Index for Hit Testing
+        // Define a small search box around the cursor
+        const searchSize = 20 / this.renderer.transform.k; // Adapt to zoom
+        const searchBox = { x: wp.x - searchSize / 2, y: wp.y - searchSize / 2, w: searchSize, h: searchSize };
 
-        // Reverse Sort (Top -> Bottom)
-        const sorted = [...visibleEntities].sort((a, b) => {
-            // Cities > Overlays (Cult/Ling) > Water > Land
-            const typeScore = (type) => {
-                if (type === 'city') return 100;
-                if (type === 'water') return 50;
+        let candidates = [];
+        if (this.spatialIndex) {
+            const results = this.spatialIndex.retrieve(searchBox);
+            candidates = results.map(r => r.entity).filter(e => e.visible);
+        } else {
+            // Fallback if index not ready
+            candidates = this.entities.filter(e => e.visible);
+        }
+
+        // Only iterate candidates
+        const sorted = candidates.sort((a, b) => {
+            // Same sorting logic as before for Z-order
+            const typeScore = (ent) => {
+                if (ent.type === 'city') return 100;
+                if (ent.type === 'water') return 50;
                 return 0;
             };
-            const catScore = (cat) => {
-                if (cat === 'linguistic' || cat === 'cultural') return 80;
+            const catScore = (ent) => {
+                if (ent.category === 'linguistic' || ent.category === 'cultural') return 80;
                 return 0;
             };
-            return (catScore(a.category) + typeScore(a.type)) - (catScore(b.category) + typeScore(b.type));
+            return (catScore(a) + typeScore(a)) - (catScore(b) + typeScore(b));
         });
 
         for (let i = sorted.length - 1; i >= 0; i--) {
@@ -1352,16 +1368,75 @@ export default class IlluminarchismApp {
 
     updateEntities() {
         let cnt = 0;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const validEntities = [];
+
         this.entities.forEach(ent => {
             ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
-            if (ent.currentGeometry) cnt++;
+            if (ent.currentGeometry && ent.currentGeometry.length > 0) {
+                cnt++;
+                // Calculate BBox for Indexing
+                const bbox = getBoundingBox(ent.currentGeometry);
+                ent.bbox = bbox; // Store for reuse
+
+                // Track World Bounds
+                if (bbox.minX < minX) minX = bbox.minX;
+                if (bbox.minY < minY) minY = bbox.minY;
+                if (bbox.maxX > maxX) maxX = bbox.maxX;
+                if (bbox.maxY > maxY) maxY = bbox.maxY;
+
+                validEntities.push(ent);
+            }
         });
+
+        // Rebuild Quadtree
+        // Add some padding to world bounds or use default
+        if (minX === Infinity) { minX = -1000; maxX = 1000; minY = -1000; maxY = 1000; }
+        const margin = 100;
+        this.currentWorldBounds = {
+            x: minX - margin,
+            y: minY - margin,
+            w: (maxX - minX) + margin * 2,
+            h: (maxY - minY) + margin * 2
+        };
+
+        this.spatialIndex = new Quadtree(this.currentWorldBounds);
+        validEntities.forEach(ent => {
+            this.spatialIndex.insert({
+                x: ent.bbox.x,
+                y: ent.bbox.y,
+                w: ent.bbox.w,
+                h: ent.bbox.h,
+                entity: ent
+            });
+        });
+
         const d = document.querySelector('.debug-info');
         if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
     }
 
     render() {
-        this.renderer.draw(this.entities, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+        // VIEWPORT CULLING
+        // Get Viewport in World Coords
+        let entitiesToDraw = this.entities; // Default to all if check fails
+
+        if (this.spatialIndex && this.renderer.width > 0) {
+            // Need to inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
+            const tl = this.renderer.toWorld(0, 0);
+            const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
+            const viewportBox = {
+                x: tl.x,
+                y: tl.y,
+                w: br.x - tl.x,
+                h: br.y - tl.y
+            };
+
+            // Retrieve only visible entities
+            const visibleNodes = this.spatialIndex.retrieve(viewportBox);
+            entitiesToDraw = visibleNodes.map(n => n.entity);
+        }
+
+        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
 
         // Add safety check for drawDraft function existence
         if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
