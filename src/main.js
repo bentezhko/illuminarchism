@@ -5,6 +5,8 @@ import { distance, getCentroid, distanceToSegment, isPointInPolygon, getBounding
 
 import { DOMAINS, buildTaxonomyForUI, getTypologiesForDomain, POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC_SUBTYPES } from './core/Ontology.js';
 import { Quadtree } from './core/SpatialIndex.js';
+import RegistryRenderer from './ui/RegistryRenderer.js';
+import Timeline from './ui/Timeline.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -14,6 +16,11 @@ export default class IlluminarchismApp {
 
         this.renderer = new MedievalRenderer('map-canvas');
         this.input = new InputController(this);
+
+        // Modules
+        this.registry = new RegistryRenderer(this);
+        this.timeline = new Timeline(this);
+
         this.entities = [];
         this.spatialIndex = null; // Quadtree instance
         this.currentWorldBounds = { x: -5000, y: -5000, w: 10000, h: 10000 };
@@ -423,13 +430,7 @@ export default class IlluminarchismApp {
         }
 
         if (this.uiRefs.slider) {
-            this.uiRefs.slider.addEventListener('input', (e) => {
-                this.currentYear = parseInt(e.target.value);
-                if (this.uiRefs.display) this.uiRefs.display.textContent = this.formatYear(this.currentYear);
-                this.updateEntities();
-                this.render();
-                this.renderTimelineView(); // Update timeline if active
-            });
+            // Slider input handled by Timeline.js
         }
 
         // Add listeners for view switching
@@ -440,36 +441,9 @@ export default class IlluminarchismApp {
         this.safeAddListener('btn-prev-key', 'click', () => this.jumpToKeyframe(-1));
         this.safeAddListener('btn-next-key', 'click', () => this.jumpToKeyframe(1));
 
-        const epochStart = document.getElementById('epoch-start');
-        const epochEnd = document.getElementById('epoch-end');
-
-        const updateTimelineBounds = () => {
-            if (!epochStart || !epochEnd) return;
-            const start = parseInt(epochStart.value);
-            const end = parseInt(epochEnd.value);
-
-            if (start < end && this.uiRefs.slider) {
-                this.uiRefs.slider.min = start;
-                this.uiRefs.slider.max = end;
-                // Clamp current value
-                if (this.currentYear < start) {
-                    this.currentYear = start;
-                    this.uiRefs.slider.value = start;
-                }
-                if (this.currentYear > end) {
-                    this.currentYear = end;
-                    this.uiRefs.slider.value = end;
-                }
-                if (this.uiRefs.display) this.uiRefs.display.textContent = this.formatYear(this.currentYear);
-                this.updateEntities();
-                this.renderTimelineNotches(); // Update notches on bound change
-                this.render();
-                this.renderTimelineView();
-            }
-        };
-
-        this.safeAddListener('epoch-start', 'change', updateTimelineBounds);
-        this.safeAddListener('epoch-end', 'change', updateTimelineBounds);
+        // Epoch listeners moved to Timeline.js, but keeping DOM Refs logic here is fine if not conflicting.
+        // Timeline.js handles 'change' on epoch-start/end to update bounds.
+        // We can remove the logic here to avoid double binding.
 
         // Toggle Timeline Panel
         this.safeAddListener('btn-toggle-time-panel', 'click', () => {
@@ -484,10 +458,8 @@ export default class IlluminarchismApp {
                 e.target.classList.add('active');
             });
         });
-
-        if (this.uiRefs.playBtn) {
-            this.uiRefs.playBtn.addEventListener('click', () => this.togglePlay());
-        }
+        // Play button listener moved to Timeline.js but we can keep it here if ref undefined or do nothing.
+        // Timeline.js captures it by ID 'btn-play'.
 
         document.querySelectorAll('.tool-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -554,163 +526,12 @@ export default class IlluminarchismApp {
             fileInput.addEventListener('change', (e) => this.loadAtlas(e));
         }
 
-
-
         // Initial render of notches if anything selected (unlikely on load but good practice)
-        this.renderTimelineNotches();
+        this.timeline.renderNotches();
     }
 
     renderRegistry() {
-        const container = document.getElementById('registry-content');
-        if (!container) return;
-        container.innerHTML = '';
-
-        // 1. Group existing entities by Domain -> Typology
-        const entityMap = {};
-        this.entities.forEach(ent => {
-            const d = ent.domain || 'unknown';
-            const t = ent.typology || 'unknown';
-            if (!entityMap[d]) entityMap[d] = {};
-            if (!entityMap[d][t]) entityMap[d][t] = [];
-            entityMap[d][t].push(ent);
-        });
-
-        // 2. Iterate OFFICIAL ONTOLOGY to build the tree (ensures empty cats show)
-        // Sort domains by name if desired, or use defined order
-        // Use keys from taxonomy (political, linguistic, etc.)
-        const domainIds = Object.keys(this.ontologyTaxonomy);
-
-        domainIds.forEach(domainId => {
-            const domainData = this.ontologyTaxonomy[domainId];
-            if (!domainData) return;
-
-            const domainLabel = domainData.domain.name;
-            const domainAbbr = domainData.domain.abbr;
-
-            const domainDiv = document.createElement('div');
-            domainDiv.className = 'registry-category';
-
-            // Domain Header
-            const domainTitle = document.createElement('div');
-            domainTitle.className = 'registry-cat-title';
-            domainTitle.textContent = `▶ ${domainLabel} (${domainAbbr})`;
-            domainTitle.onclick = () => {
-                const content = domainTitle.nextElementSibling;
-                content.classList.toggle('open');
-                domainTitle.textContent = content.classList.contains('open') ? `▼ ${domainLabel} (${domainAbbr})` : `▶ ${domainLabel} (${domainAbbr})`;
-            };
-            domainDiv.appendChild(domainTitle);
-
-            // Domain Content
-            const domainContent = document.createElement('div');
-            domainContent.className = 'registry-list';
-
-            // Iterate Typologies defined in Ontology
-            if (domainData.types) {
-                domainData.types.forEach(typeDef => {
-                    const typeId = typeDef.value;
-                    const typeLabel = typeDef.label;
-                    const existingEnts = (entityMap[domainId] && entityMap[domainId][typeId]) ? entityMap[domainId][typeId] : [];
-                    const count = existingEnts.length;
-
-                    // Typology Header
-                    const typeDiv = document.createElement('div');
-                    typeDiv.className = 'registry-typology';
-                    typeDiv.style.marginLeft = '0.5rem';
-                    typeDiv.style.borderLeft = '1px solid var(--ink-faded)';
-                    typeDiv.style.paddingLeft = '0.5rem';
-
-                    const typeTitle = document.createElement('div');
-                    typeTitle.className = 'registry-type-title';
-                    typeTitle.style.cursor = 'pointer';
-                    typeTitle.style.fontStyle = 'italic';
-                    typeTitle.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)'; // Dim if empty
-                    typeTitle.style.fontSize = '0.85rem';
-                    typeTitle.textContent = `▶ ${typeLabel} (${count})`;
-
-                    typeTitle.onclick = (e) => {
-                        e.stopPropagation();
-                        const typeList = typeTitle.nextElementSibling;
-                        typeList.classList.toggle('open');
-                        typeTitle.textContent = typeList.classList.contains('open') ? `▼ ${typeLabel} (${count})` : `▶ ${typeLabel} (${count})`;
-                    };
-                    typeDiv.appendChild(typeTitle);
-
-                    // Entity List
-                    const typeList = document.createElement('div');
-                    typeList.className = 'registry-list';
-                    typeList.style.marginLeft = '0.5rem';
-
-                    if (count > 0) {
-                        existingEnts.forEach(ent => {
-                            const item = document.createElement('div');
-                            item.className = 'registry-item';
-
-                            const left = document.createElement('div');
-                            left.style.display = 'flex';
-                            left.style.alignItems = 'center';
-
-                            const toggle = document.createElement('input');
-                            toggle.type = 'checkbox';
-                            toggle.className = 'toggle-vis';
-                            toggle.checked = ent.visible;
-                            toggle.onclick = (e) => {
-                                e.stopPropagation();
-                                ent.visible = toggle.checked;
-                                this.render();
-                            };
-                            left.appendChild(toggle);
-
-                            const nameSpan = document.createElement('span');
-                            nameSpan.textContent = ent.name;
-                            left.appendChild(nameSpan);
-
-                            item.appendChild(left);
-
-                            const goTo = document.createElement('span');
-                            goTo.innerHTML = '⌖';
-                            goTo.title = 'Go to location';
-                            goTo.style.fontSize = '0.8rem';
-                            goTo.style.cursor = 'pointer';
-
-                            item.onclick = () => {
-                                this.selectEntity(ent.id, false);
-                                if (ent.currentGeometry && ent.currentGeometry.length > 0) {
-                                    let c = { x: 0, y: 0 };
-                                    if (ent.type === 'city' || ent.typology === 'city') {
-                                        c = ent.currentGeometry[0];
-                                    } else {
-                                        c = getCentroid(ent.currentGeometry);
-                                    }
-                                    if (this.renderer && this.renderer.transform) {
-                                        this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
-                                        this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
-                                        this.render();
-                                    }
-                                }
-                            };
-                            item.appendChild(goTo);
-                            typeList.appendChild(item);
-                        });
-                    } else {
-                        // Empty state indicator
-                        const emptyMsg = document.createElement('div');
-                        emptyMsg.style.fontStyle = 'italic';
-                        emptyMsg.style.fontSize = '0.7rem';
-                        emptyMsg.style.color = 'var(--ink-faded)';
-                        emptyMsg.style.padding = '0.2rem 0.5rem';
-                        emptyMsg.textContent = '(No entities)';
-                        typeList.appendChild(emptyMsg);
-                    }
-
-                    typeDiv.appendChild(typeList);
-                    domainContent.appendChild(typeDiv);
-                });
-            }
-
-            domainDiv.appendChild(domainContent);
-            container.appendChild(domainDiv);
-        });
+        this.registry.render();
     }
 
     checkHover(wp) {
@@ -803,237 +624,26 @@ export default class IlluminarchismApp {
                 timelineDiv.style.display = 'block'; // Explicitly show
             }
             if (toolbar) toolbar.style.display = 'none';
-            this.renderTimelineView();
+            this.timeline.renderView();
         }
     }
 
+    // Timeline View now handled by Timeline.js
     renderTimelineView() {
-        const container = document.getElementById('view-timeline');
-        if (!container || this.currentView !== 'timeline') return;
-
-        container.innerHTML = ''; // Clear content
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'timeline-header';
-        container.appendChild(header);
-
-        // Draw ticks
-        const epochStart = parseInt(document.getElementById('epoch-start').value);
-        const epochEnd = parseInt(document.getElementById('epoch-end').value);
-        const totalYears = epochEnd - epochStart;
-
-        for (let i = 0; i <= 10; i++) {
-            const tick = document.createElement('div');
-            tick.className = 'timeline-ruler-tick';
-            tick.style.left = `${i * 10}%`;
-            tick.textContent = Math.round(epochStart + (totalYears * (i / 10)));
-            header.appendChild(tick);
-        }
-
-        const currentPercent = ((this.currentYear - epochStart) / totalYears) * 100;
-
-        // Group by Domain using the new ontology
-        const grouped = {};
-        this.entities.forEach(ent => {
-            const domainId = ent.domain || 'unknown';
-            if (!grouped[domainId]) {
-                grouped[domainId] = [];
-            }
-            grouped[domainId].push(ent);
-        });
-
-        const sortedDomains = Object.keys(grouped).sort((a, b) => {
-            const nameA = this.ontologyTaxonomy[a]?.domain.name || a;
-            const nameB = this.ontologyTaxonomy[b]?.domain.name || b;
-            return nameA.localeCompare(nameB);
-        });
-
-        for (const domainId of sortedDomains) {
-            const domainData = this.ontologyTaxonomy[domainId];
-            const domainLabel = domainData ? domainData.domain.name : (domainId.charAt(0).toUpperCase() + domainId.slice(1));
-            const entities = grouped[domainId];
-
-            const groupDiv = document.createElement('div');
-            groupDiv.className = 'timeline-group open'; // Default open
-
-            const groupHeader = document.createElement('div');
-            groupHeader.className = 'timeline-group-header';
-            groupHeader.innerHTML = `<span class="group-arrow">▼</span> ${domainLabel}`;
-            groupHeader.onclick = () => {
-                const isOpen = groupDiv.classList.toggle('open');
-                const arrow = groupHeader.querySelector('.group-arrow');
-                if (arrow) arrow.textContent = isOpen ? '▼' : '▶';
-            };
-            groupDiv.appendChild(groupHeader);
-
-            const groupContent = document.createElement('div');
-            groupContent.className = 'timeline-group-content';
-
-            entities.sort((a, b) => a.name.localeCompare(b.name));
-
-            entities.forEach(ent => {
-                const row = document.createElement('div');
-                row.className = 'timeline-row';
-
-                const label = document.createElement('div');
-                label.className = 'timeline-label';
-                label.textContent = ent.name;
-                row.appendChild(label);
-
-                const track = document.createElement('div');
-                track.className = 'timeline-bar-track';
-
-                const startP = Math.max(0, ((ent.validRange.start - epochStart) / totalYears) * 100);
-                const endP = Math.min(100, ((ent.validRange.end - epochStart) / totalYears) * 100);
-                const widthP = endP - startP;
-
-                if (widthP > 0) {
-                    const bar = document.createElement('div');
-                    bar.className = 'timeline-bar';
-                    bar.style.left = `${startP}%`;
-                    bar.style.width = `${widthP}%`;
-                    bar.style.backgroundColor = ent.color;
-                    bar.dataset.id = ent.id;
-
-                    if (Number.isFinite(ent.validRange.start)) {
-                        const handleL = document.createElement('div');
-                        handleL.className = 'timeline-handle handle-l';
-                        bar.appendChild(handleL);
-                    }
-
-                    if (Number.isFinite(ent.validRange.end)) {
-                        const handleR = document.createElement('div');
-                        handleR.className = 'timeline-handle handle-r';
-                        bar.appendChild(handleR);
-                    }
-
-                    track.appendChild(bar);
-                }
-                row.appendChild(track);
-                groupContent.appendChild(row);
-            });
-
-            groupDiv.appendChild(groupContent);
-            container.appendChild(groupDiv);
-        }
-
-        // Add Red Line
-        const lineContainer = document.createElement('div');
-        lineContainer.style.position = 'absolute';
-        lineContainer.style.top = '70px';
-        lineContainer.style.bottom = '20px';
-        lineContainer.style.left = '232px';
-        lineContainer.style.right = '32px';
-        lineContainer.style.pointerEvents = 'none';
-        lineContainer.style.zIndex = '10'; // Ensure it's above the content
-
-        const redLine = document.createElement('div');
-        redLine.style.position = 'absolute';
-        redLine.style.left = `${currentPercent}%`;
-        redLine.style.top = '0';
-        redLine.style.bottom = '0';
-        redLine.style.width = '2px';
-        redLine.style.backgroundColor = 'var(--rubric-red)';
-
-        lineContainer.appendChild(redLine);
-        container.appendChild(lineContainer);
+        this.timeline.renderView();
     }
 
+    // Timeline Notches handled by Timeline.js
     renderTimelineNotches() {
-        const container = document.getElementById('keyframe-notches');
-        container.innerHTML = '';
-
-        if (!this.selectedEntityId) return;
-
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (!ent) return;
-
-        const min = parseInt(this.uiRefs.slider.min);
-        const max = parseInt(this.uiRefs.slider.max);
-        const range = max - min;
-
-        ent.timeline.forEach(kf => {
-            if (kf.year >= min && kf.year <= max) {
-                const percent = ((kf.year - min) / range) * 100;
-                const notch = document.createElement('div');
-                notch.className = 'keyframe-notch';
-                notch.style.left = `${percent}%`;
-                notch.title = `Keyframe: ${this.formatYear(kf.year)}`;
-                container.appendChild(notch);
-            }
-        });
+        this.timeline.renderNotches();
     }
 
     jumpToKeyframe(direction) {
-        if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (!ent || ent.timeline.length === 0) return;
-
-        let targetYear = null;
-
-        // Sort timeline just in case
-        const sortedTimeline = [...ent.timeline].sort((a, b) => a.year - b.year);
-
-        if (direction === -1) { // Previous
-            // Find largest year strictly less than current
-            for (let i = sortedTimeline.length - 1; i >= 0; i--) {
-                if (sortedTimeline[i].year < this.currentYear) {
-                    targetYear = sortedTimeline[i].year;
-                    break;
-                }
-            }
-        } else { // Next
-            // Find smallest year strictly greater than current
-            for (let i = 0; i < sortedTimeline.length; i++) {
-                if (sortedTimeline[i].year > this.currentYear) {
-                    targetYear = sortedTimeline[i].year;
-                    break;
-                }
-            }
-        }
-
-        if (targetYear !== null) {
-            // Update State
-            this.currentYear = targetYear;
-
-            // Update UI (Slider + Display)
-            // Check bounds first to avoid weird UI states
-            const min = parseInt(this.uiRefs.slider.min);
-            const max = parseInt(this.uiRefs.slider.max);
-            if (targetYear >= min && targetYear <= max) {
-                this.uiRefs.slider.value = targetYear;
-                this.uiRefs.display.textContent = this.formatYear(this.currentYear);
-                this.updateEntities();
-                this.render();
-            }
-        }
+        this.timeline.jumpToKeyframe(direction);
     }
 
     togglePlay() {
-        if (this.isPlaying) {
-            this.isPlaying = false;
-            clearInterval(this.playInterval);
-            this.uiRefs.playBtn.textContent = '▶';
-        } else {
-            this.isPlaying = true;
-            this.uiRefs.playBtn.textContent = '⏸';
-            this.playInterval = setInterval(() => {
-                let y = parseInt(this.uiRefs.slider.value) + this.playbackSpeed;
-
-                // Loop within EPOCH BOUNDS not slider bounds
-                const min = parseInt(this.uiRefs.slider.min);
-                const max = parseInt(this.uiRefs.slider.max);
-
-                if (y > max) y = min;
-
-                this.uiRefs.slider.value = y;
-                this.currentYear = y;
-                this.uiRefs.display.textContent = this.formatYear(y);
-                this.updateEntities();
-                this.render();
-            }, 50);
-        }
+        this.timeline.togglePlayback();
     }
 
     saveAtlas() {
