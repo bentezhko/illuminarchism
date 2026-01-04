@@ -8,6 +8,10 @@ import { Quadtree } from './core/SpatialIndex.js';
 import RegistryRenderer from './ui/RegistryRenderer.js';
 import Timeline from './ui/Timeline.js';
 import InfoPanel from './ui/InfoPanel.js';
+import Dial from './ui/Dial.js';
+import Toolbar from './ui/Toolbar.js';
+import AtlasLoader from './io/AtlasLoader.js';
+import AtlasExporter from './io/AtlasExporter.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -22,6 +26,10 @@ export default class IlluminarchismApp {
         this.registry = new RegistryRenderer(this);
         this.timeline = new Timeline(this);
         this.infoPanel = new InfoPanel(this);
+        this.dial = new Dial(this);
+        this.toolbar = new Toolbar(this);
+        this.loader = new AtlasLoader(this);
+        this.exporter = new AtlasExporter(this);
 
         this.entities = [];
         this.spatialIndex = null; // Quadtree instance
@@ -301,6 +309,11 @@ export default class IlluminarchismApp {
         this.drawType = this._typologyToType(this.drawTypology);
     }
 
+    // Dial Logic Delegated to Dial.js
+    updateDialDisplay() {
+        this.dial.updateDisplay();
+    }
+
     /**
      * Map domain ID to legacy category
      */
@@ -336,80 +349,7 @@ export default class IlluminarchismApp {
         return map[typology] || typology;
     }
 
-    // --- Advance dial to next option (using new ontology) ---
-    cycleDial(wheel) {
-        if (wheel === 'domain') {
-            // Cycle through domains from ontology
-            const domains = Object.keys(this.ontologyTaxonomy);
-            let idx = domains.indexOf(this.drawDomain);
-            idx = (idx + 1) % domains.length;
-            this.drawDomain = domains[idx];
 
-            // Auto-select first typology of new domain
-            const domainData = this.ontologyTaxonomy[this.drawDomain];
-            if (domainData && domainData.types.length > 0) {
-                this.drawTypology = domainData.types[0].value;
-            }
-        }
-        else if (wheel === 'form') {
-            // Cycle through typologies within current domain
-            const domainData = this.ontologyTaxonomy[this.drawDomain];
-            if (domainData && domainData.types) {
-                let idx = domainData.types.findIndex(t => t.value === this.drawTypology);
-                idx = (idx + 1) % domainData.types.length;
-                this.drawTypology = domainData.types[idx].value;
-            }
-            this.drawSubtype = null; // Reset subtype when type changes
-        }
-        else if (wheel === 'rank') {
-            const subtypes = this._getSubtypesForTypology(this.drawTypology);
-            if (subtypes && subtypes.length > 0) {
-                let idx = subtypes.findIndex(s => s.value === this.drawSubtype);
-                idx = (idx + 1) % subtypes.length;
-                this.drawSubtype = subtypes[idx].value;
-            }
-        }
-
-        this.updateDialDisplay();
-    }
-
-    /**
-     * Get available subtypes for a typology (admin levels, denominations, etc.)
-     */
-    _getSubtypesForTypology(typology) {
-        // Political Levels
-        const adminTypologies = ['empire', 'nation-state', 'supranational', 'archaic-state'];
-        if (adminTypologies.includes(typology)) {
-            return Object.values(POLITICAL_SUBTYPES).map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
-        }
-
-        // Religious Hierarchy
-        if (typology === 'universalizing' || typology === 'ethnic' || typology === 'syncretic') {
-            return Object.values(RELIGIOUS_SUBTYPES).map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
-        }
-
-        // Linguistic Hierarchy
-        if (typology === 'genealogical') {
-            return [
-                LINGUISTIC_SUBTYPES.MACRO_PHYLUM,
-                LINGUISTIC_SUBTYPES.FAMILY,
-                LINGUISTIC_SUBTYPES.BRANCH,
-                LINGUISTIC_SUBTYPES.LANGUAGE,
-                LINGUISTIC_SUBTYPES.DIALECT
-            ].map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
-        }
-
-        if (typology === 'typological' || typology === 'areal') {
-            return [{ value: 'feature', label: 'Feature', abbr: 'FEA' }];
-        }
-
-        // Geographic
-        if (typology === 'natural' || typology === 'bare') {
-            return Object.values(GEOGRAPHIC_SUBTYPES).map(s => ({ value: s.id, label: s.label, abbr: s.abbr }));
-        }
-
-        return null;
-    }
 
     // NEW HELPER: Safe Add Listener
     safeAddListener(id, event, handler) {
@@ -471,24 +411,18 @@ export default class IlluminarchismApp {
             });
         });
 
-        // --- DIAL LISTENERS ---
-        this.safeAddListener('dial-domain', 'mousedown', (e) => {
-            e.preventDefault(); // Prevent text selection
-            this.cycleDial('domain');
-        });
-        this.safeAddListener('dial-form', 'mousedown', (e) => {
-            e.preventDefault();
-            this.cycleDial('form');
-        });
-
-        // --- NEW: Dial Rank (Level 3) Listener ---
-        this.safeAddListener('dial-rank', 'mousedown', (e) => {
-            e.preventDefault();
-            this.cycleDial('rank');
-        });
-
         // Initialize Dial
-        this.updateDialDisplay();
+        this.dial.updateDisplay();
+
+        // Add Dial Listeners
+        this.safeAddListener('val-domain', 'wheel', (e) => { e.preventDefault(); this.dial.cycle('domain'); });
+        this.safeAddListener('val-domain', 'click', () => { this.dial.cycle('domain'); });
+
+        this.safeAddListener('val-form', 'wheel', (e) => { e.preventDefault(); this.dial.cycle('form'); });
+        this.safeAddListener('val-form', 'click', () => { this.dial.cycle('form'); });
+
+        this.safeAddListener('val-rank', 'wheel', (e) => { e.preventDefault(); this.dial.cycle('rank'); });
+        this.safeAddListener('val-rank', 'click', () => { this.dial.cycle('rank'); });
 
         // Registry Toggle
         this.safeAddListener('btn-toggle-registry', 'click', () => {
@@ -518,14 +452,14 @@ export default class IlluminarchismApp {
         // HATCH INPUT LISTENER
         this.safeAddListener('info-hatch-input', 'change', () => this.updateSelectedMetadata());
 
-
-        this.safeAddListener('btn-save', 'click', () => this.saveAtlas());
+        // Save/Load
+        this.safeAddListener('btn-save', 'click', () => this.exporter.downloadAtlas());
 
         const fileInput = document.getElementById('file-input');
         this.safeAddListener('btn-load', 'click', () => { if (fileInput) fileInput.click(); });
 
         if (fileInput) {
-            fileInput.addEventListener('change', (e) => this.loadAtlas(e));
+            fileInput.addEventListener('change', (e) => this.loader.loadFromJSON(e));
         }
 
         // Initial render of notches if anything selected (unlikely on load but good practice)
@@ -648,34 +582,7 @@ export default class IlluminarchismApp {
         this.timeline.togglePlayback();
     }
 
-    saveAtlas() {
-        const data = JSON.stringify(this.entities, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = `atlas_backup_${new Date().toISOString().slice(0, 10)}.atlas`;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-
-    loadAtlas(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const rawData = JSON.parse(e.target.result);
-                this.entities = rawData.map(obj => HistoricalEntity.fromJSON(obj));
-                this.updateEntities();
-                this.renderRegistry();
-                this.render();
-                alert('Atlas loaded successfully.');
-            } catch (err) { console.error(err); alert('Failed to parse atlas file.'); }
-        };
-        reader.readAsText(file);
-        event.target.value = '';
-    }
-
+    // Persistence methods moved to io/* modules
     setTool(name) {
         this.activeTool = name;
         this.cancelDraft();
