@@ -451,39 +451,6 @@ export const GEOGRAPHIC_SUBTYPES = {
     MOUNTAIN: { id: 'mountain', label: 'Mountain', abbr: 'MTN' },
     ISLAND: { id: 'island', label: 'Island', abbr: 'ISL' },
     DESERT: { id: 'desert', label: 'Desert', abbr: 'DST' }
-};,
-HARD: {
-    id: 'hard',
-        label: 'Hard Boundary',
-            description: 'Defined frontier (walls, forts)',
-                renderStyle: 'solid',
-                    confidenceDefault: 0.9
-},
-LEGAL: {
-    id: 'legal',
-        label: 'Legal/Treaty',
-            description: 'Precise lines defined by treaty coordinates',
-                renderStyle: 'solid',
-                    confidenceDefault: 1.0
-},
-CONTAINER: {
-    id: 'container',
-        label: 'Container',
-            description: 'Outer boundary containing nested subdivisions',
-                renderStyle: 'thick'
-},
-AGGREGATE: {
-    id: 'aggregate',
-        label: 'Aggregate',
-            description: 'Union of member polygons',
-                renderStyle: 'double'
-},
-POINT: {
-    id: 'point',
-        label: 'Point Feature',
-            description: 'Single location (city, site)',
-                renderStyle: 'marker'
-}
 };
 
 // ============================================================================
@@ -735,8 +702,6 @@ export default {
     getDomain,
     getTypology,
     getOCMCode,
-    buildTaxonomyForUI,
-    validateEntity,
     buildTaxonomyForUI,
     validateEntity,
     migrateFromLegacy,
