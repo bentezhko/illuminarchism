@@ -582,7 +582,7 @@ export default class IlluminarchismApp {
         this.cancelDraft();
 
         const hint = document.getElementById('draw-hint');
-        const isAnnex = this.drawType === 'vassal'; // Implicit annex mode for vassals
+        const isAnnex = this.drawType === 'vassal';
 
         if (name === 'draw') {
             hint.classList.add('visible');
@@ -592,400 +592,391 @@ export default class IlluminarchismApp {
             } else if (this.selectedEntityId) {
                 const ent = this.entities.find(e => e.id === this.selectedEntityId);
                 hint.textContent = `EDITING: Redrawing geometry for ${ent.name} in ${this.currentYear}.`;
+            } else {
+                if (this.drawTypology === 'city') hint.textContent = "Click once to place City.";
+                else hint.textContent = `Click to draw new ${this.drawCategory} ${this.drawType}. Double-click to finish.`;
             }
+        } else if (name === 'transform') {
+            hint.classList.add('visible');
+            hint.textContent = "TRANSFORM: Drag corners to Resize (Hold Shift for Aspect Ratio). Drag center to Move.";
         } else {
             hint.classList.remove('visible');
         }
 
-        // Sync Toolbar UI if needed (though Toolbar.js handles its own buttons, 
-        // if we set tool programmatically we might want to notify toolbar? 
-        // For now, assume Toolbar.js drives this.)
+        // Update Cursor
+        const c = this.renderer.canvas;
+        c.style.cursor = 'default';
+        if (name === 'pan') c.style.cursor = 'grab';
+        else if (name === 'draw') c.style.cursor = 'crosshair';
+        else if (name === 'erase') c.style.cursor = 'not-allowed';
+        else if (name === 'vertex-edit') c.style.cursor = 'alias';
+        else if (name === 'transform') c.style.cursor = 'default'; // managed by InputController hover
 
-        // Render to update cursor
-        this.render();
-    } else {
-    if (this.drawType === 'city') hint.textContent = "Click once to place City.";
-    else hint.textContent = `Click to draw new ${this.drawCategory} ${this.drawType}. Double-click to finish.`;
-}
-        } else if (name === 'transform') {
-    hint.classList.add('visible');
-    hint.textContent = "TRANSFORM: Drag corners to Resize (Hold Shift for Aspect Ratio). Drag center to Move.";
-} else {
-    hint.classList.remove('visible');
-}
-
-const c = this.renderer.canvas;
-c.style.cursor = 'default';
-if (name === 'pan') c.style.cursor = 'grab';
-else if (name === 'draw') c.style.cursor = 'crosshair';
-else if (name === 'erase') c.style.cursor = 'not-allowed';
-else if (name === 'vertex-edit') c.style.cursor = 'alias';
-
-this.render();
-    }
-
-addDraftPoint(p) {
-    const last = this.draftPoints[this.draftPoints.length - 1];
-    if (last && Math.abs(last.x - p.x) < 2 && Math.abs(last.y - p.y) < 2) return;
-    this.draftPoints.push(p);
-    this.render();
-}
-
-updateDraftCursor(p) { this.draftCursor = p; this.render(); }
-
-commitDraft() {
-    if (this.draftPoints.length === 0) return;
-
-    // Check if current typology requires specific geometry (e.g., city = point)
-    const domainData = this.ontologyTaxonomy[this.drawDomain];
-    const typologyData = domainData?.types?.find(t => t.value === this.drawTypology);
-    const isPointGeometry = typologyData?.geometryType === 'Point' || this.drawTypology === 'city' || this.drawTypology === 'sacred-site';
-
-    if (!isPointGeometry && this.draftPoints.length < 2) return;
-
-    const isAnnex = this.drawTypology === 'vassal';
-
-    if (this.selectedEntityId) {
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (ent) {
-            if (isAnnex) {
-                const id = 'vassal_' + Date.now();
-                // Create vassal using new ontology config format
-                const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
-                    domain: this.drawDomain,
-                    typology: this.drawTypology,
-                    subtype: this.drawSubtype,
-                    color: ent.color,
-                    parentId: ent.id,
-                    boundaryConfidence: 0.8
-                });
-                // New shape creation (no resampling)
-                newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
-                newEnt.validRange.start = this.currentYear;
-                newEnt.validRange.end = this.currentYear + 200;
-                this.entities.push(newEnt);
-                this.selectEntity(id);
-                this.renderRegistry();
-            } else {
-                // Updating existing shape (no resampling to preserve corners)
-                ent.addKeyframe(this.currentYear, [...this.draftPoints], true);
-                this.updateInfoPanel(ent);
-            }
-        }
-    } else {
-        const id = 'ent_' + Date.now();
-        const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-
-        // Generate descriptive name based on typology
-        let name = "New Territory";
-        if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') name = "New Settlement";
-        else if (this.drawTypology === 'river' || this.drawTypology === 'coast') name = "New River";
-        else if (this.drawTypology === 'aquatic') name = "New Sea/Lake";
-        else if (this.drawDomain === 'linguistic') name = "New Language Zone";
-        else if (this.drawDomain === 'religious') name = "New Faith Zone";
-        else if (typologyData) name = `New ${typologyData.label}`;
-
-        // Create entity using new ontology config format
-        const newEnt = new HistoricalEntity(id, name, {
-            domain: this.drawDomain,
-            typology: this.drawTypology,
-            subtype: this.drawSubtype,
-            color: color,
-            boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
-        });
-        // New shape creation (no resampling)
-        newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
-        newEnt.validRange.start = this.currentYear - 200;
-        newEnt.validRange.end = this.currentYear + 200;
-
-        this.entities.push(newEnt);
-        this.selectEntity(id);
-        this.renderRegistry();
-    }
-
-    this.draftPoints = [];
-    this.draftCursor = null;
-    this.updateEntities();
-    this.render();
-    if (this.activeTool === 'draw') this.setTool('draw');
-}
-
-cancelDraft() { this.draftPoints = []; this.draftCursor = null; this.render(); }
-
-deleteEntity(id) {
-    this.entities = this.entities.filter(e => e.id !== id);
-    if (this.selectedEntityId === id) this.deselect();
-    this.hoveredEntityId = null;
-    this.updateEntities();
-    this.renderRegistry();
-    this.render();
-}
-
-deselect() {
-    this.selectedEntityId = null;
-    document.getElementById('info-panel').style.display = 'none';
-    this.renderTimelineNotches(); // Clear notches
-    if (this.activeTool === 'draw') this.setTool('draw');
-    this.render();
-}
-
-selectEntity(id, showPanel = true) {
-    this.selectedEntityId = id;
-    const ent = this.entities.find(e => e.id === id);
-    if (ent) {
-        // --- SYNC DIAL ---
-        // If the entity's domain is valid in current ontology, sync the dial
-        if (this.ontologyTaxonomy[ent.domain]) {
-            this.drawDomain = ent.domain;
-            // If the typology exists in that domain (or maybe it was legacy), try to sync
-            // If typology is valid:
-            const domainData = this.ontologyTaxonomy[ent.domain];
-            const typeExists = domainData.types.some(t => t.value === ent.typology);
-            if (typeExists) {
-                this.drawTypology = ent.typology;
-            } else {
-                // Fallback to first? Or leave as is if invalid?
-                // Better to just keep what we have or default
-                if (domainData.types.length > 0) this.drawTypology = domainData.types[0].value;
-            }
-
-            this.drawSubtype = ent.subtype || null;
-            this.updateDialDisplay();
-        }
-
-        if (showPanel) {
-            const p = document.getElementById('info-panel');
-            p.style.display = 'block';
-            document.getElementById('info-name-input').value = ent.name;
-            document.getElementById('info-type').textContent = ent.typology; // updated to match property name
-            document.getElementById('info-cat').textContent = ent.domain; // updated to match property name
-            document.getElementById('info-color-input').value = ent.color;
-            document.getElementById('info-hatch-input').value = ent.hatchStyle; // SYNC DROPDOWN
-            document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
-
-            const parentRow = document.getElementById('info-parent-row');
-            if (ent.parentId) {
-                const parent = this.entities.find(e => e.id === ent.parentId) || { name: 'Unknown' };
-                document.getElementById('info-parent').textContent = parent.name;
-                parentRow.style.display = 'flex';
-            } else {
-                parentRow.style.display = 'none';
-            }
-
-            this.updateInfoPanel(ent);
-        }
-        this.renderTimelineNotches(); // Update timeline notches for selected entity
-    }
-    this.render();
-}
-
-updateSelectedMetadata() {
-    if (!this.selectedEntityId) return;
-    const ent = this.entities.find(e => e.id === this.selectedEntityId);
-    if (ent) {
-        ent.name = document.getElementById('info-name-input').value;
-        ent.color = document.getElementById('info-color-input').value;
-        ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
-        this.renderRegistry();
         this.render();
     }
-}
 
-// Vertex Editing Logic
-editVertex(index, newPos) {
-    if (!this.selectedEntityId) return;
-    const ent = this.entities.find(e => e.id === this.selectedEntityId);
-    if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
-        ent.currentGeometry[index] = newPos;
+    addDraftPoint(p) {
+        const last = this.draftPoints[this.draftPoints.length - 1];
+        if (last && Math.abs(last.x - p.x) < 2 && Math.abs(last.y - p.y) < 2) return;
+        this.draftPoints.push(p);
         this.render();
     }
-}
 
-highlightVertex(index) {
-    this.highlightedVertexIndex = index;
-    this.render();
-}
+    updateDraftCursor(p) { this.draftCursor = p; this.render(); }
 
-finishVertexEdit() {
-    if (!this.selectedEntityId) return;
-    const ent = this.entities.find(e => e.id === this.selectedEntityId);
-    if (ent) {
-        // Commit change to timeline (preventResampling = true)
-        ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
-        this.updateInfoPanel(ent);
-        this.renderTimelineNotches(); // Update notches as keyframes changed
-    }
-}
+    commitDraft() {
+        if (this.draftPoints.length === 0) return;
 
-updateInfoPanel(ent) {
-    const list = document.getElementById('keyframe-list');
-    if (!list) return; // Safety check for missing element
+        // Check if current typology requires specific geometry (e.g., city = point)
+        const domainData = this.ontologyTaxonomy[this.drawDomain];
+        const typologyData = domainData?.types?.find(t => t.value === this.drawTypology);
+        const isPointGeometry = typologyData?.geometryType === 'Point' || this.drawTypology === 'city' || this.drawTypology === 'sacred-site';
 
-    list.innerHTML = '';
-    ent.timeline.forEach(kf => {
-        const div = document.createElement('div');
-        div.textContent = `• ${kf.year} AD`;
-        div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
-        list.appendChild(div);
-    });
-}
+        if (!isPointGeometry && this.draftPoints.length < 2) return;
 
-checkHover(wp) {
-    if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
-    let fid = null;
+        const isAnnex = this.drawTypology === 'vassal';
 
-    // Use Spatial Index for Hit Testing
-    // Define a small search box around the cursor
-    const searchSize = 20 / this.renderer.transform.k; // Adapt to zoom
-    const searchBox = { x: wp.x - searchSize / 2, y: wp.y - searchSize / 2, w: searchSize, h: searchSize };
-
-    let candidates = [];
-    if (this.spatialIndex) {
-        const results = this.spatialIndex.retrieve(searchBox);
-        candidates = results.map(r => r.entity).filter(e => e.visible);
-    } else {
-        // Fallback if index not ready
-        candidates = this.entities.filter(e => e.visible);
-    }
-
-    // Only iterate candidates
-    const sorted = candidates.sort((a, b) => {
-        // Same sorting logic as before for Z-order
-        const typeScore = (ent) => {
-            if (ent.type === 'city') return 100;
-            if (ent.type === 'water') return 50;
-            return 0;
-        };
-        const catScore = (ent) => {
-            if (ent.category === 'linguistic' || ent.category === 'cultural') return 80;
-            return 0;
-        };
-        return (catScore(a) + typeScore(a)) - (catScore(b) + typeScore(b));
-    });
-
-    for (let i = sorted.length - 1; i >= 0; i--) {
-        const e = sorted[i];
-        if (!e.currentGeometry) continue;
-
-        let hit = false;
-        if (e.type === 'city') {
-            if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
-        } else if (e.type === 'river') {
-            const pts = e.currentGeometry;
-            for (let j = 0; j < pts.length - 1; j++) {
-                if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
+        if (this.selectedEntityId) {
+            const ent = this.entities.find(e => e.id === this.selectedEntityId);
+            if (ent) {
+                if (isAnnex) {
+                    const id = 'vassal_' + Date.now();
+                    // Create vassal using new ontology config format
+                    const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
+                        domain: this.drawDomain,
+                        typology: this.drawTypology,
+                        subtype: this.drawSubtype,
+                        color: ent.color,
+                        parentId: ent.id,
+                        boundaryConfidence: 0.8
+                    });
+                    // New shape creation (no resampling)
+                    newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
+                    newEnt.validRange.start = this.currentYear;
+                    newEnt.validRange.end = this.currentYear + 200;
+                    this.entities.push(newEnt);
+                    this.selectEntity(id);
+                    this.renderRegistry();
+                } else {
+                    // Updating existing shape (no resampling to preserve corners)
+                    ent.addKeyframe(this.currentYear, [...this.draftPoints], true);
+                    this.updateInfoPanel(ent);
+                }
             }
         } else {
-            if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+            const id = 'ent_' + Date.now();
+            const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+
+            // Generate descriptive name based on typology
+            let name = "New Territory";
+            if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') name = "New Settlement";
+            else if (this.drawTypology === 'river' || this.drawTypology === 'coast') name = "New River";
+            else if (this.drawTypology === 'aquatic') name = "New Sea/Lake";
+            else if (this.drawDomain === 'linguistic') name = "New Language Zone";
+            else if (this.drawDomain === 'religious') name = "New Faith Zone";
+            else if (typologyData) name = `New ${typologyData.label}`;
+
+            // Create entity using new ontology config format
+            const newEnt = new HistoricalEntity(id, name, {
+                domain: this.drawDomain,
+                typology: this.drawTypology,
+                subtype: this.drawSubtype,
+                color: color,
+                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
+            });
+            // New shape creation (no resampling)
+            newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
+            newEnt.validRange.start = this.currentYear - 200;
+            newEnt.validRange.end = this.currentYear + 200;
+
+            this.entities.push(newEnt);
+            this.selectEntity(id);
+            this.renderRegistry();
         }
 
-        if (hit) { fid = e.id; break; }
+        this.draftPoints = [];
+        this.draftCursor = null;
+        this.updateEntities();
+        this.render();
+        if (this.activeTool === 'draw') this.setTool('draw');
     }
 
-    if (fid !== this.hoveredEntityId) {
-        this.hoveredEntityId = fid;
-        this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
+    cancelDraft() { this.draftPoints = []; this.draftCursor = null; this.render(); }
+
+    deleteEntity(id) {
+        this.entities = this.entities.filter(e => e.id !== id);
+        if (this.selectedEntityId === id) this.deselect();
+        this.hoveredEntityId = null;
+        this.updateEntities();
+        this.renderRegistry();
         this.render();
     }
-}
 
-updateEntities() {
-    let cnt = 0;
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    const validEntities = [];
+    deselect() {
+        this.selectedEntityId = null;
+        document.getElementById('info-panel').style.display = 'none';
+        this.renderTimelineNotches(); // Clear notches
+        if (this.activeTool === 'draw') this.setTool('draw');
+        this.render();
+    }
 
-    this.entities.forEach(ent => {
-        ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
-        if (ent.currentGeometry && ent.currentGeometry.length > 0) {
-            cnt++;
-            // Calculate BBox for Indexing
-            const bbox = getBoundingBox(ent.currentGeometry);
-            if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
-            if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
+    selectEntity(id, showPanel = true) {
+        this.selectedEntityId = id;
+        const ent = this.entities.find(e => e.id === id);
+        if (ent) {
+            // --- SYNC DIAL ---
+            // If the entity's domain is valid in current ontology, sync the dial
+            if (this.ontologyTaxonomy[ent.domain]) {
+                this.drawDomain = ent.domain;
+                // If the typology exists in that domain (or maybe it was legacy), try to sync
+                // If typology is valid:
+                const domainData = this.ontologyTaxonomy[ent.domain];
+                const typeExists = domainData.types.some(t => t.value === ent.typology);
+                if (typeExists) {
+                    this.drawTypology = ent.typology;
+                } else {
+                    // Fallback to first? Or leave as is if invalid?
+                    // Better to just keep what we have or default
+                    if (domainData.types.length > 0) this.drawTypology = domainData.types[0].value;
+                }
 
-            ent.bbox = bbox; // Store for reuse
+                this.drawSubtype = ent.subtype || null;
+                this.updateDialDisplay();
+            }
 
-            // Track World Bounds
-            if (bbox.minX < minX) minX = bbox.minX;
-            if (bbox.minY < minY) minY = bbox.minY;
-            if (bbox.maxX > maxX) maxX = bbox.maxX;
-            if (bbox.maxY > maxY) maxY = bbox.maxY;
+            if (showPanel) {
+                const p = document.getElementById('info-panel');
+                p.style.display = 'block';
+                document.getElementById('info-name-input').value = ent.name;
+                document.getElementById('info-type').textContent = ent.typology; // updated to match property name
+                document.getElementById('info-cat').textContent = ent.domain; // updated to match property name
+                document.getElementById('info-color-input').value = ent.color;
+                document.getElementById('info-hatch-input').value = ent.hatchStyle; // SYNC DROPDOWN
+                document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
 
-            validEntities.push(ent);
+                const parentRow = document.getElementById('info-parent-row');
+                if (ent.parentId) {
+                    const parent = this.entities.find(e => e.id === ent.parentId) || { name: 'Unknown' };
+                    document.getElementById('info-parent').textContent = parent.name;
+                    parentRow.style.display = 'flex';
+                } else {
+                    parentRow.style.display = 'none';
+                }
+
+                this.updateInfoPanel(ent);
+            }
+            this.renderTimelineNotches(); // Update timeline notches for selected entity
         }
-    });
+        this.render();
+    }
 
-    // Rebuild Quadtree
-    // Add some padding to world bounds or use default
-    if (minX === Infinity) { minX = -1000; maxX = 1000; minY = -1000; maxY = 1000; }
-    const margin = 100;
-    this.currentWorldBounds = {
-        x: minX - margin,
-        y: minY - margin,
-        w: (maxX - minX) + margin * 2,
-        h: (maxY - minY) + margin * 2
-    };
+    updateSelectedMetadata() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+            ent.name = document.getElementById('info-name-input').value;
+            ent.color = document.getElementById('info-color-input').value;
+            ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
+            this.renderRegistry();
+            this.render();
+        }
+    }
 
-    this.spatialIndex = new Quadtree(this.currentWorldBounds);
-    validEntities.forEach(ent => {
-        this.spatialIndex.insert({
-            x: ent.bbox.x,
-            y: ent.bbox.y,
-            w: ent.bbox.w,
-            h: ent.bbox.h,
-            entity: ent
+    // Vertex Editing Logic
+    editVertex(index, newPos) {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
+            ent.currentGeometry[index] = newPos;
+            this.render();
+        }
+    }
+
+    highlightVertex(index) {
+        this.highlightedVertexIndex = index;
+        this.render();
+    }
+
+    finishVertexEdit() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+            // Commit change to timeline (preventResampling = true)
+            ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
+            this.updateInfoPanel(ent);
+            this.renderTimelineNotches(); // Update notches as keyframes changed
+        }
+    }
+
+    updateInfoPanel(ent) {
+        const list = document.getElementById('keyframe-list');
+        if (!list) return; // Safety check for missing element
+
+        list.innerHTML = '';
+        ent.timeline.forEach(kf => {
+            const div = document.createElement('div');
+            div.textContent = `• ${kf.year} AD`;
+            div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
+            list.appendChild(div);
         });
-    });
+    }
 
-    const d = document.querySelector('.debug-info');
-    if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
-}
+    checkHover(wp) {
+        if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
+        let fid = null;
 
-render() {
-    // VIEWPORT CULLING
-    // Get Viewport in World Coords
-    let entitiesToDraw = this.entities; // Default to all if check fails
+        // Use Spatial Index for Hit Testing
+        // Define a small search box around the cursor
+        const searchSize = 20 / this.renderer.transform.k; // Adapt to zoom
+        const searchBox = { x: wp.x - searchSize / 2, y: wp.y - searchSize / 2, w: searchSize, h: searchSize };
 
-    if (this.spatialIndex && this.renderer.width > 0) {
-        // Need to inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
-        const tl = this.renderer.toWorld(0, 0);
-        const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
-        const viewportBox = {
-            x: tl.x,
-            y: tl.y,
-            w: br.x - tl.x,
-            h: br.y - tl.y
+        let candidates = [];
+        if (this.spatialIndex) {
+            const results = this.spatialIndex.retrieve(searchBox);
+            candidates = results.map(r => r.entity).filter(e => e.visible);
+        } else {
+            // Fallback if index not ready
+            candidates = this.entities.filter(e => e.visible);
+        }
+
+        // Only iterate candidates
+        const sorted = candidates.sort((a, b) => {
+            // Same sorting logic as before for Z-order
+            const typeScore = (ent) => {
+                if (ent.type === 'city') return 100;
+                if (ent.type === 'water') return 50;
+                return 0;
+            };
+            const catScore = (ent) => {
+                if (ent.category === 'linguistic' || ent.category === 'cultural') return 80;
+                return 0;
+            };
+            return (catScore(a) + typeScore(a)) - (catScore(b) + typeScore(b));
+        });
+
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const e = sorted[i];
+            if (!e.currentGeometry) continue;
+
+            let hit = false;
+            if (e.type === 'city') {
+                if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
+            } else if (e.type === 'river') {
+                const pts = e.currentGeometry;
+                for (let j = 0; j < pts.length - 1; j++) {
+                    if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
+                }
+            } else {
+                if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+            }
+
+            if (hit) { fid = e.id; break; }
+        }
+
+        if (fid !== this.hoveredEntityId) {
+            this.hoveredEntityId = fid;
+            this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
+            this.render();
+        }
+    }
+
+    updateEntities() {
+        let cnt = 0;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const validEntities = [];
+
+        this.entities.forEach(ent => {
+            ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
+            if (ent.currentGeometry && ent.currentGeometry.length > 0) {
+                cnt++;
+                // Calculate BBox for Indexing
+                const bbox = getBoundingBox(ent.currentGeometry);
+                if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
+                if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
+
+                ent.bbox = bbox; // Store for reuse
+
+                // Track World Bounds
+                if (bbox.minX < minX) minX = bbox.minX;
+                if (bbox.minY < minY) minY = bbox.minY;
+                if (bbox.maxX > maxX) maxX = bbox.maxX;
+                if (bbox.maxY > maxY) maxY = bbox.maxY;
+
+                validEntities.push(ent);
+            }
+        });
+
+        // Rebuild Quadtree
+        // Add some padding to world bounds or use default
+        if (minX === Infinity) { minX = -1000; maxX = 1000; minY = -1000; maxY = 1000; }
+        const margin = 100;
+        this.currentWorldBounds = {
+            x: minX - margin,
+            y: minY - margin,
+            w: (maxX - minX) + margin * 2,
+            h: (maxY - minY) + margin * 2
         };
 
-        // Retrieve only visible entities
-        const visibleNodes = this.spatialIndex.retrieve(viewportBox);
-        entitiesToDraw = visibleNodes.map(n => n.entity);
+        this.spatialIndex = new Quadtree(this.currentWorldBounds);
+        validEntities.forEach(ent => {
+            this.spatialIndex.insert({
+                x: ent.bbox.x,
+                y: ent.bbox.y,
+                w: ent.bbox.w,
+                h: ent.bbox.h,
+                entity: ent
+            });
+        });
+
+        const d = document.querySelector('.debug-info');
+        if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
     }
 
-    this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+    render() {
+        // VIEWPORT CULLING
+        // Get Viewport in World Coords
+        let entitiesToDraw = this.entities; // Default to all if check fails
 
-    // Add safety check for drawDraft function existence
-    if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-        if (typeof this.renderer.drawDraft === 'function') {
-            this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+        if (this.spatialIndex && this.renderer.width > 0) {
+            // Need to inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
+            const tl = this.renderer.toWorld(0, 0);
+            const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
+            const viewportBox = {
+                x: tl.x,
+                y: tl.y,
+                w: br.x - tl.x,
+                h: br.y - tl.y
+            };
+
+            // Retrieve only visible entities
+            const visibleNodes = this.spatialIndex.retrieve(viewportBox);
+            entitiesToDraw = visibleNodes.map(n => n.entity);
+        }
+
+        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+
+        // Add safety check for drawDraft function existence
+        if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
+            if (typeof this.renderer.drawDraft === 'function') {
+                this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+            }
         }
     }
-}
 
-openInfoPanel() {
-    if (!this.selectedEntityId) return;
-    const ent = this.entities.find(e => e.id === this.selectedEntityId);
-    if (ent) {
-        this.infoPanel.update(ent);
-        this.infoPanel.show();
+    openInfoPanel() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+            this.infoPanel.update(ent);
+            this.infoPanel.show();
+        }
     }
-}
 
-startEditing(id) {
-    this.selectEntity(id, true);
-    this.setActiveTool('transform');
-}
+    startEditing(id) {
+        this.selectEntity(id, true);
+        this.setActiveTool('transform');
+    }
 }
 
 // Global hook
