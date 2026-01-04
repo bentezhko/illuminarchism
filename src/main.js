@@ -7,6 +7,7 @@ import { DOMAINS, buildTaxonomyForUI, getTypologiesForDomain, POLITICAL_SUBTYPES
 import { Quadtree } from './core/SpatialIndex.js';
 import RegistryRenderer from './ui/RegistryRenderer.js';
 import Timeline from './ui/Timeline.js';
+import InfoPanel from './ui/InfoPanel.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -20,6 +21,7 @@ export default class IlluminarchismApp {
         // Modules
         this.registry = new RegistryRenderer(this);
         this.timeline = new Timeline(this);
+        this.infoPanel = new InfoPanel(this);
 
         this.entities = [];
         this.spatialIndex = null; // Quadtree instance
@@ -987,6 +989,9 @@ export default class IlluminarchismApp {
                 cnt++;
                 // Calculate BBox for Indexing
                 const bbox = getBoundingBox(ent.currentGeometry);
+                if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
+                if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
+
                 ent.bbox = bbox; // Store for reuse
 
                 // Track World Bounds
@@ -1054,6 +1059,20 @@ export default class IlluminarchismApp {
                 this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
             }
         }
+    }
+
+    openInfoPanel() {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        if (ent) {
+            this.infoPanel.update(ent);
+            this.infoPanel.show();
+        }
+    }
+
+    startEditing(id) {
+        this.selectEntity(id, true);
+        this.setActiveTool('transform');
     }
 }
 

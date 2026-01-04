@@ -83,8 +83,8 @@ export default class InputController {
                             this.isDragging = true;
                             this.transformMode = handle;
                             this.transformStart = wp;
-                            this.originalGeometry = ent.currentGeometry.map(p => ({ ...p })); // Deep copy
-                            c.style.cursor = 'nwse-resize'; // Simplification
+                            this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
+                            c.style.cursor = 'nwse-resize';
                             return;
                         }
                         // Check Inside Box (Move)
@@ -103,24 +103,21 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                     const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        // Check for vertex click
                         const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
                         if (hitIdx !== -1) {
                             this.isDragging = true;
                             this.dragVertexIndex = hitIdx;
                             c.style.cursor = 'grabbing';
-                            return; // Stop processing other tools
+                            return;
                         } else {
-                            // Check for edge click to ADD vertex
-                            // Iterate segments
+                            // Add vertex logic
                             const poly = ent.currentGeometry;
                             for (let i = 0; i < poly.length; i++) {
                                 const p1 = poly[i];
                                 const p2 = poly[(i + 1) % poly.length];
                                 if (distanceToSegment(wp, p1, p2) < 5 / this.renderer.transform.k) {
-                                    // Insert new point
                                     ent.currentGeometry.splice(i + 1, 0, { x: wp.x, y: wp.y });
-                                    this.app.finishVertexEdit(); // Auto-save
+                                    this.app.finishVertexEdit();
                                     this.app.render();
                                     return;
                                 }
@@ -129,18 +126,8 @@ export default class InputController {
                     }
                 }
 
-                // Priority 2: Pan Tool
-                if (this.app.activeTool === 'pan') {
-                    this.isDragging = true;
-                    this.lastX = e.clientX;
-                    this.lastY = e.clientY;
-                    c.style.cursor = 'grabbing';
-                    return;
-                }
-
-                // Priority 3: Drawing
-                else if (this.app.activeTool === 'draw') {
-                    // Check for middle click (button 1) logic below, this is left click
+                // Priority 2: Drawing Tool
+                if (this.app.activeTool === 'draw') {
                     if (this.app.drawType === 'city') {
                         this.app.addDraftPoint(wp);
                         this.app.commitDraft();
@@ -150,55 +137,60 @@ export default class InputController {
                     return;
                 }
 
-                // Priority 4: Erase
-                else if (this.app.activeTool === 'erase' && this.app.hoveredEntityId) {
+                // Priority 3: Erase Tool
+                if (this.app.activeTool === 'erase' && this.app.hoveredEntityId) {
                     this.app.deleteEntity(this.app.hoveredEntityId);
                     return;
                 }
 
-                // Priority 5: Selection (Inspect/Vertex/General)
-                // Just SELECT, do not open info panel
-                if (this.app.hoveredEntityId) {
-                    this.app.selectEntity(this.app.hoveredEntityId, false); // false = don't open panel
-                } else {
-                    this.app.deselect();
-                }
+                // Priority 4: Default Navigation (Pan)
+                // If not in a specific modal tool, Left Click creates Pan interaction
+                this.isDragging = true;
+                this.lastX = e.clientX;
+                this.lastY = e.clientY;
+                c.style.cursor = 'grabbing';
             }
 
-            // Middle Click (button 1) to Finish Polygon
+            // Middle Click (button 1)
             if (e.button === 1 && this.app.activeTool === 'draw') {
                 e.preventDefault();
                 this.app.commitDraft();
             }
         });
 
-        // Context Menu (Right Click)
+        // Context Menu (Right Click) -> Seek / Details
         c.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             if (this.app.currentView !== 'map') return;
 
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
-            // Vertex Edit: Right Click to Delete Point
+            // Vertex Edit: Delete Point
             if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                 const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
                     const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
-                    if (hitIdx !== -1) {
-                        // Don't delete if too few points
-                        if (ent.currentGeometry.length > 3) {
-                            ent.currentGeometry.splice(hitIdx, 1);
-                            this.app.finishVertexEdit();
-                            this.app.render();
-                        }
-                        return;
+                    if (hitIdx !== -1 && ent.currentGeometry.length > 3) {
+                        ent.currentGeometry.splice(hitIdx, 1);
+                        this.app.finishVertexEdit();
+                        this.app.render();
                     }
+                    return;
                 }
             }
 
-            // If hovering over an entity, select it AND open the panel
+            // Default: Seek / Inspect
+            // Perform a hit test right now
+            this.app.checkHover(wp);
+
             if (this.app.hoveredEntityId) {
-                this.app.selectEntity(this.app.hoveredEntityId, true); // true = open panel
+                this.app.selectEntity(this.app.hoveredEntityId, true); // Select
+                this.app.openInfoPanel(); // Open "Details Overview"
+                // The Info Panel will contain the "Edit" button to switch mode
+            } else {
+                this.app.deselect();
+                // Optionally close info panel?
+                if (this.app.infoPanel) this.app.infoPanel.hide();
             }
         });
 
