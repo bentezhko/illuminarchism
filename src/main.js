@@ -775,11 +775,12 @@ export default class IlluminarchismApp {
         });
     }
 
-    // FIXED: Single optimized checkHover with safety checks
+    // FIXED: Single optimized checkHover with safety checks - NOW WORKS IN PAN MODE
     checkHover(wp) {
         // Safety checks to prevent crashes
         if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
-        if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
+        // CHANGED: Allow hover in pan mode for unified Navigate tool
+        if (this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform') return;
         
         try {
             let fid = null;
@@ -853,7 +854,7 @@ export default class IlluminarchismApp {
                 this.hoveredEntityId = fid;
                 this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? 
                     (fid ? 'pointer' : 'not-allowed') : 
-                    (fid ? 'pointer' : 'default');
+                    (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
                 this.render();
             }
         } catch(error) {
