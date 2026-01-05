@@ -42,9 +42,13 @@ export default class HistoricalEntity {
         // Common properties
         this.description = this.description || "A mapped entity.";
         this.timeline = this.timeline || [];
-        this.validRange = this.validRange || { start: -Infinity, end: Infinity };
         this.currentGeometry = null;
         this.visible = this.visible !== undefined ? this.visible : true;
+
+        // Ensure validRange is set (if not already set by _initFromConfig)
+        if (!this.validRange) {
+            this.validRange = { start: -Infinity, end: Infinity };
+        }
 
         // Set default hatch style based on domain if not set
         if (!this.hatchStyle) {
@@ -115,6 +119,7 @@ export default class HistoricalEntity {
         this.attributes = config.attributes || {};
 
         // Temporal modeling
+        this.validRange = config.validRange || null; // FIXED: Initialize validRange from config
         this.validTime = config.validTime || null; // { start: ISO8601, end: ISO8601 }
         this.transactionTime = config.transactionTime || {
             created: Date.now(),
@@ -353,9 +358,17 @@ export default class HistoricalEntity {
         this.timeline.push({ year, geometry: finalGeo });
         this.timeline.sort((a, b) => a.year - b.year);
 
+        // Auto-expand range ONLY if it's currently finite or default unset?
+        // Logic: If range was set manually (finite), we should expand it to fit keyframes if they fall outside.
+        // If range is infinite, it remains infinite.
+        // But if range is finite, and we add a keyframe, we expand.
         if (this.timeline.length > 0) {
-            this.validRange.start = Math.min(this.timeline[0].year - 100, this.validRange.start);
-            this.validRange.end = Math.max(this.timeline[this.timeline.length - 1].year + 100, this.validRange.end);
+            if (Number.isFinite(this.validRange.start)) {
+                this.validRange.start = Math.min(this.timeline[0].year - 100, this.validRange.start);
+            }
+            if (Number.isFinite(this.validRange.end)) {
+                this.validRange.end = Math.max(this.timeline[this.timeline.length - 1].year + 100, this.validRange.end);
+            }
         }
 
         this.transactionTime.modified = Date.now();

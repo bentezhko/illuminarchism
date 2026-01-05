@@ -138,9 +138,9 @@ export default class IlluminarchismApp {
             typology: 'aquatic',
             color: '#264e86',
             hatchStyle: 'waves',
-            validRange: { start: -10000, end: 2050 }
+            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
-        seaNorth.addKeyframe(-10000, [{ x: 0, y: -400 }, { x: 500, y: -400 }, { x: 500, y: 0 }, { x: 0, y: 0 }], true);
+        seaNorth.addKeyframe(-2000, [{ x: 0, y: -400 }, { x: 500, y: -400 }, { x: 500, y: 0 }, { x: 0, y: 0 }], true);
         seaNorth.addKeyframe(2025, [{ x: -10, y: -410 }, { x: 510, y: -410 }, { x: 510, y: 10 }, { x: -10, y: 10 }], true);
         this.entities.push(seaNorth);
 
@@ -149,9 +149,9 @@ export default class IlluminarchismApp {
             typology: 'aquatic',
             color: '#264e86',
             hatchStyle: 'waves',
-            validRange: { start: -10000, end: 2050 }
+            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
-        seaSouth.addKeyframe(-10000, [{ x: 0, y: -100 }, { x: 500, y: -100 }, { x: 500, y: 300 }, { x: 0, y: 300 }], true);
+        seaSouth.addKeyframe(-2000, [{ x: 0, y: -100 }, { x: 500, y: -100 }, { x: 500, y: 300 }, { x: 0, y: 300 }], true);
         seaSouth.addKeyframe(2025, [{ x: -10, y: -110 }, { x: 510, y: -110 }, { x: 510, y: 310 }, { x: -10, y: 310 }], true);
         this.entities.push(seaSouth);
 
@@ -159,7 +159,8 @@ export default class IlluminarchismApp {
             domain: 'political',
             typology: 'nation-state',
             color: '#264e86',
-            hatchStyle: 'diagonal-right'
+            hatchStyle: 'diagonal-right',
+            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         mainland.addKeyframe(-2000, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
         mainland.addKeyframe(2025, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
@@ -169,7 +170,8 @@ export default class IlluminarchismApp {
             domain: 'political',
             typology: 'nation-state',
             color: '#264e86',
-            hatchStyle: 'diagonal-left'
+            hatchStyle: 'diagonal-left',
+            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         island.addKeyframe(-2000, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
         island.addKeyframe(2025, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
@@ -179,7 +181,8 @@ export default class IlluminarchismApp {
             domain: 'political',
             typology: 'nation-state',
             color: '#8a3324',
-            hatchStyle: 'vertical'
+            hatchStyle: 'vertical',
+            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         bridge.addKeyframe(-2000, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
         bridge.addKeyframe(2025, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
@@ -189,7 +192,8 @@ export default class IlluminarchismApp {
             domain: 'political',
             typology: 'archaic-state',
             subtype: 'sovereign',
-            color: '#000000'
+            color: '#000000',
+            validRange: { start: -1000, end: 2050 } // FIXED: Finite range for editing
         });
         city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
         this.entities.push(city);
@@ -199,7 +203,8 @@ export default class IlluminarchismApp {
             typology: 'genealogical',
             subtype: 'language',
             color: '#5c3c92',
-            hatchStyle: 'cross'
+            hatchStyle: 'cross',
+            validRange: { start: 800, end: 2050 } // FIXED: Finite range for editing
         });
         oldTongue.addKeyframe(800, [{ x: -280, y: -80 }, { x: -120, y: -80 }, { x: -120, y: 80 }, { x: -280, y: 80 }], true);
         this.entities.push(oldTongue);
@@ -209,7 +214,8 @@ export default class IlluminarchismApp {
             typology: 'typological',
             subtype: 'feature',
             color: '#800080',
-            hatchStyle: 'stipple'
+            hatchStyle: 'stipple',
+            validRange: { start: 1200, end: 2050 } // FIXED: Finite range for editing
         });
         thSound.addKeyframe(1200, [{ x: -250, y: -50 }, { x: -150, y: -50 }, { x: -150, y: 50 }, { x: -250, y: 50 }], true);
         this.entities.push(thSound);
@@ -219,7 +225,8 @@ export default class IlluminarchismApp {
             typology: 'typological',
             subtype: 'feature',
             color: '#FF4500',
-            hatchStyle: 'stipple'
+            hatchStyle: 'stipple',
+            validRange: { start: 1900, end: 2050 } // FIXED: Finite range for editing
         });
         sodaWord.addKeyframe(1900, [{ x: -200, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 0 }, { x: -200, y: 0 }], true);
         this.entities.push(sodaWord);
@@ -228,7 +235,8 @@ export default class IlluminarchismApp {
             domain: 'political', // Mapped to Political/Band for "Shared Use" activity zone
             typology: 'band',
             color: '#c5a059',
-            hatchStyle: 'vertical'
+            hatchStyle: 'vertical',
+            validRange: { start: 900, end: 2050 } // FIXED: Finite range for editing
         });
         festivalZone.addKeyframe(900, [{ x: -290, y: -90 }, { x: 100, y: -90 }, { x: 100, y: 90 }, { x: -290, y: 90 }], true);
         this.entities.push(festivalZone);
@@ -237,7 +245,8 @@ export default class IlluminarchismApp {
             domain: 'religious',
             typology: 'ethnic',
             color: '#228B22',
-            hatchStyle: 'stipple'
+            hatchStyle: 'stipple',
+            validRange: { start: -500, end: 2050 } // FIXED: Finite range for editing
         });
         paganEnclave.addKeyframe(-500, [{ x: 250, y: -50 }, { x: 350, y: -50 }, { x: 350, y: 50 }, { x: 250, y: 50 }], true);
         this.entities.push(paganEnclave);
