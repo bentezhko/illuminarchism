@@ -219,7 +219,7 @@ export default class InputController {
                 return;
             }
 
-            // Handle Panning - CRITICAL: Don't call checkHover during pan!
+            // Handle Panning - CRITICAL: Don't call checkHover during pan drag!
             if (this.isDragging && this.app.activeTool === 'pan') {
                 const dx = e.clientX - this.lastX;
                 const dy = e.clientY - this.lastY;
@@ -246,8 +246,8 @@ export default class InputController {
                 return; 
             }
             
-            // CRITICAL FIX: Only call checkHover when NOT dragging and with throttle
-            if (!this.isDragging && (this.app.activeTool === 'inspect' || this.app.activeTool === 'erase')) {
+            // CRITICAL FIX: Enable hover detection in pan mode when NOT dragging (unified Navigate tool)
+            if (!this.isDragging && (this.app.activeTool === 'pan' || this.app.activeTool === 'erase')) {
                 const now = Date.now();
                 if (now - this.hoverThrottle > 50) { // Increased throttle to 50ms
                     this.hoverThrottle = now;
