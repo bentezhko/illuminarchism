@@ -21,6 +21,10 @@ export default class MedievalRenderer {
         this.createWaterTexture();
     }
 
+    _isPointEntity(ent) {
+        return !!(ent && ent.currentGeometry && ent.currentGeometry.length === 1);
+    }
+
     resize() {
         this.width = Math.max(1, Math.floor(window.innerWidth));
         this.height = Math.max(1, Math.floor(window.innerHeight));
@@ -186,12 +190,12 @@ export default class MedievalRenderer {
         // 1. DRAW EVERYTHING THAT IS NOT WATER (The "World" Layer)
         const worldEntities = sorted.filter(e => e && e.type !== 'water' && e.visible);
 
-        // Sort within world layer: Polities < Rivers < Cities < Overlays
+        // Sort within world layer: Polities < Rivers < Points < Overlays
         worldEntities.sort((a, b) => {
             const typeScore = (e) => {
                 if (e.type === 'polity') return 1;
                 if (e.type === 'river') return 2;
-                if (e.type === 'city') return 3;
+                if (this._isPointEntity(e)) return 3;
                 if (['linguistic', 'cultural', 'faith'].includes(e.category)) return 4;
                 return 5;
             }
@@ -204,8 +208,8 @@ export default class MedievalRenderer {
             const isHovered = ent.id === hoveredId;
             const isSelected = ent.id === selectedId;
 
-            if (ent.type === 'city') {
-                this.drawCityMarker(ent, isHovered, isSelected);
+            if (this._isPointEntity(ent)) {
+                this.drawPointMarker(ent, isHovered, isSelected);
             } else if (ent.type === 'river') {
                 this.drawRiver(ent, isHovered, isSelected);
             } else {
@@ -269,7 +273,7 @@ export default class MedievalRenderer {
         }
         if (activeTool === 'transform' && selectedId) {
             const ent = entities.find(e => e && e.id === selectedId);
-            if (ent && ent.currentGeometry && ent.type !== 'city') this.drawTransformBox(ent.currentGeometry);
+            if (ent && ent.currentGeometry && !this._isPointEntity(ent)) this.drawTransformBox(ent.currentGeometry);
         }
 
         ctx.restore();
@@ -409,12 +413,13 @@ export default class MedievalRenderer {
         }
     }
 
-    drawCityMarker(ent, isHovered, isSelected) {
+    drawPointMarker(ent, isHovered, isSelected) {
         const ctx = this.ctx;
         const pt = ent.currentGeometry[0];
         if (!pt) return;
         const size = 6 / this.transform.k;
 
+        // Decorative diamond marker (same as legacy city marker for now)
         ctx.beginPath();
         ctx.moveTo(pt.x, pt.y - size);
         ctx.lineTo(pt.x + size, pt.y);
@@ -434,9 +439,14 @@ export default class MedievalRenderer {
         }
     }
 
+    // Backward compatibility
+    drawCityMarker(ent, isHovered, isSelected) {
+        this.drawPointMarker(ent, isHovered, isSelected);
+    }
+
     drawLabel(ent, isSelected) {
         let cx, cy;
-        if (ent.type === 'city') {
+        if (this._isPointEntity(ent)) {
             cx = ent.currentGeometry[0].x + 10 / this.transform.k;
             cy = ent.currentGeometry[0].y + 2 / this.transform.k;
         } else {
@@ -449,10 +459,10 @@ export default class MedievalRenderer {
 
         if (ent.category === 'linguistic') this.ctx.font = `italic ${14 / this.transform.k}px "Cinzel"`;
         else if (ent.category === 'faith') this.ctx.font = `italic bold ${13 / this.transform.k}px "Cinzel"`;
-        else if (ent.type === 'city') this.ctx.font = `bold ${12 / this.transform.k}px "Cinzel"`;
+        else if (this._isPointEntity(ent)) this.ctx.font = `bold ${12 / this.transform.k}px "Cinzel"`;
         else this.ctx.font = `${14 / this.transform.k}px "Cinzel"`;
 
-        this.ctx.textAlign = ent.type === 'city' ? 'left' : 'center';
+        this.ctx.textAlign = this._isPointEntity(ent) ? 'left' : 'center';
         this.ctx.fillText(ent.name, cx, cy);
         this.ctx.shadowBlur = 0;
     }
@@ -469,7 +479,7 @@ export default class MedievalRenderer {
             ctx.fillStyle = '#8a3324'; ctx.fill();
         });
 
-        if (type === 'city') {
+        if (type === 'city' || points.length === 1) {
             const p = points[0];
             ctx.beginPath();
             ctx.moveTo(p.x, p.y - 5); ctx.lineTo(p.x + 5, p.y);
