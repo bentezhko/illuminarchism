@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Illuminarchism - Debug Mode</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        #log { border: 1px solid #444; padding: 10px; height: 400px; overflow-y: auto; background: #252526; }
+        .error { color: #f48771; }
+        .warn { color: #dcdcaa; }
+        .info { color: #4ec9b0; }
+        button { margin: 10px 5px; padding: 10px 20px; background: #0e639c; color: white; border: none; cursor: pointer; }
+        button:hover { background: #1177bb; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Illuminarchism Debug Console</h1>
+    <p>This page will help identify what's freezing your UI.</p>
+    
+    <div>
+        <button onclick="testBasicLoad()">1. Test Basic Load</button>
+        <button onclick="testSpatialIndex()">2. Test Spatial Index</button>
+        <button onclick="testCheckHover()">3. Test CheckHover</button>
+        <button onclick="testFullRender()">4. Test Full Render</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div id="log"></div>
+
+    <script type="module">
+        window.log = (msg, type = 'info') => {
+            const el = document.getElementById('log');
+            const line = document.createElement('div');
+            line.className = type;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            el.appendChild(line);
+            el.scrollTop = el.scrollHeight;
+            console.log(msg);
+        };
+
+        window.clearLog = () => {
+            document.getElementById('log').innerHTML = '';
+        };
+
+        // Override console methods to capture errors
+        const originalError = console.error;
+        console.error = (...args) => {
+            window.log('ERROR: ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+
+        const originalWarn = console.warn;
+        console.warn = (...args) => {
+            window.log('WARN: ' + args.join(' '), 'warn');
+            originalWarn.apply(console, args);
+        };
+
+        window.testBasicLoad = async () => {
+            window.log('=== Test 1: Basic Module Loading ===');
+            try {
+                window.log('Loading main.js...');
+                const { default: IlluminarchismApp } = await import('./src/main.js');
+                window.log('✓ main.js loaded successfully', 'info');
+                
+                window.log('Creating app instance...');
+                window.testApp = new IlluminarchismApp();
+                window.log('✓ App instance created', 'info');
+                window.log(`✓ Entities loaded: ${window.testApp.entities.length}`, 'info');
+            } catch(e) {
+                window.log('✗ FAILED: ' + e.message, 'error');
+                window.log('Stack: ' + e.stack, 'error');
+            }
+        };
+
+        window.testSpatialIndex = () => {
+            window.log('=== Test 2: Spatial Index ===');
+            if (!window.testApp) {
+                window.log('✗ Run Test 1 first!', 'warn');
+                return;
+            }
+
+            try {
+                window.log('Updating entities...');
+                window.testApp.updateEntities();
+                window.log(`✓ Spatial index created: ${window.testApp.spatialIndex ? 'YES' : 'NO'}`, 'info');
+                
+                if (window.testApp.spatialIndex) {
+                    const testBox = { x: 0, y: 0, w: 100, h: 100 };
+                    window.log('Testing spatial query...');
+                    const results = window.testApp.spatialIndex.retrieve(testBox);
+                    window.log(`✓ Query returned ${results.length} results`, 'info');
+                }
+            } catch(e) {
+                window.log('✗ FAILED: ' + e.message, 'error');
+                window.log('Stack: ' + e.stack, 'error');
+            }
+        };
+
+        window.testCheckHover = () => {
+            window.log('=== Test 3: CheckHover Function ===');
+            if (!window.testApp) {
+                window.log('✗ Run Test 1 first!', 'warn');
+                return;
+            }
+
+            try {
+                window.log('Setting tool to inspect...');
+                window.testApp.activeTool = 'inspect';
+                
+                window.log('Testing checkHover at (0, 0)...');
+                const start = performance.now();
+                window.testApp.checkHover({ x: 0, y: 0 });
+                const duration = performance.now() - start;
+                
+                window.log(`✓ checkHover completed in ${duration.toFixed(2)}ms`, 'info');
+                
+                if (duration > 100) {
+                    window.log(`⚠ WARNING: checkHover is SLOW (${duration.toFixed(2)}ms)`, 'warn');
+                }
+                
+                // Test multiple points
+                window.log('Testing 100 rapid checkHover calls...');
+                const batchStart = performance.now();
+                for (let i = 0; i < 100; i++) {
+                    window.testApp.checkHover({ x: i * 5, y: i * 5 });
+                }
+                const batchDuration = performance.now() - batchStart;
+                window.log(`✓ 100 calls completed in ${batchDuration.toFixed(2)}ms (avg: ${(batchDuration/100).toFixed(2)}ms)`, 'info');
+                
+                if (batchDuration > 1000) {
+                    window.log('✗ CRITICAL: checkHover is causing freeze!', 'error');
+                }
+            } catch(e) {
+                window.log('✗ FAILED: ' + e.message, 'error');
+                window.log('Stack: ' + e.stack, 'error');
+            }
+        };
+
+        window.testFullRender = () => {
+            window.log('=== Test 4: Full Render ===');
+            if (!window.testApp) {
+                window.log('✗ Run Test 1 first!', 'warn');
+                return;
+            }
+
+            try {
+                window.log('Testing render()...');
+                const start = performance.now();
+                window.testApp.render();
+                const duration = performance.now() - start;
+                
+                window.log(`✓ render() completed in ${duration.toFixed(2)}ms`, 'info');
+                
+                if (duration > 100) {
+                    window.log(`⚠ WARNING: render() is SLOW (${duration.toFixed(2)}ms)`, 'warn');
+                }
+                
+                // Test rapid renders
+                window.log('Testing 50 rapid render calls...');
+                const batchStart = performance.now();
+                for (let i = 0; i < 50; i++) {
+                    window.testApp.render();
+                }
+                const batchDuration = performance.now() - batchStart;
+                window.log(`✓ 50 renders completed in ${batchDuration.toFixed(2)}ms (avg: ${(batchDuration/50).toFixed(2)}ms)`, 'info');
+            } catch(e) {
+                window.log('✗ FAILED: ' + e.message, 'error');
+                window.log('Stack: ' + e.stack, 'error');
+            }
+        };
+
+        // Auto-run on load
+        window.log('Debug console ready. Click buttons above to run tests.');
+        window.log('If any test freezes, that\'s the culprit!');
+    </script>
+</body>
+</html>
