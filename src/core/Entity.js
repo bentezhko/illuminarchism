@@ -333,13 +333,13 @@ export default class HistoricalEntity {
         this.timeline = this.timeline.filter(k => k.year !== year);
         let finalGeo;
 
-        // Check for point geometry types
-        const isPointType = this.type === 'city' ||
-            this.typology === 'city' ||
-            this.typology === 'sacred-site';
+        const typologyInfo = getTypology(this.domain, this.typology);
+        const isPointType = (typologyInfo && typologyInfo.geometryType === 'Point') ||
+            (Array.isArray(geometry) && geometry.length === 1);
 
         if (isPointType) {
-            finalGeo = geometry;
+            // Deep copy to prevent reference issues, but keep as a single point
+            finalGeo = geometry.map(p => ({ ...p }));
         } else {
             const isLineType = this.type === 'river' ||
                 this.typology === 'river' ||

@@ -478,7 +478,7 @@ export default class IlluminarchismApp {
         const ent = this.entities.find(e => e.id === this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
             let c = { x: 0, y: 0 };
-            if (ent.type === 'city') {
+            if (ent.currentGeometry.length === 1) {
                 c = ent.currentGeometry[0];
             } else {
                 c = getCentroid(ent.currentGeometry);
@@ -821,8 +821,8 @@ export default class IlluminarchismApp {
             // Sort candidates for Z-order
             const sorted = candidates.sort((a, b) => {
                 const typeScore = (ent) => {
-                    if (!ent || !ent.type) return 0;
-                    if (ent.type === 'city') return 100;
+                    if (!ent) return 0;
+                    if (ent.currentGeometry && ent.currentGeometry.length === 1) return 100;
                     if (ent.type === 'water') return 50;
                     return 0;
                 };
@@ -839,7 +839,7 @@ export default class IlluminarchismApp {
                 if (!e || !e.currentGeometry || e.currentGeometry.length === 0) continue;
 
                 let hit = false;
-                if (e.type === 'city') {
+                if (e.currentGeometry.length === 1) {
                     if (distance(wp, e.currentGeometry[0]) < 10 / (this.renderer.transform.k || 1)) hit = true;
                 } else if (e.type === 'river') {
                     const pts = e.currentGeometry;
