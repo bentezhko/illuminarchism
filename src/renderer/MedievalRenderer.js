@@ -479,7 +479,7 @@ export default class MedievalRenderer {
             ctx.fillStyle = '#8a3324'; ctx.fill();
         });
 
-        if (type === 'city' || points.length === 1) {
+        if (type === 'city') {
             const p = points[0];
             ctx.beginPath();
             ctx.moveTo(p.x, p.y - 5); ctx.lineTo(p.x + 5, p.y);
