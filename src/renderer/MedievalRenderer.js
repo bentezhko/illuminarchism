@@ -159,6 +159,12 @@ export default class MedievalRenderer {
     draw(entities, hoveredId, selectedId, activeTool, vertexHighlightIndex) {
         if (this.width === 0 || this.height === 0) return;
 
+        // FIXED: Safety check for entities input
+        if (!entities || !Array.isArray(entities)) {
+            // console.warn('Renderer received invalid entities, using empty array'); // Uncomment for debugging
+            entities = [];
+        }
+
         this.clear();
         const ctx = this.ctx;
         const t = this.transform;
@@ -169,15 +175,16 @@ export default class MedievalRenderer {
 
         this.drawGrid();
 
+        // FIXED: Safe spread and sort
         const sorted = [...entities].sort((a, b) => {
             // Sorting only affects visual stacking relative to each other, not the render pipeline phase
             return 0; // Maintain insertion/natural sort roughly
         });
 
-        const waterEntities = sorted.filter(e => e.type === 'water' && e.currentGeometry && e.visible);
+        const waterEntities = sorted.filter(e => e && e.type === 'water' && e.currentGeometry && e.visible);
 
         // 1. DRAW EVERYTHING THAT IS NOT WATER (The "World" Layer)
-        const worldEntities = sorted.filter(e => e.type !== 'water' && e.visible);
+        const worldEntities = sorted.filter(e => e && e.type !== 'water' && e.visible);
 
         // Sort within world layer: Polities < Rivers < Cities < Overlays
         worldEntities.sort((a, b) => {
@@ -233,7 +240,7 @@ export default class MedievalRenderer {
 
         // 3. DRAW LABELS & UI OVERLAYS (Must be visible on top of water)
         sorted.forEach(ent => {
-            if (!ent.currentGeometry || !ent.visible) return;
+            if (!ent || !ent.currentGeometry || !ent.visible) return;
             const isHovered = ent.id === hoveredId;
             const isSelected = ent.id === selectedId;
 
@@ -257,11 +264,11 @@ export default class MedievalRenderer {
 
         // Editor Overlays
         if (activeTool === 'vertex-edit' && selectedId) {
-            const ent = entities.find(e => e.id === selectedId);
+            const ent = entities.find(e => e && e.id === selectedId);
             if (ent && ent.currentGeometry) this.drawVertices(ent.currentGeometry, vertexHighlightIndex);
         }
         if (activeTool === 'transform' && selectedId) {
-            const ent = entities.find(e => e.id === selectedId);
+            const ent = entities.find(e => e && e.id === selectedId);
             if (ent && ent.currentGeometry && ent.type !== 'city') this.drawTransformBox(ent.currentGeometry);
         }
 

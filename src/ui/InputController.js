@@ -181,7 +181,11 @@ export default class InputController {
 
             // Default: Seek / Inspect
             // Perform a hit test right now
-            this.app.checkHover(wp);
+            try {
+                this.app.checkHover(wp);
+            } catch(err) {
+                console.error('checkHover failed on right-click:', err);
+            }
 
             if (this.app.hoveredEntityId) {
                 this.app.selectEntity(this.app.hoveredEntityId, true); // Select
@@ -194,8 +198,13 @@ export default class InputController {
             }
         });
 
-        window.addEventListener('mousemove', (e) => {
+        // FIXED: Mousemove with better bounds checking and drag prevention
+        c.addEventListener('mousemove', (e) => {
             if (this.app.currentView !== 'map') return;
+            
+            // Safety check: ensure we have valid coordinates
+            if (typeof e.offsetX !== 'number' || typeof e.offsetY !== 'number') return;
+            
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
             // Handle Transform (Move/Resize)
@@ -210,7 +219,7 @@ export default class InputController {
                 return;
             }
 
-            // Handle Panning
+            // Handle Panning - CRITICAL: Don't call checkHover during pan!
             if (this.isDragging && this.app.activeTool === 'pan') {
                 const dx = e.clientX - this.lastX;
                 const dy = e.clientY - this.lastY;
@@ -222,7 +231,7 @@ export default class InputController {
             }
 
             // Handle Vertex Hover Effect
-            if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
+            if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
                 const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
                     const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
@@ -231,12 +240,24 @@ export default class InputController {
                 }
             }
 
-            if (this.app.activeTool === 'draw') { this.app.updateDraftCursor(wp); return; }
-            if (this.app.activeTool === 'inspect' || this.app.activeTool === 'erase' || this.app.activeTool === 'pan' || this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'transform') {
+            // Drawing mode cursor update
+            if (this.app.activeTool === 'draw') { 
+                this.app.updateDraftCursor(wp); 
+                return; 
+            }
+            
+            // CRITICAL FIX: Only call checkHover when NOT dragging and with throttle
+            if (!this.isDragging && (this.app.activeTool === 'inspect' || this.app.activeTool === 'erase')) {
                 const now = Date.now();
-                if (now - this.hoverThrottle > 30) {
+                if (now - this.hoverThrottle > 50) { // Increased throttle to 50ms
                     this.hoverThrottle = now;
-                    this.app.checkHover(wp);
+                    try {
+                        this.app.checkHover(wp);
+                    } catch(err) {
+                        console.error('checkHover failed:', err);
+                        // Reset hover state on error
+                        this.app.hoveredEntityId = null;
+                    }
                 }
             }
         });
@@ -282,6 +303,8 @@ export default class InputController {
 
     initTimelineInteraction() {
         const tlContainer = document.getElementById('view-timeline');
+        if (!tlContainer) return; // Safety check
+        
         let isDraggingBar = false;
         let dragTarget = null;
         let dragType = null; // 'move', 'start', 'end'
@@ -314,9 +337,17 @@ export default class InputController {
         window.addEventListener('mousemove', (e) => {
             if (!isDraggingBar || !dragTarget) return;
 
-            const trackWidth = document.querySelector('.timeline-bar-track').offsetWidth;
-            const epochStart = parseInt(document.getElementById('epoch-start').value);
-            const epochEnd = parseInt(document.getElementById('epoch-end').value);
+            const trackEl = document.querySelector('.timeline-bar-track');
+            if (!trackEl) return;
+            
+            const trackWidth = trackEl.offsetWidth;
+            const epochStartEl = document.getElementById('epoch-start');
+            const epochEndEl = document.getElementById('epoch-end');
+            
+            if (!epochStartEl || !epochEndEl) return;
+            
+            const epochStart = parseInt(epochStartEl.value);
+            const epochEnd = parseInt(epochEndEl.value);
             const totalYears = epochEnd - epochStart;
 
             const deltaPixels = e.clientX - startX;
