@@ -267,7 +267,7 @@ export default class Timeline {
                 if (widthP > 0) {
                     const bar = document.createElement('div');
                     bar.className = 'timeline-bar';
-                    bar.dataset.id = ent.id; // Added dataset.id for InputController
+                    bar.dataset.id = ent.id;
                     bar.style.left = `${startP}%`;
                     bar.style.width = `${widthP}%`;
                     bar.style.backgroundColor = ent.color;
