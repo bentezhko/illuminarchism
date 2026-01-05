@@ -947,7 +947,7 @@ export default class IlluminarchismApp {
 
                 // Retrieve only visible entities
                 const visibleNodes = this.spatialIndex.retrieve(viewportBox);
-                entitiesToDraw = visibleNodes.map(n => n.entity);
+                entitiesToDraw = visibleNodes.map(n => n.entity).filter(e => e);
             } catch(e) {
                 console.warn('Viewport culling failed, rendering all entities:', e);
             }
