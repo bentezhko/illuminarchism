@@ -464,53 +464,6 @@ export default class IlluminarchismApp {
         this.registry.render();
     }
 
-    checkHover(wp) {
-        if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
-        let fid = null;
-
-        const visibleEntities = this.entities.filter(e => e.visible);
-
-        // Reverse Sort (Top -> Bottom)
-        const sorted = [...visibleEntities].sort((a, b) => {
-            // Cities > Overlays (Cult/Ling) > Water > Land
-            const typeScore = (type) => {
-                if (type === 'city') return 100;
-                if (type === 'water') return 50;
-                return 0;
-            };
-            const catScore = (cat) => {
-                if (cat === 'linguistic' || cat === 'cultural') return 80;
-                return 0;
-            };
-            return (catScore(a.category) + typeScore(a.type)) - (catScore(b.category) + typeScore(b.type));
-        });
-
-        for (let i = sorted.length - 1; i >= 0; i--) {
-            const e = sorted[i];
-            if (!e.currentGeometry) continue;
-
-            let hit = false;
-            if (e.type === 'city') {
-                if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
-            } else if (e.type === 'river') {
-                const pts = e.currentGeometry;
-                for (let j = 0; j < pts.length - 1; j++) {
-                    if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
-                }
-            } else {
-                if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
-            }
-
-            if (hit) { fid = e.id; break; }
-        }
-
-        if (fid !== this.hoveredEntityId) {
-            this.hoveredEntityId = fid;
-            this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
-            this.render();
-        }
-    }
-
     focusSelectedEntity() {
         if (!this.selectedEntityId) return;
         const ent = this.entities.find(e => e.id === this.selectedEntityId);
@@ -822,62 +775,90 @@ export default class IlluminarchismApp {
         });
     }
 
+    // FIXED: Single optimized checkHover with safety checks
     checkHover(wp) {
+        // Safety checks to prevent crashes
+        if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
         if (this.activeTool !== 'inspect' && this.activeTool !== 'erase') return;
-        let fid = null;
+        
+        try {
+            let fid = null;
 
-        // Use Spatial Index for Hit Testing
-        // Define a small search box around the cursor
-        const searchSize = 20 / this.renderer.transform.k; // Adapt to zoom
-        const searchBox = { x: wp.x - searchSize / 2, y: wp.y - searchSize / 2, w: searchSize, h: searchSize };
-
-        let candidates = [];
-        if (this.spatialIndex) {
-            const results = this.spatialIndex.retrieve(searchBox);
-            candidates = results.map(r => r.entity).filter(e => e.visible);
-        } else {
-            // Fallback if index not ready
-            candidates = this.entities.filter(e => e.visible);
-        }
-
-        // Only iterate candidates
-        const sorted = candidates.sort((a, b) => {
-            // Same sorting logic as before for Z-order
-            const typeScore = (ent) => {
-                if (ent.type === 'city') return 100;
-                if (ent.type === 'water') return 50;
-                return 0;
+            // Use Spatial Index for Hit Testing
+            const searchSize = 20 / (this.renderer.transform.k || 1); // Prevent division by zero
+            const searchBox = { 
+                x: wp.x - searchSize / 2, 
+                y: wp.y - searchSize / 2, 
+                w: searchSize, 
+                h: searchSize 
             };
-            const catScore = (ent) => {
-                if (ent.category === 'linguistic' || ent.category === 'cultural') return 80;
-                return 0;
-            };
-            return (catScore(a) + typeScore(a)) - (catScore(b) + typeScore(b));
-        });
 
-        for (let i = sorted.length - 1; i >= 0; i--) {
-            const e = sorted[i];
-            if (!e.currentGeometry) continue;
-
-            let hit = false;
-            if (e.type === 'city') {
-                if (distance(wp, e.currentGeometry[0]) < 10 / this.renderer.transform.k) hit = true;
-            } else if (e.type === 'river') {
-                const pts = e.currentGeometry;
-                for (let j = 0; j < pts.length - 1; j++) {
-                    if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / this.renderer.transform.k) { hit = true; break; }
+            let candidates = [];
+            if (this.spatialIndex) {
+                try {
+                    const results = this.spatialIndex.retrieve(searchBox);
+                    candidates = results.map(r => r.entity).filter(e => e && e.visible);
+                } catch(e) {
+                    console.warn('Spatial index query failed:', e);
+                    // Fallback to full entity list
+                    candidates = this.entities.filter(e => e && e.visible);
                 }
             } else {
-                if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+                // Fallback if index not ready
+                candidates = this.entities.filter(e => e && e.visible);
             }
 
-            if (hit) { fid = e.id; break; }
-        }
+            // Sort candidates for Z-order
+            const sorted = candidates.sort((a, b) => {
+                const typeScore = (ent) => {
+                    if (!ent || !ent.type) return 0;
+                    if (ent.type === 'city') return 100;
+                    if (ent.type === 'water') return 50;
+                    return 0;
+                };
+                const catScore = (ent) => {
+                    if (!ent || !ent.category) return 0;
+                    if (ent.category === 'linguistic' || ent.category === 'cultural') return 80;
+                    return 0;
+                };
+                return (catScore(a) + typeScore(a)) - (catScore(b) + typeScore(b));
+            });
 
-        if (fid !== this.hoveredEntityId) {
-            this.hoveredEntityId = fid;
-            this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? (fid ? 'pointer' : 'not-allowed') : (fid ? 'pointer' : 'default');
-            this.render();
+            for (let i = sorted.length - 1; i >= 0; i--) {
+                const e = sorted[i];
+                if (!e || !e.currentGeometry || e.currentGeometry.length === 0) continue;
+
+                let hit = false;
+                if (e.type === 'city') {
+                    if (distance(wp, e.currentGeometry[0]) < 10 / (this.renderer.transform.k || 1)) hit = true;
+                } else if (e.type === 'river') {
+                    const pts = e.currentGeometry;
+                    for (let j = 0; j < pts.length - 1; j++) {
+                        if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / (this.renderer.transform.k || 1)) { 
+                            hit = true; 
+                            break; 
+                        }
+                    }
+                } else {
+                    if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+                }
+
+                if (hit) { 
+                    fid = e.id; 
+                    break; 
+                }
+            }
+
+            if (fid !== this.hoveredEntityId) {
+                this.hoveredEntityId = fid;
+                this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? 
+                    (fid ? 'pointer' : 'not-allowed') : 
+                    (fid ? 'pointer' : 'default');
+                this.render();
+            }
+        } catch(error) {
+            console.error('Hover check failed:', error);
+            this.hoveredEntityId = null;
         }
     }
 
@@ -890,26 +871,34 @@ export default class IlluminarchismApp {
             ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
             if (ent.currentGeometry && ent.currentGeometry.length > 0) {
                 cnt++;
-                // Calculate BBox for Indexing
-                const bbox = getBoundingBox(ent.currentGeometry);
-                if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
-                if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
+                try {
+                    // Calculate BBox for Indexing with safety checks
+                    const bbox = getBoundingBox(ent.currentGeometry);
+                    
+                    // Ensure valid dimensions for spatial indexing
+                    if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
+                    if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
 
-                ent.bbox = bbox; // Store for reuse
+                    ent.bbox = bbox; // Store for reuse
 
-                // Track World Bounds
-                if (bbox.minX < minX) minX = bbox.minX;
-                if (bbox.minY < minY) minY = bbox.minY;
-                if (bbox.maxX > maxX) maxX = bbox.maxX;
-                if (bbox.maxY > maxY) maxY = bbox.maxY;
+                    // Track World Bounds
+                    if (bbox.minX < minX) minX = bbox.minX;
+                    if (bbox.minY < minY) minY = bbox.minY;
+                    if (bbox.maxX > maxX) maxX = bbox.maxX;
+                    if (bbox.maxY > maxY) maxY = bbox.maxY;
 
-                validEntities.push(ent);
+                    validEntities.push(ent);
+                } catch(e) {
+                    console.warn(`Failed to calculate bbox for entity ${ent.id}:`, e);
+                }
             }
         });
 
-        // Rebuild Quadtree
-        // Add some padding to world bounds or use default
-        if (minX === Infinity) { minX = -1000; maxX = 1000; minY = -1000; maxY = 1000; }
+        // Rebuild Quadtree with safety checks
+        if (minX === Infinity) { 
+            minX = -1000; maxX = 1000; minY = -1000; maxY = 1000; 
+        }
+        
         const margin = 100;
         this.currentWorldBounds = {
             x: minX - margin,
@@ -918,16 +907,23 @@ export default class IlluminarchismApp {
             h: (maxY - minY) + margin * 2
         };
 
-        this.spatialIndex = new Quadtree(this.currentWorldBounds);
-        validEntities.forEach(ent => {
-            this.spatialIndex.insert({
-                x: ent.bbox.x,
-                y: ent.bbox.y,
-                w: ent.bbox.w,
-                h: ent.bbox.h,
-                entity: ent
+        try {
+            this.spatialIndex = new Quadtree(this.currentWorldBounds);
+            validEntities.forEach(ent => {
+                if (ent.bbox) {
+                    this.spatialIndex.insert({
+                        x: ent.bbox.x,
+                        y: ent.bbox.y,
+                        w: ent.bbox.w,
+                        h: ent.bbox.h,
+                        entity: ent
+                    });
+                }
             });
-        });
+        } catch(e) {
+            console.error('Failed to rebuild spatial index:', e);
+            this.spatialIndex = null; // Fallback to no index
+        }
 
         const d = document.querySelector('.debug-info');
         if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
@@ -935,31 +931,38 @@ export default class IlluminarchismApp {
 
     render() {
         // VIEWPORT CULLING
-        // Get Viewport in World Coords
         let entitiesToDraw = this.entities; // Default to all if check fails
 
         if (this.spatialIndex && this.renderer.width > 0) {
-            // Need to inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
-            const tl = this.renderer.toWorld(0, 0);
-            const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
-            const viewportBox = {
-                x: tl.x,
-                y: tl.y,
-                w: br.x - tl.x,
-                h: br.y - tl.y
-            };
+            try {
+                // Inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
+                const tl = this.renderer.toWorld(0, 0);
+                const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
+                const viewportBox = {
+                    x: tl.x,
+                    y: tl.y,
+                    w: br.x - tl.x,
+                    h: br.y - tl.y
+                };
 
-            // Retrieve only visible entities
-            const visibleNodes = this.spatialIndex.retrieve(viewportBox);
-            entitiesToDraw = visibleNodes.map(n => n.entity);
+                // Retrieve only visible entities
+                const visibleNodes = this.spatialIndex.retrieve(viewportBox);
+                entitiesToDraw = visibleNodes.map(n => n.entity);
+            } catch(e) {
+                console.warn('Viewport culling failed, rendering all entities:', e);
+            }
         }
 
         this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
 
-        // Add safety check for drawDraft function existence
+        // Draw draft with safety check
         if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
             if (typeof this.renderer.drawDraft === 'function') {
-                this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+                try {
+                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+                } catch(e) {
+                    console.warn('Draft rendering failed:', e);
+                }
             }
         }
     }
