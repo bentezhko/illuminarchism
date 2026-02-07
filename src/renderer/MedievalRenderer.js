@@ -370,7 +370,8 @@ export default class MedievalRenderer {
             // For performance, maybe only roughness if k > X?
             // But consistent look is better.
             // But consistent look is better.
-            this.traceRoughPath(pts, true, ctx);
+            // FIX: Rough path causing invisibility. Reverting to simple path.
+            this.tracePathOnCtx(ctx, pts, true);
 
             // Land Shadow / Glow
             if (ent.type === 'polity') {
