@@ -78,7 +78,7 @@ export default class IlluminarchismApp {
         if (!ent) return;
 
         // Invalidate cache during transform
-        if (this.renderer) this.renderer.worldLayerValid = false;
+        if (this.renderer) this.renderer.invalidateWorldLayer();
 
         // Calculate Delta
         const dx = currentMouse.x - startMouse.x;
