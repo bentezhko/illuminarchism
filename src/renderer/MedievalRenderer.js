@@ -221,9 +221,6 @@ export default class MedievalRenderer {
         });
 
         // --- LAYER CACHING LOGIC ---
-        // DEBUG: Force invalidation every frame
-        this.worldLayerValid = false;
-
         // If the cache is invalid (or first run), re-render the static world
         if (!this.worldLayerValid) {
             this.renderWorldLayer(sorted, t);
@@ -354,16 +351,15 @@ export default class MedievalRenderer {
             ctx.fillStyle = this.hexToRgba(ent.color, 0.05); // Very faint wash
         } else {
             ctx.setLineDash([]);
-            // DEBUG: Red Outline
-            ctx.strokeStyle = '#ff0000';
-            ctx.lineWidth = 2 / this.transform.k;
-
-            // STRONG OPACITY
+            ctx.strokeStyle = '#2b2118';
+            ctx.lineWidth = 1.5 / this.transform.k;
+            // STRONG OPACITY: 0.6 base, 0.8 hover/select
             let alpha = (isSelected || isHovered) ? 0.8 : 0.6;
             ctx.fillStyle = this.hexToRgba(ent.color, alpha);
         }
 
         // Get Pattern
+
         const pattern = this.getHatchPattern(ent.color, ent.hatchStyle);
 
         if (ent.category !== 'cultural') {
@@ -374,8 +370,7 @@ export default class MedievalRenderer {
             // For performance, maybe only roughness if k > X?
             // But consistent look is better.
             // But consistent look is better.
-            // DEBUG: Use simple path
-            this.tracePathOnCtx(ctx, pts, true);
+            this.traceRoughPath(pts, true, ctx);
 
             // Land Shadow / Glow
             if (ent.type === 'polity') {
@@ -734,8 +729,7 @@ export default class MedievalRenderer {
 
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.shadowColor = 'rgba(43, 33, 24, 0.5)';
-            ctx.shadowBlur = 10;
+            // SHADOW REMOVED: Was causing floating artifact due to transparency
             // TRANSPARENCY: Allow land to be seen through water if they overlap
             ctx.globalAlpha = 0.5;
             ctx.drawImage(this.waterLayer, 0, 0);
