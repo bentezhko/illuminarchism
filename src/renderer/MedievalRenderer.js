@@ -353,7 +353,8 @@ export default class MedievalRenderer {
             ctx.setLineDash([]);
             ctx.strokeStyle = '#2b2118';
             ctx.lineWidth = 1.5 / this.transform.k;
-            let alpha = (isSelected || isHovered) ? 0.4 : 0.15;
+            // INCREASED OPACITY: from 0.15 to 0.4 for better visibility
+            let alpha = (isSelected || isHovered) ? 0.6 : 0.4;
             ctx.fillStyle = this.hexToRgba(ent.color, alpha);
         }
 
@@ -695,20 +696,7 @@ export default class MedievalRenderer {
             return typeScore(a) - typeScore(b);
         });
 
-        // 1. Draw Land & Rivers
-        // Note: passing isSelected=false to render base state
-        worldEntities.forEach(ent => {
-            if (!ent.currentGeometry) return;
-            if (this._isPointEntity(ent)) {
-                this.drawPointMarker(ent, false, false, ctx); // Need to pass ctx!
-            } else if (ent.type === 'river') {
-                this.drawRiver(ent, false, false, ctx);
-            } else {
-                this.drawPolygon(ent, false, false, ctx);
-            }
-        });
-
-        // 2. Draw Water (Uses its own offscreen buffering, but now we composite it onto worldLayer)
+        // 1. Draw Water (Uses its own offscreen buffering, but now we composite it onto worldLayer)
         if (waterEntities.length > 0 && this.waterLayer.width > 0) {
             this.waterCtx.clearRect(0, 0, this.width, this.height);
             this.waterCtx.save();
@@ -733,6 +721,19 @@ export default class MedievalRenderer {
             ctx.drawImage(this.waterLayer, 0, 0);
             ctx.restore();
         }
+
+        // 2. Draw Land & Rivers
+        // Note: passing isSelected=false to render base state
+        worldEntities.forEach(ent => {
+            if (!ent.currentGeometry) return;
+            if (this._isPointEntity(ent)) {
+                this.drawPointMarker(ent, false, false, ctx); // Need to pass ctx!
+            } else if (ent.type === 'river') {
+                this.drawRiver(ent, false, false, ctx);
+            } else {
+                this.drawPolygon(ent, false, false, ctx);
+            }
+        });
 
         // 3. Draw Ripples (On top of water, onto worldLayer)
         // Need to restore transform for ripples as they use tracePathOnCtx which expects transformed context?
