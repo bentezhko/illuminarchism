@@ -183,28 +183,40 @@ export default class InputController {
             // Perform a hit test right now
             try {
                 this.app.checkHover(wp);
-            } catch(err) {
+            } catch (err) {
                 console.error('checkHover failed on right-click:', err);
             }
 
             if (this.app.hoveredEntityId) {
-                this.app.selectEntity(this.app.hoveredEntityId, true); // Select
-                this.app.openInfoPanel(); // Open "Details Overview"
-                // The Info Panel will contain the "Edit" button to switch mode
+                // this.app.selectEntity(this.app.hoveredEntityId, true); // Don't auto-select on right click? Maybe yes.
+                // Actually, let's keep selection separate.
+
+                const ent = this.app.entities.find(e => e.id === this.app.hoveredEntityId);
+                if (ent) {
+                    this.app.showContextMenu(ent, e.clientX, e.clientY);
+                }
             } else {
-                this.app.deselect();
-                // Optionally close info panel?
-                if (this.app.infoPanel) this.app.infoPanel.hide();
+                this.app.hideContextMenu();
+            }
+        });
+
+        // Hide context menu on click elsewhere
+        window.addEventListener('click', (e) => {
+            // If click is inside context menu, don't hide? 
+            // Actually, usually interacting with menu hides it or keeps it.
+            // For now, any click outside menu hides it.
+            if (!e.target.closest('#context-menu')) {
+                this.app.hideContextMenu();
             }
         });
 
         // FIXED: Mousemove with better bounds checking and drag prevention
         c.addEventListener('mousemove', (e) => {
             if (this.app.currentView !== 'map') return;
-            
+
             // Safety check: ensure we have valid coordinates
             if (typeof e.offsetX !== 'number' || typeof e.offsetY !== 'number') return;
-            
+
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
             // Handle Transform (Move/Resize)
@@ -241,11 +253,11 @@ export default class InputController {
             }
 
             // Drawing mode cursor update
-            if (this.app.activeTool === 'draw') { 
-                this.app.updateDraftCursor(wp); 
-                return; 
+            if (this.app.activeTool === 'draw') {
+                this.app.updateDraftCursor(wp);
+                return;
             }
-            
+
             // CRITICAL FIX: Enable hover detection in pan mode when NOT dragging (unified Navigate tool)
             if (!this.isDragging && (this.app.activeTool === 'pan' || this.app.activeTool === 'erase')) {
                 const now = Date.now();
@@ -253,7 +265,7 @@ export default class InputController {
                     this.hoverThrottle = now;
                     try {
                         this.app.checkHover(wp);
-                    } catch(err) {
+                    } catch (err) {
                         console.error('checkHover failed:', err);
                         // Reset hover state on error
                         this.app.hoveredEntityId = null;
@@ -304,7 +316,7 @@ export default class InputController {
     initTimelineInteraction() {
         const tlContainer = document.getElementById('view-timeline');
         if (!tlContainer) return; // Safety check
-        
+
         let isDraggingBar = false;
         let dragTarget = null;
         let dragType = null; // 'move', 'start', 'end'
@@ -339,13 +351,13 @@ export default class InputController {
 
             const trackEl = document.querySelector('.timeline-bar-track');
             if (!trackEl) return;
-            
+
             const trackWidth = trackEl.offsetWidth;
             const epochStartEl = document.getElementById('epoch-start');
             const epochEndEl = document.getElementById('epoch-end');
-            
+
             if (!epochStartEl || !epochEndEl) return;
-            
+
             const epochStart = parseInt(epochStartEl.value);
             const epochEnd = parseInt(epochEndEl.value);
             const totalYears = epochEnd - epochStart;

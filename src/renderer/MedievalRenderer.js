@@ -369,7 +369,8 @@ export default class MedievalRenderer {
             // Let's roughness everything except maybe very specific things.
             // For performance, maybe only roughness if k > X?
             // But consistent look is better.
-            this.traceRoughPath(pts, true);
+            // But consistent look is better.
+            this.traceRoughPath(pts, true, ctx);
 
             // Land Shadow / Glow
             if (ent.type === 'polity') {
@@ -413,7 +414,7 @@ export default class MedievalRenderer {
         if (!pts.length) return;
 
         ctx.beginPath();
-        this.traceRoughPath(pts, false);
+        this.traceRoughPath(pts, false, ctx);
         ctx.strokeStyle = isSelected ? '#8a3324' : ent.color;
         ctx.lineWidth = (isSelected ? 4 : 2.5) / this.transform.k;
         ctx.lineCap = 'round';
@@ -641,6 +642,40 @@ export default class MedievalRenderer {
         });
 
         ctx.restore();
+    }
+
+    traceRoughPath(pts, close, targetCtx = null) {
+        if (!pts.length) return;
+
+        const ctx = targetCtx || this.ctx;
+
+        // Don't roughen if zoomed out too far (optimization + visual noise reduction)
+        const useRough = this.transform.k > 0.2;
+
+        const moveTo = (p) => {
+            if (useRough) {
+                const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
+                ctx.moveTo(pp.x, pp.y);
+            } else {
+                ctx.moveTo(p.x, p.y);
+            }
+        };
+
+        const lineTo = (p) => {
+            if (useRough) {
+                const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
+                ctx.lineTo(pp.x, pp.y);
+            } else {
+                ctx.lineTo(p.x, p.y);
+            }
+        };
+
+        moveTo(pts[0]);
+        for (let i = 1; i < pts.length; i++) lineTo(pts[i]);
+
+        if (close) {
+            ctx.closePath();
+        }
     }
 
     drawReferenceLayer(shapes) {

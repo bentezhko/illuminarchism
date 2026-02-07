@@ -645,6 +645,7 @@ body:not(.panel-collapsed) #btn-toggle-time-panel::after {
 
 input[type=range] {
     -webkit-appearance: none;
+    appearance: none;
     width: 100%;
     background: transparent;
     position: relative;
@@ -653,6 +654,7 @@ input[type=range] {
 
 input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
+    appearance: none;
     height: 24px;
     width: 24px;
     border-radius: 50%;
@@ -964,4 +966,62 @@ body:not(.panel-collapsed) #view-timeline {
 .speed-btn.active {
     background: var(--rubric-red);
     color: white;
+}
+
+/* =========================================
+   Context Menu
+   ========================================= */
+.context-menu {
+    position: absolute;
+    z-index: 2000;
+    background: #f3e9d2;
+    border: 2px solid #5d4037;
+    border-radius: 4px;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
+    min-width: 250px;
+    font-family: 'Cinzel', serif;
+    color: #2b2118;
+}
+
+.menu-header {
+    background: #5d4037;
+    color: #f3e9d2;
+    padding: 8px 12px;
+    font-weight: bold;
+    border-bottom: 2px solid #3e2723;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.menu-content {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.menu-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9em;
+}
+
+.menu-row label {
+    font-weight: bold;
+    color: #5d4037;
+}
+
+.color-preview {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #5d4037;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.color-preview:hover {
+    border-color: #8a3324;
+    box-shadow: 0 0 4px rgba(138, 51, 36, 0.5);
 }

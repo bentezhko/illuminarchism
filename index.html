@@ -203,10 +203,37 @@
     <div class="debug-info pointer-events-auto">
         Render: Watercolor/Ink | Mode: Interactive | Entities: Loading...
     </div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Loading Chronicle...</div>
     </div>
 
-    <canvas id="map-canvas"></canvas>
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu" style="display: none;">
+        <div class="menu-header">Entity Details</div>
+        <div class="menu-content">
+            <div class="menu-row">
+                <label>Name:</label>
+                <span id="ctx-name"></span>
+            </div>
+            <div class="menu-row">
+                <label>Type:</label>
+                <span id="ctx-type"></span>
+            </div>
+            <div class="menu-row">
+                <label>Years:</label>
+                <span id="ctx-years"></span>
+            </div>
+            <div class="menu-row">
+                <label>Color:</label>
+                <div id="ctx-color-preview" class="color-preview"></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="mapCanvas"></canvas>
 
 </body>
 
 </html>
+```
