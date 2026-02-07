@@ -47,8 +47,6 @@ export default class MedievalRenderer {
 
         this.createParchmentTexture();
         this.createWaterTexture();
-        this.createParchmentTexture();
-        this.createWaterTexture();
         this.worldLayerValid = false; // Invalidate cache on resize
         if (window.illuminarchismApp) window.illuminarchismApp.render();
     }
@@ -537,43 +535,7 @@ export default class MedievalRenderer {
         ctx.restore();
     }
 
-    traceRoughPath(pts, close) {
-        if (!pts.length) return;
 
-        // Don't roughen if zoomed out too far (optimization + visual noise reduction)
-        const useRough = this.transform.k > 0.2;
-
-        const moveTo = (p) => {
-            if (useRough) {
-                const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
-                this.ctx.moveTo(pp.x, pp.y);
-            } else {
-                this.ctx.moveTo(p.x, p.y);
-            }
-        };
-
-        const lineTo = (p) => {
-            if (useRough) {
-                // To do it right, we should subdivide long segments..
-                // But for now, just perturbing vertices.
-                const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
-                this.ctx.lineTo(pp.x, pp.y);
-            } else {
-                this.ctx.lineTo(p.x, p.y);
-            }
-        };
-
-        moveTo(pts[0]);
-        for (let i = 1; i < pts.length; i++) lineTo(pts[i]);
-
-        if (close) {
-            // For closed loops, the last point connects to first. 
-            // If we perturbed the first point differently than a "new" call, gap?
-            // perturbPoint is deterministic (noise), so calling it on same x,y yields same result.
-            // So closePath() is fine.
-            this.ctx.closePath();
-        }
-    }
 
     tracePath(pts, close) {
         if (!pts.length) return;
