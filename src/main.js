@@ -41,6 +41,10 @@ export default class IlluminarchismApp {
         this.draftCursor = null;
         this.activeTool = 'pan';
 
+        // Reference Layer State
+        this.referenceShapes = []; // Array of { geometry: [{x,y}...], type: 'LineString'|'Polygon' }
+        this.showReferenceLayer = true;
+
         // New ontology-aware drawing state
         this.drawDomain = 'political';  // Level 1: Domain
         this.drawTypology = 'nation-state';  // Level 2: Typology
@@ -465,6 +469,13 @@ export default class IlluminarchismApp {
             fileInput.addEventListener('change', (e) => this.loader.loadFromJSON(e));
         }
 
+        // Reference Import
+        const refInput = document.getElementById('ref-input');
+        this.safeAddListener('btn-import-ref', 'click', () => { if (refInput) refInput.click(); });
+        if (refInput) {
+            refInput.addEventListener('change', (e) => this.loader.loadReferenceFromJSON(e));
+        }
+
         // Initial render of notches if anything selected (unlikely on load but good practice)
         this.timeline.renderNotches();
     }
@@ -744,252 +755,258 @@ export default class IlluminarchismApp {
             this.render();
         }
     }
+}
 
-    // Vertex Editing Logic
-    editVertex(index, newPos) {
-        if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
-            ent.currentGeometry[index] = newPos;
-            this.render();
-        }
-    }
+setReferenceShapes(shapes) {
+    this.referenceShapes = shapes;
+    this.render();
+}
 
-    highlightVertex(index) {
-        this.highlightedVertexIndex = index;
+// Vertex Editing Logic
+editVertex(index, newPos) {
+    if (!this.selectedEntityId) return;
+    const ent = this.entities.find(e => e.id === this.selectedEntityId);
+    if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
+        ent.currentGeometry[index] = newPos;
         this.render();
     }
+}
 
-    finishVertexEdit() {
-        if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (ent) {
-            // Commit change to timeline (preventResampling = true)
-            ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
-            this.updateInfoPanel(ent);
-            this.renderTimelineNotches(); // Update notches as keyframes changed
-        }
+highlightVertex(index) {
+    this.highlightedVertexIndex = index;
+    this.render();
+}
+
+finishVertexEdit() {
+    if (!this.selectedEntityId) return;
+    const ent = this.entities.find(e => e.id === this.selectedEntityId);
+    if (ent) {
+        // Commit change to timeline (preventResampling = true)
+        ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
+        this.updateInfoPanel(ent);
+        this.renderTimelineNotches(); // Update notches as keyframes changed
     }
+}
 
-    updateInfoPanel(ent) {
-        const list = document.getElementById('keyframe-list');
-        if (!list) return; // Safety check for missing element
+updateInfoPanel(ent) {
+    const list = document.getElementById('keyframe-list');
+    if (!list) return; // Safety check for missing element
 
-        list.innerHTML = '';
-        ent.timeline.forEach(kf => {
-            const div = document.createElement('div');
-            div.textContent = `• ${kf.year} AD`;
-            div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
-            list.appendChild(div);
-        });
-    }
+    list.innerHTML = '';
+    ent.timeline.forEach(kf => {
+        const div = document.createElement('div');
+        div.textContent = `• ${kf.year} AD`;
+        div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
+        list.appendChild(div);
+    });
+}
 
-    // FIXED: Single optimized checkHover with safety checks - NOW WORKS IN PAN MODE
-    checkHover(wp) {
-        // Safety checks to prevent crashes
-        if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
-        // CHANGED: Allow hover in pan mode for unified Navigate tool
-        if (this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform') return;
-        
-        try {
-            let fid = null;
+// FIXED: Single optimized checkHover with safety checks - NOW WORKS IN PAN MODE
+checkHover(wp) {
+    // Safety checks to prevent crashes
+    if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
+    // CHANGED: Allow hover in pan mode for unified Navigate tool
+    if (this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform') return;
 
-            // Use Spatial Index for Hit Testing
-            const searchSize = 20 / (this.renderer.transform.k || 1); // Prevent division by zero
-            const searchBox = { 
-                x: wp.x - searchSize / 2, 
-                y: wp.y - searchSize / 2, 
-                w: searchSize, 
-                h: searchSize 
-            };
+    try {
+        let fid = null;
 
-            let candidates = [];
-            if (this.spatialIndex) {
-                try {
-                    const results = this.spatialIndex.retrieve(searchBox);
-                    candidates = results.map(r => r.entity).filter(e => e && e.visible);
-                } catch(e) {
-                    console.warn('Spatial index query failed:', e);
-                    // Fallback to full entity list
-                    candidates = this.entities.filter(e => e && e.visible);
-                }
-            } else {
-                // Fallback if index not ready
-                candidates = this.entities.filter(e => e && e.visible);
-            }
-
-            // Sort candidates for Z-order
-            const sorted = candidates.sort((a, b) => {
-                const typeScore = (ent) => {
-                    if (!ent) return 0;
-                    if (ent.currentGeometry && ent.currentGeometry.length === 1) return 100;
-                    if (ent.type === 'water') return 50;
-                    return 0;
-                };
-                const catScore = (ent) => {
-                    if (!ent || !ent.category) return 0;
-                    if (ent.category === 'linguistic' || ent.category === 'cultural') return 80;
-                    return 0;
-                };
-                return (catScore(a) + typeScore(a)) - (catScore(b) + typeScore(b));
-            });
-
-            for (let i = sorted.length - 1; i >= 0; i--) {
-                const e = sorted[i];
-                if (!e || !e.currentGeometry || e.currentGeometry.length === 0) continue;
-
-                let hit = false;
-                if (e.currentGeometry.length === 1) {
-                    if (distance(wp, e.currentGeometry[0]) < 10 / (this.renderer.transform.k || 1)) hit = true;
-                } else if (e.type === 'river') {
-                    const pts = e.currentGeometry;
-                    for (let j = 0; j < pts.length - 1; j++) {
-                        if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / (this.renderer.transform.k || 1)) { 
-                            hit = true; 
-                            break; 
-                        }
-                    }
-                } else {
-                    if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
-                }
-
-                if (hit) { 
-                    fid = e.id; 
-                    break; 
-                }
-            }
-
-            if (fid !== this.hoveredEntityId) {
-                this.hoveredEntityId = fid;
-                this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ? 
-                    (fid ? 'pointer' : 'not-allowed') : 
-                    (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
-                this.render();
-            }
-        } catch(error) {
-            console.error('Hover check failed:', error);
-            this.hoveredEntityId = null;
-        }
-    }
-
-    updateEntities() {
-        let cnt = 0;
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        const validEntities = [];
-
-        this.entities.forEach(ent => {
-            ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
-            if (ent.currentGeometry && ent.currentGeometry.length > 0) {
-                cnt++;
-                try {
-                    // Calculate BBox for Indexing with safety checks
-                    const bbox = getBoundingBox(ent.currentGeometry);
-                    
-                    // Ensure valid dimensions for spatial indexing
-                    if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
-                    if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
-
-                    ent.bbox = bbox; // Store for reuse
-
-                    // Track World Bounds
-                    if (bbox.minX < minX) minX = bbox.minX;
-                    if (bbox.minY < minY) minY = bbox.minY;
-                    if (bbox.maxX > maxX) maxX = bbox.maxX;
-                    if (bbox.maxY > maxY) maxY = bbox.maxY;
-
-                    validEntities.push(ent);
-                } catch(e) {
-                    console.warn(`Failed to calculate bbox for entity ${ent.id}:`, e);
-                }
-            }
-        });
-
-        // Rebuild Quadtree with safety checks
-        if (minX === Infinity) { 
-            minX = -1000; maxX = 1000; minY = -1000; maxY = 1000; 
-        }
-        
-        const margin = 100;
-        this.currentWorldBounds = {
-            x: minX - margin,
-            y: minY - margin,
-            w: (maxX - minX) + margin * 2,
-            h: (maxY - minY) + margin * 2
+        // Use Spatial Index for Hit Testing
+        const searchSize = 20 / (this.renderer.transform.k || 1); // Prevent division by zero
+        const searchBox = {
+            x: wp.x - searchSize / 2,
+            y: wp.y - searchSize / 2,
+            w: searchSize,
+            h: searchSize
         };
 
-        try {
-            this.spatialIndex = new Quadtree(this.currentWorldBounds);
-            validEntities.forEach(ent => {
-                if (ent.bbox) {
-                    this.spatialIndex.insert({
-                        x: ent.bbox.x,
-                        y: ent.bbox.y,
-                        w: ent.bbox.w,
-                        h: ent.bbox.h,
-                        entity: ent
-                    });
-                }
-            });
-        } catch(e) {
-            console.error('Failed to rebuild spatial index:', e);
-            this.spatialIndex = null; // Fallback to no index
-        }
-
-        const d = document.querySelector('.debug-info');
-        if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
-    }
-
-    render() {
-        // VIEWPORT CULLING
-        let entitiesToDraw = this.entities; // Default to all if check fails
-
-        if (this.spatialIndex && this.renderer.width > 0) {
+        let candidates = [];
+        if (this.spatialIndex) {
             try {
-                // Inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
-                const tl = this.renderer.toWorld(0, 0);
-                const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
-                const viewportBox = {
-                    x: tl.x,
-                    y: tl.y,
-                    w: br.x - tl.x,
-                    h: br.y - tl.y
-                };
-
-                // Retrieve only visible entities
-                const visibleNodes = this.spatialIndex.retrieve(viewportBox);
-                entitiesToDraw = visibleNodes.map(n => n.entity).filter(e => e);
-            } catch(e) {
-                console.warn('Viewport culling failed, rendering all entities:', e);
+                const results = this.spatialIndex.retrieve(searchBox);
+                candidates = results.map(r => r.entity).filter(e => e && e.visible);
+            } catch (e) {
+                console.warn('Spatial index query failed:', e);
+                // Fallback to full entity list
+                candidates = this.entities.filter(e => e && e.visible);
             }
+        } else {
+            // Fallback if index not ready
+            candidates = this.entities.filter(e => e && e.visible);
         }
 
-        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+        // Sort candidates for Z-order
+        const sorted = candidates.sort((a, b) => {
+            const typeScore = (ent) => {
+                if (!ent) return 0;
+                if (ent.currentGeometry && ent.currentGeometry.length === 1) return 100;
+                if (ent.type === 'water') return 50;
+                return 0;
+            };
+            const catScore = (ent) => {
+                if (!ent || !ent.category) return 0;
+                if (ent.category === 'linguistic' || ent.category === 'cultural') return 80;
+                return 0;
+            };
+            return (catScore(a) + typeScore(a)) - (catScore(b) + typeScore(b));
+        });
 
-        // Draw draft with safety check
-        if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
-            if (typeof this.renderer.drawDraft === 'function') {
-                try {
-                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
-                } catch(e) {
-                    console.warn('Draft rendering failed:', e);
+        for (let i = sorted.length - 1; i >= 0; i--) {
+            const e = sorted[i];
+            if (!e || !e.currentGeometry || e.currentGeometry.length === 0) continue;
+
+            let hit = false;
+            if (e.currentGeometry.length === 1) {
+                if (distance(wp, e.currentGeometry[0]) < 10 / (this.renderer.transform.k || 1)) hit = true;
+            } else if (e.type === 'river') {
+                const pts = e.currentGeometry;
+                for (let j = 0; j < pts.length - 1; j++) {
+                    if (distanceToSegment(wp, pts[j], pts[j + 1]) < 5 / (this.renderer.transform.k || 1)) {
+                        hit = true;
+                        break;
+                    }
                 }
+            } else {
+                if (isPointInPolygon(wp, e.currentGeometry)) hit = true;
+            }
+
+            if (hit) {
+                fid = e.id;
+                break;
+            }
+        }
+
+        if (fid !== this.hoveredEntityId) {
+            this.hoveredEntityId = fid;
+            this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ?
+                (fid ? 'pointer' : 'not-allowed') :
+                (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
+            this.render();
+        }
+    } catch (error) {
+        console.error('Hover check failed:', error);
+        this.hoveredEntityId = null;
+    }
+}
+
+updateEntities() {
+    let cnt = 0;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const validEntities = [];
+
+    this.entities.forEach(ent => {
+        ent.currentGeometry = ent.getGeometryAtYear(this.currentYear);
+        if (ent.currentGeometry && ent.currentGeometry.length > 0) {
+            cnt++;
+            try {
+                // Calculate BBox for Indexing with safety checks
+                const bbox = getBoundingBox(ent.currentGeometry);
+
+                // Ensure valid dimensions for spatial indexing
+                if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
+                if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
+
+                ent.bbox = bbox; // Store for reuse
+
+                // Track World Bounds
+                if (bbox.minX < minX) minX = bbox.minX;
+                if (bbox.minY < minY) minY = bbox.minY;
+                if (bbox.maxX > maxX) maxX = bbox.maxX;
+                if (bbox.maxY > maxY) maxY = bbox.maxY;
+
+                validEntities.push(ent);
+            } catch (e) {
+                console.warn(`Failed to calculate bbox for entity ${ent.id}:`, e);
+            }
+        }
+    });
+
+    // Rebuild Quadtree with safety checks
+    if (minX === Infinity) {
+        minX = -1000; maxX = 1000; minY = -1000; maxY = 1000;
+    }
+
+    const margin = 100;
+    this.currentWorldBounds = {
+        x: minX - margin,
+        y: minY - margin,
+        w: (maxX - minX) + margin * 2,
+        h: (maxY - minY) + margin * 2
+    };
+
+    try {
+        this.spatialIndex = new Quadtree(this.currentWorldBounds);
+        validEntities.forEach(ent => {
+            if (ent.bbox) {
+                this.spatialIndex.insert({
+                    x: ent.bbox.x,
+                    y: ent.bbox.y,
+                    w: ent.bbox.w,
+                    h: ent.bbox.h,
+                    entity: ent
+                });
+            }
+        });
+    } catch (e) {
+        console.error('Failed to rebuild spatial index:', e);
+        this.spatialIndex = null; // Fallback to no index
+    }
+
+    const d = document.querySelector('.debug-info');
+    if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
+}
+
+render() {
+    // VIEWPORT CULLING
+    let entitiesToDraw = this.entities; // Default to all if check fails
+
+    if (this.spatialIndex && this.renderer.width > 0) {
+        try {
+            // Inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
+            const tl = this.renderer.toWorld(0, 0);
+            const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
+            const viewportBox = {
+                x: tl.x,
+                y: tl.y,
+                w: br.x - tl.x,
+                h: br.y - tl.y
+            };
+
+            // Retrieve only visible entities
+            const visibleNodes = this.spatialIndex.retrieve(viewportBox);
+            entitiesToDraw = visibleNodes.map(n => n.entity).filter(e => e);
+        } catch (e) {
+            console.warn('Viewport culling failed, rendering all entities:', e);
+        }
+    }
+
+    this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+
+    // Draw draft with safety check
+    if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
+        if (typeof this.renderer.drawDraft === 'function') {
+            try {
+                this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+            } catch (e) {
+                console.warn('Draft rendering failed:', e);
             }
         }
     }
+}
 
-    openInfoPanel() {
-        if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (ent) {
-            this.infoPanel.update(ent);
-            this.infoPanel.show();
-        }
+openInfoPanel() {
+    if (!this.selectedEntityId) return;
+    const ent = this.entities.find(e => e.id === this.selectedEntityId);
+    if (ent) {
+        this.infoPanel.update(ent);
+        this.infoPanel.show();
     }
+}
 
-    startEditing(id) {
-        this.selectEntity(id, true);
-        this.setActiveTool('transform');
-    }
+startEditing(id) {
+    this.selectEntity(id, true);
+    this.setActiveTool('transform');
+}
 }
 
 // Global hook

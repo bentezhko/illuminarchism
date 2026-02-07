@@ -179,6 +179,11 @@ export default class MedievalRenderer {
 
         this.drawGrid();
 
+        // 0. DRAW REFERENCE LAYER (Underlay)
+        if (window.illuminarchismApp && window.illuminarchismApp.referenceShapes) {
+            this.drawReferenceLayer(window.illuminarchismApp.referenceShapes);
+        }
+
         // FIXED: Safe spread and sort
         const sorted = [...entities].sort((a, b) => {
             // Sorting only affects visual stacking relative to each other, not the render pipeline phase
@@ -528,5 +533,33 @@ export default class MedievalRenderer {
     hexToRgba(hex, a) {
         const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
         return `rgba(${r},${g},${b},${a})`;
+    }
+
+    drawReferenceLayer(shapes) {
+        if (!shapes || shapes.length === 0) return;
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.strokeStyle = '#00ffff'; // Cyan for high contrast visibility
+        ctx.lineWidth = 1 / this.transform.k;
+        ctx.setLineDash([4 / this.transform.k, 4 / this.transform.k]);
+        ctx.globalAlpha = 0.5;
+
+        shapes.forEach(shape => {
+            if (!shape.geometry || shape.geometry.length === 0) return;
+
+            ctx.beginPath();
+            if (shape.type === 'Point') {
+                const p = shape.geometry[0];
+                const r = 2 / this.transform.k;
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.stroke();
+            } else {
+                this.tracePathOnCtx(ctx, shape.geometry, shape.type === 'Polygon');
+                ctx.stroke();
+            }
+        });
+
+        ctx.restore();
     }
 }
