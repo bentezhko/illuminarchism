@@ -751,7 +751,7 @@ export default class MedievalRenderer {
         }
 
         // 3. Draw Ripples (On top of water, onto worldLayer)
-        // worldCtx already has transform applied from line 795
+        // worldCtx already has transform applied from lines 702-703
         this.drawCoastlineRipples(worldEntities, ctx);
 
         ctx.restore();
