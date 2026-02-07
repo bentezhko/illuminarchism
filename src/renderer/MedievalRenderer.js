@@ -199,19 +199,35 @@ export default class MedievalRenderer {
             entities = [];
         }
 
-        this.clear();
-        const ctx = this.ctx;
         const t = this.transform;
 
+        // --- CACHE INVALIDATION ---
+        // If transform changed, the cached world layer is no longer valid
+        if (!this.lastTransform ||
+            this.lastTransform.x !== t.x ||
+            this.lastTransform.y !== t.y ||
+            this.lastTransform.k !== t.k) {
+            this.worldLayerValid = false;
+            this.lastTransform = { ...t };
+        }
+
+        this.clear();
+        const ctx = this.ctx;
+
+        // FIXED: Grid should be drawn relative to world transform
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
-
         this.drawGrid();
+        ctx.restore();
 
         // 0. DRAW REFERENCE LAYER (Underlay)
         if (window.illuminarchismApp && window.illuminarchismApp.referenceShapes) {
+            ctx.save();
+            ctx.translate(t.x, t.y);
+            ctx.scale(t.k, t.k);
             this.drawReferenceLayer(window.illuminarchismApp.referenceShapes);
+            ctx.restore();
         }
 
         // FIXED: Safe spread and sort
@@ -234,6 +250,10 @@ export default class MedievalRenderer {
         ctx.restore();
 
         // 4. DRAW LABELS & UI OVERLAYS (Dynamic)
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.scale(t.k, t.k);
+
         sorted.forEach(ent => {
             if (!ent || !ent.currentGeometry || !ent.visible) return;
             const isHovered = ent.id === hoveredId;
@@ -251,7 +271,7 @@ export default class MedievalRenderer {
                 ctx.lineWidth = 2 / t.k;
                 ctx.setLineDash([10 / t.k, 5 / t.k]);
                 ctx.beginPath();
-                this.tracePath(ent.currentGeometry, true);
+                this.tracePathOnCtx(ctx, ent.currentGeometry, true);
                 ctx.stroke();
                 ctx.restore();
             }
@@ -394,12 +414,12 @@ export default class MedievalRenderer {
         if (pattern && ent.category !== 'cultural') {
             ctx.fillStyle = pattern;
             ctx.beginPath();
-            this.tracePath(pts, true);
+            this.tracePathOnCtx(ctx, pts, true);
             ctx.fill();
         }
 
         ctx.beginPath();
-        this.tracePath(pts, true);
+        this.tracePathOnCtx(ctx, pts, true);
         if (isSelected) {
             ctx.shadowColor = '#000'; ctx.shadowBlur = 10;
             ctx.lineWidth *= 1.5;
@@ -539,13 +559,6 @@ export default class MedievalRenderer {
     }
 
 
-
-    tracePath(pts, close) {
-        if (!pts.length) return;
-        this.ctx.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < pts.length; i++) this.ctx.lineTo(pts[i].x, pts[i].y);
-        if (close) this.ctx.closePath();
-    }
 
     tracePathOnCtx(ctx, pts, close) {
         if (!pts.length) return;
@@ -738,16 +751,9 @@ export default class MedievalRenderer {
         }
 
         // 3. Draw Ripples (On top of water, onto worldLayer)
-        // Need to restore transform for ripples as they use tracePathOnCtx which expects transformed context?
-        // Wait, drawCoastlineRipples calls tracePathOnCtx.
-        // We are currently in worldCtx with transform applied? 
-        // No, we cleared transform for water compositing (lines 821-822).
-        // Let's re-apply transform for ripples.
-        ctx.translate(t.x, t.y);
-        ctx.scale(t.k, t.k);
-
+        // worldCtx already has transform applied from line 795
         this.drawCoastlineRipples(worldEntities, ctx);
 
-        ctx.restore(); // Restore initial save (lines 688)
+        ctx.restore();
     }
 }
