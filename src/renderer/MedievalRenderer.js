@@ -221,6 +221,9 @@ export default class MedievalRenderer {
         });
 
         // --- LAYER CACHING LOGIC ---
+        // DEBUG: Force invalidation every frame
+        this.worldLayerValid = false;
+
         // If the cache is invalid (or first run), re-render the static world
         if (!this.worldLayerValid) {
             this.renderWorldLayer(sorted, t);
@@ -351,9 +354,11 @@ export default class MedievalRenderer {
             ctx.fillStyle = this.hexToRgba(ent.color, 0.05); // Very faint wash
         } else {
             ctx.setLineDash([]);
-            ctx.strokeStyle = '#2b2118';
-            ctx.lineWidth = 1.5 / this.transform.k;
-            // STRONG OPACITY: 0.6 base, 0.8 hover/select
+            // DEBUG: Red Outline
+            ctx.strokeStyle = '#ff0000';
+            ctx.lineWidth = 2 / this.transform.k;
+
+            // STRONG OPACITY
             let alpha = (isSelected || isHovered) ? 0.8 : 0.6;
             ctx.fillStyle = this.hexToRgba(ent.color, alpha);
         }
@@ -369,7 +374,8 @@ export default class MedievalRenderer {
             // For performance, maybe only roughness if k > X?
             // But consistent look is better.
             // But consistent look is better.
-            this.traceRoughPath(pts, true, ctx);
+            // DEBUG: Use simple path
+            this.tracePathOnCtx(ctx, pts, true);
 
             // Land Shadow / Glow
             if (ent.type === 'polity') {
