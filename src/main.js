@@ -77,6 +77,9 @@ export default class IlluminarchismApp {
         const ent = this.entities.find(e => e.id === this.selectedEntityId);
         if (!ent) return;
 
+        // Invalidate cache during transform
+        if (this.renderer) this.renderer.invalidateWorldLayer();
+
         // Calculate Delta
         const dx = currentMouse.x - startMouse.x;
         const dy = currentMouse.y - startMouse.y;
@@ -801,6 +804,10 @@ export default class IlluminarchismApp {
             ent.name = document.getElementById('info-name-input').value;
             ent.color = document.getElementById('info-color-input').value;
             ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
+
+            // Invalidate cache as styling changed
+            if (this.renderer) this.renderer.worldLayerValid = false;
+
             this.renderRegistry();
             this.render();
         }
@@ -817,6 +824,7 @@ export default class IlluminarchismApp {
         const ent = this.entities.find(e => e.id === this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
             ent.currentGeometry[index] = newPos;
+            if (this.renderer) this.renderer.worldLayerValid = false;
             this.render();
         }
     }
@@ -939,6 +947,9 @@ export default class IlluminarchismApp {
     }
 
     updateEntities() {
+        // Invalidate renderer cache as geometry or visibility might have changed
+        if (this.renderer) this.renderer.worldLayerValid = false;
+
         let cnt = 0;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         const validEntities = [];
