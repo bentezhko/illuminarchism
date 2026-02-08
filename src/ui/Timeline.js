@@ -428,7 +428,7 @@ export default class Timeline {
 
             // Create connection
             const conn = {
-                id: 'conn_' + Date.now(),
+                id: this.app.exporter.generateId(),
                 fromId: this.linkSource.id,
                 fromSide: this.linkSource.side,
                 targetId: entityId,
