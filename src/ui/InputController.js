@@ -164,11 +164,9 @@ export default class InputController {
 
                 // Priority 4: Default Navigation (Pan) & Deselection
                 // If not in a specific modal tool, Left Click creates Pan interaction
-                if (this.app.activeTool === 'pan' || this.app.activeTool === 'transform' || this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'erase') {
-                    // Any left-click on empty area deselects
-                    if (!this.app.hoveredEntityId) {
-                        this.app.deselect();
-                    }
+                const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
+                if (deselectOnClickEmptyTools.includes(this.app.activeTool) && !this.app.hoveredEntityId) {
+                    this.app.deselect();
                 }
 
                 this.isDragging = true;
