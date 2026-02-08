@@ -1,3 +1,4 @@
+
 import MedievalRenderer from './renderer/MedievalRenderer.js';
 import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
@@ -41,9 +42,6 @@ export default class IlluminarchismApp {
         this.draftCursor = null;
         this.activeTool = 'pan';
 
-        // Reference Layer State
-        this.referenceShapes = []; // Array of { geometry: [{x,y}...], type: 'LineString'|'Polygon' }
-        this.showReferenceLayer = true;
 
         // New ontology-aware drawing state
         this.drawDomain = 'political';  // Level 1: Domain
@@ -75,6 +73,9 @@ export default class IlluminarchismApp {
         if (!this.selectedEntityId) return;
         const ent = this.entities.find(e => e.id === this.selectedEntityId);
         if (!ent) return;
+
+        // Invalidate cache during transform
+        if (this.renderer) this.renderer.invalidateWorldLayer();
 
         // Calculate Delta
         const dx = currentMouse.x - startMouse.x;
@@ -362,6 +363,17 @@ export default class IlluminarchismApp {
         return map[typology] || typology;
     }
 
+    /**
+     * Helper to execute logic only if an entity is selected
+     */
+    _withSelectedEntity(callback) {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(en => en.id === this.selectedEntityId);
+        if (ent) {
+            callback(ent);
+        }
+    }
+
 
 
     // NEW HELPER: Safe Add Listener
@@ -469,16 +481,121 @@ export default class IlluminarchismApp {
             fileInput.addEventListener('change', (e) => this.loader.loadFromJSON(e));
         }
 
-        // Reference Import
-        const refInput = document.getElementById('ref-input');
-        this.safeAddListener('btn-import-ref', 'click', () => { if (refInput) refInput.click(); });
-        if (refInput) {
-            refInput.addEventListener('change', (e) => this.loader.loadReferenceFromJSON(e));
-        }
 
-        // Initial render of notches if anything selected (unlikely on load but good practice)
-        this.timeline.renderNotches();
+        // Context Menu elements
+        this.ctxMenu = document.getElementById('context-menu');
+        this.ctxHeader = document.getElementById('ctx-header');
+        this.ctxNameInput = document.getElementById('ctx-name-input');
+        this.ctxType = document.getElementById('ctx-type');
+        this.ctxStartYear = document.getElementById('ctx-start-year');
+        this.ctxEndYear = document.getElementById('ctx-end-year');
+        this.ctxColorInput = document.getElementById('ctx-color-input');
+        this.ctxHatchInput = document.getElementById('ctx-hatch-input');
+
+        // Context Menu Listeners
+        this.safeAddListener('ctx-name-input', 'input', (e) => {
+            this._withSelectedEntity(ent => {
+                ent.name = e.target.value;
+                if (this.ctxHeader) this.ctxHeader.textContent = ent.name;
+                if (this.renderer) this.renderer.invalidateWorldLayer();
+                this.render();
+            });
+        });
+
+        this.safeAddListener('ctx-name-input', 'change', () => {
+            this.renderRegistry();
+        });
+
+        this.safeAddListener('ctx-color-input', 'input', (e) => {
+            this._withSelectedEntity(ent => {
+                ent.color = e.target.value;
+                if (this.renderer) this.renderer.invalidateWorldLayer();
+                this.render();
+            });
+        });
+
+        this.safeAddListener('ctx-hatch-input', 'change', (e) => {
+            this._withSelectedEntity(ent => {
+                ent.hatchStyle = e.target.value;
+                if (this.renderer) this.renderer.invalidateWorldLayer();
+                this.render();
+            });
+        });
+
+        this.safeAddListener('ctx-start-year', 'change', (e) => {
+            this._withSelectedEntity(ent => {
+                if (ent.validRange) {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                        ent.validRange.start = val;
+                        this.updateEntities();
+                        this.render();
+                    }
+                }
+            });
+        });
+
+        this.safeAddListener('ctx-end-year', 'change', (e) => {
+            this._withSelectedEntity(ent => {
+                if (ent.validRange) {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                        ent.validRange.end = val;
+                        this.updateEntities();
+                        this.render();
+                    }
+                }
+            });
+        });
+
+        // Initial render of notches
+        if (this.timeline) this.timeline.renderNotches();
     }
+
+    showContextMenu(ent, x, y) {
+        if (!this.ctxMenu) return;
+
+        // Ensure the entity is selected for the listeners to work on the correct one
+        this.selectedEntityId = ent.id;
+
+        // Populate Data
+        if (this.ctxHeader) this.ctxHeader.textContent = ent.name || "Entity Details";
+        if (this.ctxNameInput) this.ctxNameInput.value = ent.name || "";
+        if (this.ctxType) this.ctxType.textContent = ent.type === 'polity' ? (ent.typology || 'Polity') : ent.type;
+
+        // Span
+        const start = ent.validRange ? ent.validRange.start : -10000;
+        const end = ent.validRange ? ent.validRange.end : 2025;
+        if (this.ctxStartYear) this.ctxStartYear.value = Number.isFinite(start) ? start : -10000;
+        if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : 2025;
+
+        // Color
+        if (this.ctxColorInput) this.ctxColorInput.value = ent.color || '#000000';
+
+        // Texture
+        if (this.ctxHatchInput) this.ctxHatchInput.value = ent.hatchStyle || 'solid';
+
+        // Position and Show
+        this.ctxMenu.style.display = 'block';
+
+        // Adjust position if out of bounds
+        const rect = this.ctxMenu.getBoundingClientRect();
+        let posX = x;
+        let posY = y;
+
+        if (posX + rect.width > window.innerWidth) posX = x - rect.width;
+        if (posY + rect.height > window.innerHeight) posY = y - rect.height;
+
+        this.ctxMenu.style.left = `${posX}px`;
+        this.ctxMenu.style.top = `${posY}px`;
+    }
+
+    hideContextMenu() {
+        if (this.ctxMenu) {
+            this.ctxMenu.style.display = 'none';
+        }
+    }
+
 
     renderRegistry() {
         this.registry.render();
@@ -690,7 +807,7 @@ export default class IlluminarchismApp {
         this.selectedEntityId = null;
         document.getElementById('info-panel').style.display = 'none';
         this.renderTimelineNotches(); // Clear notches
-        if (this.activeTool === 'draw') this.setTool('draw');
+        if (this.activeTool === 'draw') this.setActiveTool('draw');
         this.render();
     }
 
@@ -745,21 +862,19 @@ export default class IlluminarchismApp {
     }
 
     updateSelectedMetadata() {
-        if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (ent) {
+        this._withSelectedEntity(ent => {
             ent.name = document.getElementById('info-name-input').value;
             ent.color = document.getElementById('info-color-input').value;
             ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
+
+            // Invalidate cache as styling changed
+            if (this.renderer) this.renderer.worldLayerValid = false;
+
             this.renderRegistry();
             this.render();
-        }
+        });
     }
 
-    setReferenceShapes(shapes) {
-        this.referenceShapes = shapes;
-        this.render();
-    }
 
     // Vertex Editing Logic
     editVertex(index, newPos) {
@@ -767,6 +882,7 @@ export default class IlluminarchismApp {
         const ent = this.entities.find(e => e.id === this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
             ent.currentGeometry[index] = newPos;
+            if (this.renderer) this.renderer.invalidateWorldLayer();
             this.render();
         }
     }
@@ -804,14 +920,16 @@ export default class IlluminarchismApp {
     checkHover(wp) {
         // Safety checks to prevent crashes
         if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
-        // CHANGED: Allow hover in pan mode for unified Navigate tool
-        if (this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform') return;
+
+        // We still want to know what's under the mouse for deselection logic,
+        // but we might skip cursor updates or heavy rendering in certain tools.
+        const isModalTool = this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform';
 
         try {
             let fid = null;
 
             // Use Spatial Index for Hit Testing
-            const searchSize = 20 / (this.renderer.transform.k || 1); // Prevent division by zero
+            const searchSize = 25 / (this.renderer.transform.k || 1); // Prevent division by zero
             const searchBox = {
                 x: wp.x - searchSize / 2,
                 y: wp.y - searchSize / 2,
@@ -856,7 +974,7 @@ export default class IlluminarchismApp {
 
                 let hit = false;
                 if (e.currentGeometry.length === 1) {
-                    if (distance(wp, e.currentGeometry[0]) < 10 / (this.renderer.transform.k || 1)) hit = true;
+                    if (distance(wp, e.currentGeometry[0]) < 25 / (this.renderer.transform.k || 1)) hit = true;
                 } else if (e.type === 'river') {
                     const pts = e.currentGeometry;
                     for (let j = 0; j < pts.length - 1; j++) {
@@ -877,9 +995,13 @@ export default class IlluminarchismApp {
 
             if (fid !== this.hoveredEntityId) {
                 this.hoveredEntityId = fid;
-                this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ?
-                    (fid ? 'pointer' : 'not-allowed') :
-                    (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
+
+                // Only update cursor if not in a modal tool that manages its own cursor
+                if (!isModalTool) {
+                    this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ?
+                        (fid ? 'pointer' : 'not-allowed') :
+                        (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
+                }
                 this.render();
             }
         } catch (error) {
@@ -889,6 +1011,9 @@ export default class IlluminarchismApp {
     }
 
     updateEntities() {
+        // Invalidate renderer cache as geometry or visibility might have changed
+        if (this.renderer) this.renderer.worldLayerValid = false;
+
         let cnt = 0;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         const validEntities = [];
@@ -1010,5 +1135,13 @@ export default class IlluminarchismApp {
 
 // Global hook
 window.onload = () => {
-    window.illuminarchismApp = new IlluminarchismApp();
+    try {
+        window.illuminarchismApp = new IlluminarchismApp();
+        // Remove loading overlay if successful
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'none';
+    } catch (e) {
+        console.error("Initialization Failed:", e);
+        alert("App Initialization Failed: " + e.message + "\nCheck console for details.");
+    }
 };

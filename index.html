@@ -30,10 +30,8 @@
             <div class="file-controls">
                 <button class="btn-text" id="btn-save" title="Download .atlas JSON">Save</button>
                 <button class="btn-text" id="btn-load" title="Upload .atlas JSON">Load</button>
-                <button class="btn-text" id="btn-import-ref" title="Import GeoJSON Reference">Ref</button>
                 <button id="btn-ontology" title="View Taxonomy">Help</button>
                 <input type="file" id="file-input" accept=".json,.atlas">
-                <input type="file" id="ref-input" accept=".json,.geojson" style="display:none;">
             </div>
         </header>
 
@@ -203,6 +201,50 @@
     <div class="debug-info pointer-events-auto">
         Render: Watercolor/Ink | Mode: Interactive | Entities: Loading...
     </div>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">Loading Chronicle...</div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu" style="display: none;">
+        <div class="menu-header" id="ctx-header">Entity Details</div>
+        <div class="menu-content">
+            <div class="menu-row">
+                <label>Name:</label>
+                <input type="text" id="ctx-name-input" class="ctx-input">
+            </div>
+            <div class="menu-row">
+                <label>Type:</label>
+                <span id="ctx-type"></span>
+            </div>
+            <div class="menu-row">
+                <label>Span:</label>
+                <div style="display:flex; gap: 4px; align-items:center;">
+                    <input type="number" id="ctx-start-year" class="ctx-input-year" title="Start Year">
+                    <span style="font-size: 0.8rem;">to</span>
+                    <input type="number" id="ctx-end-year" class="ctx-input-year" title="End Year">
+                </div>
+            </div>
+            <div class="menu-row">
+                <label>Color:</label>
+                <input type="color" id="ctx-color-input">
+            </div>
+            <div class="menu-row">
+                <label>Texture:</label>
+                <select id="ctx-hatch-input" class="ctx-input">
+                    <option value="solid">Solid</option>
+                    <option value="diagonal-right">Diagonal (Right)</option>
+                    <option value="diagonal-left">Diagonal (Left)</option>
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                    <option value="cross">Cross Hatch</option>
+                    <option value="saltire">Saltire (X)</option>
+                    <option value="stipple">Stipple (Dots)</option>
+                    <option value="waves">Undy (Waves)</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <canvas id="map-canvas"></canvas>
@@ -210,3 +252,4 @@
 </body>
 
 </html>
+```

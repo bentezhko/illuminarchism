@@ -69,32 +69,51 @@ export default class InputController {
         c.addEventListener('mousedown', (e) => {
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
+            // Force hover check on click to ensure hoveredEntityId is up to date
+            this.app.checkHover(wp);
+
             // Left Click (button 0)
             if (e.button === 0) {
 
                 // Priority 0: Transform Tool
                 if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
                     const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
-                    if (ent && ent.currentGeometry && ent.type !== 'city') {
-                        const bbox = getBoundingBox(ent.currentGeometry);
-                        // Check handles
-                        const handle = this.getTransformHandle(wp, bbox, this.renderer.transform.k);
-                        if (handle) {
-                            this.isDragging = true;
-                            this.transformMode = handle;
-                            this.transformStart = wp;
-                            this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
-                            c.style.cursor = 'nwse-resize';
-                            return;
-                        }
-                        // Check Inside Box (Move)
-                        if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
-                            this.isDragging = true;
-                            this.transformMode = 'move';
-                            this.transformStart = wp;
-                            this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
-                            c.style.cursor = 'move';
-                            return;
+                    if (ent && ent.currentGeometry) {
+                        const isPoint = ent.currentGeometry.length === 1;
+
+                        if (isPoint) {
+                            // For points, only 'move' is supported, and we check distance to the point
+                            const pt = ent.currentGeometry[0];
+                            const d = distance(wp, pt);
+                            if (d < 25 / this.renderer.transform.k) {
+                                this.isDragging = true;
+                                this.transformMode = 'move';
+                                this.transformStart = wp;
+                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
+                                c.style.cursor = 'move';
+                                return;
+                            }
+                        } else {
+                            const bbox = getBoundingBox(ent.currentGeometry);
+                            // Check handles
+                            const handle = this.getTransformHandle(wp, bbox, this.renderer.transform.k);
+                            if (handle) {
+                                this.isDragging = true;
+                                this.transformMode = handle;
+                                this.transformStart = wp;
+                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
+                                c.style.cursor = 'nwse-resize';
+                                return;
+                            }
+                            // Check Inside Box (Move)
+                            if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
+                                this.isDragging = true;
+                                this.transformMode = 'move';
+                                this.transformStart = wp;
+                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
+                                c.style.cursor = 'move';
+                                return;
+                            }
                         }
                     }
                 }
@@ -143,8 +162,13 @@ export default class InputController {
                     return;
                 }
 
-                // Priority 4: Default Navigation (Pan)
+                // Priority 4: Default Navigation (Pan) & Deselection
                 // If not in a specific modal tool, Left Click creates Pan interaction
+                const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
+                if (deselectOnClickEmptyTools.includes(this.app.activeTool) && !this.app.hoveredEntityId) {
+                    this.app.deselect();
+                }
+
                 this.isDragging = true;
                 this.lastX = e.clientX;
                 this.lastY = e.clientY;
@@ -183,28 +207,39 @@ export default class InputController {
             // Perform a hit test right now
             try {
                 this.app.checkHover(wp);
-            } catch(err) {
+            } catch (err) {
                 console.error('checkHover failed on right-click:', err);
             }
 
             if (this.app.hoveredEntityId) {
-                this.app.selectEntity(this.app.hoveredEntityId, true); // Select
-                this.app.openInfoPanel(); // Open "Details Overview"
-                // The Info Panel will contain the "Edit" button to switch mode
+                const ent = this.app.entities.find(e => e.id === this.app.hoveredEntityId);
+                if (ent) {
+                    this.app.selectEntity(ent.id, true);
+                    this.app.focusSelectedEntity();
+                    this.app.showContextMenu(ent, e.clientX, e.clientY);
+                }
             } else {
-                this.app.deselect();
-                // Optionally close info panel?
-                if (this.app.infoPanel) this.app.infoPanel.hide();
+                this.app.hideContextMenu();
+            }
+        });
+
+        // Hide context menu on click elsewhere
+        window.addEventListener('click', (e) => {
+            // If click is inside context menu, don't hide? 
+            // Actually, usually interacting with menu hides it or keeps it.
+            // For now, any click outside menu hides it.
+            if (!e.target.closest('#context-menu')) {
+                this.app.hideContextMenu();
             }
         });
 
         // FIXED: Mousemove with better bounds checking and drag prevention
         c.addEventListener('mousemove', (e) => {
             if (this.app.currentView !== 'map') return;
-            
+
             // Safety check: ensure we have valid coordinates
             if (typeof e.offsetX !== 'number' || typeof e.offsetY !== 'number') return;
-            
+
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
             // Handle Transform (Move/Resize)
@@ -241,11 +276,11 @@ export default class InputController {
             }
 
             // Drawing mode cursor update
-            if (this.app.activeTool === 'draw') { 
-                this.app.updateDraftCursor(wp); 
-                return; 
+            if (this.app.activeTool === 'draw') {
+                this.app.updateDraftCursor(wp);
+                return;
             }
-            
+
             // CRITICAL FIX: Enable hover detection in pan mode when NOT dragging (unified Navigate tool)
             if (!this.isDragging && (this.app.activeTool === 'pan' || this.app.activeTool === 'erase')) {
                 const now = Date.now();
@@ -253,7 +288,7 @@ export default class InputController {
                     this.hoverThrottle = now;
                     try {
                         this.app.checkHover(wp);
-                    } catch(err) {
+                    } catch (err) {
                         console.error('checkHover failed:', err);
                         // Reset hover state on error
                         this.app.hoveredEntityId = null;
@@ -304,7 +339,7 @@ export default class InputController {
     initTimelineInteraction() {
         const tlContainer = document.getElementById('view-timeline');
         if (!tlContainer) return; // Safety check
-        
+
         let isDraggingBar = false;
         let dragTarget = null;
         let dragType = null; // 'move', 'start', 'end'
@@ -339,13 +374,13 @@ export default class InputController {
 
             const trackEl = document.querySelector('.timeline-bar-track');
             if (!trackEl) return;
-            
+
             const trackWidth = trackEl.offsetWidth;
             const epochStartEl = document.getElementById('epoch-start');
             const epochEndEl = document.getElementById('epoch-end');
-            
+
             if (!epochStartEl || !epochEndEl) return;
-            
+
             const epochStart = parseInt(epochStartEl.value);
             const epochEnd = parseInt(epochEndEl.value);
             const totalYears = epochEnd - epochStart;

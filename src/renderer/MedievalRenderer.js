@@ -1,4 +1,5 @@
 import { getCentroid, getBoundingBox } from '../core/math.js';
+import { fbm, perturbPoint } from './filters.js';
 
 export default class MedievalRenderer {
     constructor(canvasId) {
@@ -10,6 +11,10 @@ export default class MedievalRenderer {
 
         this.waterLayer = document.createElement('canvas');
         this.waterCtx = this.waterLayer.getContext('2d');
+
+        this.worldLayer = document.createElement('canvas');
+        this.worldCtx = this.worldLayer.getContext('2d');
+        this.worldLayerValid = false;
 
         this.noisePattern = null;
         this.waterPattern = null;
@@ -35,8 +40,13 @@ export default class MedievalRenderer {
         this.waterLayer.width = this.width;
         this.waterLayer.height = this.height;
 
+        this.worldLayer.width = this.width;
+        this.worldLayer.height = this.height;
+        this.worldLayerValid = false;
+
         this.createParchmentTexture();
         this.createWaterTexture();
+        this.worldLayerValid = false; // Invalidate cache on resize
         if (window.illuminarchismApp) window.illuminarchismApp.render();
     }
 
@@ -100,22 +110,44 @@ export default class MedievalRenderer {
     }
 
     createParchmentTexture() {
-        const size = 256;
+        const size = 512;
         const c = document.createElement('canvas');
         c.width = size; c.height = size;
         const ctx = c.getContext('2d');
-        ctx.fillStyle = '#f3e9d2';
-        ctx.fillRect(0, 0, size, size);
-        const id = ctx.getImageData(0, 0, size, size);
-        const d = id.data;
-        for (let i = 0; i < d.length; i += 4) {
-            const n = (Math.random() - 0.5) * 15;
-            d[i] = Math.min(255, Math.max(0, d[i] + n));
-            d[i + 1] = Math.min(255, Math.max(0, d[i + 1] + n));
-            d[i + 2] = Math.min(255, Math.max(0, d[i + 2] + n));
+
+        const imageData = ctx.createImageData(size, size);
+        const data = imageData.data;
+
+        const baseColor = { r: 243, g: 233, b: 210 }; // #f3e9d2
+
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                // Generate FBM noise for "cloudy" paper texture
+                // Scale coordinate to get good frequency
+                const n = fbm(x / 150, y / 150, 4, 0.5, 2);
+
+                // Map noise -1..1 to brightness variation
+                const brightness = 1 + (n * 0.15); // +/- 15% variation
+
+                // Add some high-frequency grain
+                const grain = (Math.random() - 0.5) * 0.05;
+
+                const i = (y * size + x) * 4;
+                const mod = brightness + grain;
+
+                data[i] = Math.min(255, Math.max(0, baseColor.r * mod));
+                data[i + 1] = Math.min(255, Math.max(0, baseColor.g * mod));
+                data[i + 2] = Math.min(255, Math.max(0, baseColor.b * mod));
+                data[i + 3] = 255;
+            }
         }
-        ctx.putImageData(id, 0, 0);
+
+        ctx.putImageData(imageData, 0, 0);
         this.noisePattern = this.ctx.createPattern(c, 'repeat');
+    }
+
+    invalidateWorldLayer() {
+        this.worldLayerValid = false;
     }
 
     createWaterTexture() {
@@ -158,6 +190,7 @@ export default class MedievalRenderer {
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.fillStyle = this.noisePattern || '#f3e9d2';
         this.ctx.fillRect(0, 0, this.width, this.height);
+        this.labelRegions = []; // Reset label collision registry
     }
 
     draw(entities, hoveredId, selectedId, activeTool, vertexHighlightIndex) {
@@ -169,20 +202,28 @@ export default class MedievalRenderer {
             entities = [];
         }
 
-        this.clear();
-        const ctx = this.ctx;
         const t = this.transform;
 
+        // --- CACHE INVALIDATION ---
+        // If transform changed, the cached world layer is no longer valid
+        if (!this.lastTransform ||
+            this.lastTransform.x !== t.x ||
+            this.lastTransform.y !== t.y ||
+            this.lastTransform.k !== t.k) {
+            this.worldLayerValid = false;
+            this.lastTransform = { ...t };
+        }
+
+        this.clear();
+        const ctx = this.ctx;
+
+        // FIXED: Grid should be drawn relative to world transform
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
-
         this.drawGrid();
+        ctx.restore();
 
-        // 0. DRAW REFERENCE LAYER (Underlay)
-        if (window.illuminarchismApp && window.illuminarchismApp.referenceShapes) {
-            this.drawReferenceLayer(window.illuminarchismApp.referenceShapes);
-        }
 
         // FIXED: Safe spread and sort
         const sorted = [...entities].sort((a, b) => {
@@ -190,64 +231,24 @@ export default class MedievalRenderer {
             return 0; // Maintain insertion/natural sort roughly
         });
 
-        const waterEntities = sorted.filter(e => e && e.type === 'water' && e.currentGeometry && e.visible);
-
-        // 1. DRAW EVERYTHING THAT IS NOT WATER (The "World" Layer)
-        const worldEntities = sorted.filter(e => e && e.type !== 'water' && e.visible);
-
-        // Sort within world layer: Polities < Rivers < Points < Overlays
-        worldEntities.sort((a, b) => {
-            const typeScore = (e) => {
-                if (e.type === 'polity') return 1;
-                if (e.type === 'river') return 2;
-                if (this._isPointEntity(e)) return 3;
-                if (['linguistic', 'cultural', 'faith'].includes(e.category)) return 4;
-                return 5;
-            }
-            return typeScore(a) - typeScore(b);
-        });
-
-        worldEntities.forEach(ent => {
-            if (!ent.currentGeometry) return;
-
-            const isHovered = ent.id === hoveredId;
-            const isSelected = ent.id === selectedId;
-
-            if (this._isPointEntity(ent)) {
-                this.drawPointMarker(ent, isHovered, isSelected);
-            } else if (ent.type === 'river') {
-                this.drawRiver(ent, isHovered, isSelected);
-            } else {
-                this.drawPolygon(ent, isHovered, isSelected);
-            }
-        });
-
-        // 2. DRAW WATER MASK (Opaque)
-        if (waterEntities.length > 0 && this.waterLayer.width > 0) {
-            this.waterCtx.clearRect(0, 0, this.width, this.height);
-            this.waterCtx.save();
-            this.waterCtx.translate(t.x, t.y);
-            this.waterCtx.scale(t.k, t.k);
-            this.waterCtx.fillStyle = '#000000';
-            this.waterCtx.beginPath();
-            waterEntities.forEach(ent => this.tracePathOnCtx(this.waterCtx, ent.currentGeometry, true));
-            this.waterCtx.fill();
-            this.waterCtx.restore();
-            this.waterCtx.save();
-            this.waterCtx.globalCompositeOperation = 'source-in';
-            this.waterCtx.fillStyle = this.waterPattern;
-            this.waterCtx.fillRect(0, 0, this.width, this.height);
-            this.waterCtx.restore();
-
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.shadowColor = 'rgba(43, 33, 24, 0.5)';
-            ctx.shadowBlur = 10;
-            try { ctx.drawImage(this.waterLayer, 0, 0); } catch (e) { }
-            ctx.restore();
+        // --- LAYER CACHING LOGIC ---
+        // If the cache is invalid (or first run), re-render the static world
+        if (!this.worldLayerValid) {
+            this.renderWorldLayer(sorted, t);
+            this.worldLayerValid = true;
         }
 
-        // 3. DRAW LABELS & UI OVERLAYS (Must be visible on top of water)
+        // Draw Cached World Layer
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform to draw screen-aligned canvas
+        ctx.drawImage(this.worldLayer, 0, 0);
+        ctx.restore();
+
+        // 4. DRAW LABELS & UI OVERLAYS (Dynamic)
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.scale(t.k, t.k);
+
         sorted.forEach(ent => {
             if (!ent || !ent.currentGeometry || !ent.visible) return;
             const isHovered = ent.id === hoveredId;
@@ -265,7 +266,7 @@ export default class MedievalRenderer {
                 ctx.lineWidth = 2 / t.k;
                 ctx.setLineDash([10 / t.k, 5 / t.k]);
                 ctx.beginPath();
-                this.tracePath(ent.currentGeometry, true);
+                this.tracePathOnCtx(ctx, ent.currentGeometry, true);
                 ctx.stroke();
                 ctx.restore();
             }
@@ -278,9 +279,37 @@ export default class MedievalRenderer {
         }
         if (activeTool === 'transform' && selectedId) {
             const ent = entities.find(e => e && e.id === selectedId);
-            if (ent && ent.currentGeometry && !this._isPointEntity(ent)) this.drawTransformBox(ent.currentGeometry);
+            if (ent && ent.currentGeometry) {
+                if (this._isPointEntity(ent)) {
+                    this.drawPointTransform(ent.currentGeometry[0]);
+                } else {
+                    this.drawTransformBox(ent.currentGeometry);
+                }
+            }
         }
 
+        ctx.restore();
+    }
+
+    drawPointTransform(pt) {
+        const ctx = this.ctx;
+        const t = this.transform;
+        const r = 10 / t.k;
+
+        ctx.save();
+        ctx.strokeStyle = '#2b2118';
+        ctx.lineWidth = 1 / t.k;
+        ctx.setLineDash([5 / t.k, 5 / t.k]);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Small "move" indicator handles
+        const hSize = 4 / t.k;
+        ctx.fillStyle = '#fff';
+        ctx.setLineDash([]);
+        ctx.fillRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
+        ctx.strokeRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
         ctx.restore();
     }
 
@@ -341,8 +370,8 @@ export default class MedievalRenderer {
         });
     }
 
-    drawPolygon(ent, isHovered, isSelected) {
-        const ctx = this.ctx;
+    drawPolygon(ent, isHovered, isSelected, targetCtx = null) {
+        const ctx = targetCtx || this.ctx;
         const pts = ent.currentGeometry;
         if (!pts.length) return;
 
@@ -367,29 +396,53 @@ export default class MedievalRenderer {
             ctx.setLineDash([]);
             ctx.strokeStyle = '#2b2118';
             ctx.lineWidth = 1.5 / this.transform.k;
-            let alpha = (isSelected || isHovered) ? 0.4 : 0.15;
+            // STRONG OPACITY: 0.6 base, 0.8 hover/select
+            let alpha = (isSelected || isHovered) ? 0.8 : 0.6;
             ctx.fillStyle = this.hexToRgba(ent.color, alpha);
         }
 
         // Get Pattern
+
         const pattern = this.getHatchPattern(ent.color, ent.hatchStyle);
 
         if (ent.category !== 'cultural') {
             ctx.beginPath();
-            this.tracePath(pts, true);
+            // Use rough path for "natural" look on Polities and Rivers, smooth for others?
+            // Actually, cultural borders often straight. But "ink" implied roughness.
+            // Let's roughness everything except maybe very specific things.
+            // For performance, maybe only roughness if k > X?
+            // But consistent look is better.
+            // But consistent look is better.
+            // FIX: Rough path causing invisibility. Reverting to simple path.
+            this.tracePathOnCtx(ctx, pts, true);
+
+            // Land Shadow / Glow
+            if (ent.type === 'polity') {
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+            }
+
             ctx.fill();
+
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
         }
 
         // Apply Pattern on top of wash
         if (pattern && ent.category !== 'cultural') {
             ctx.fillStyle = pattern;
             ctx.beginPath();
-            this.tracePath(pts, true);
+            this.tracePathOnCtx(ctx, pts, true);
             ctx.fill();
         }
 
         ctx.beginPath();
-        this.tracePath(pts, true);
+        this.tracePathOnCtx(ctx, pts, true);
         if (isSelected) {
             ctx.shadowColor = '#000'; ctx.shadowBlur = 10;
             ctx.lineWidth *= 1.5;
@@ -399,13 +452,13 @@ export default class MedievalRenderer {
         ctx.restore();
     }
 
-    drawRiver(ent, isHovered, isSelected) {
-        const ctx = this.ctx;
+    drawRiver(ent, isHovered, isSelected, targetCtx = null) {
+        const ctx = targetCtx || this.ctx;
         const pts = ent.currentGeometry;
         if (!pts.length) return;
 
         ctx.beginPath();
-        this.tracePath(pts, false);
+        this.traceRoughPath(pts, false, ctx);
         ctx.strokeStyle = isSelected ? '#8a3324' : ent.color;
         ctx.lineWidth = (isSelected ? 4 : 2.5) / this.transform.k;
         ctx.lineCap = 'round';
@@ -418,8 +471,8 @@ export default class MedievalRenderer {
         }
     }
 
-    drawPointMarker(ent, isHovered, isSelected) {
-        const ctx = this.ctx;
+    drawPointMarker(ent, isHovered, isSelected, targetCtx = null) {
+        const ctx = targetCtx || this.ctx;
         const pt = ent.currentGeometry[0];
         if (!pt) return;
         const size = 6 / this.transform.k;
@@ -459,15 +512,52 @@ export default class MedievalRenderer {
             cx = c.x; cy = c.y;
         }
 
+        let fontSize;
+        let font;
+        let baseSize = 14;
+        let style = '';
+
+        if (ent.category === 'faith') {
+            baseSize = 13;
+            style = 'italic bold';
+        } else if (this._isPointEntity(ent)) {
+            baseSize = 12;
+            style = 'bold';
+        } else if (ent.category === 'linguistic') {
+            style = 'italic';
+        }
+
+        fontSize = baseSize / this.transform.k;
+        font = `${style} ${fontSize}px "Cinzel"`.trim();
+
+        this.ctx.font = font;
+        this.ctx.textAlign = this._isPointEntity(ent) ? 'left' : 'center';
+
+        // Collision Detection
+        if (!isSelected && !this._isPointEntity(ent)) { // Always draw selected or points (points have icons)
+            const metrics = this.ctx.measureText(ent.name);
+            const w = metrics.width;
+            const h = fontSize; // approx height
+            const x = cx - w / 2; // centered
+            const y = cy - h / 2;
+
+            // Padding
+            const pad = 5;
+            const bbox = { x: x - pad, y: y - pad, w: w + pad * 2, h: h + pad * 2 };
+
+            // Check collision
+            for (const r of this.labelRegions) {
+                if (bbox.x < r.x + r.w && bbox.x + bbox.w > r.x &&
+                    bbox.y < r.y + r.h && bbox.y + bbox.h > r.y) {
+                    return; // Skip drawing
+                }
+            }
+            this.labelRegions.push(bbox);
+        }
+
         this.ctx.fillStyle = isSelected ? '#fff' : '#2b2118';
         if (isSelected) this.ctx.shadowBlur = 4;
 
-        if (ent.category === 'linguistic') this.ctx.font = `italic ${14 / this.transform.k}px "Cinzel"`;
-        else if (ent.category === 'faith') this.ctx.font = `italic bold ${13 / this.transform.k}px "Cinzel"`;
-        else if (this._isPointEntity(ent)) this.ctx.font = `bold ${12 / this.transform.k}px "Cinzel"`;
-        else this.ctx.font = `${14 / this.transform.k}px "Cinzel"`;
-
-        this.ctx.textAlign = this._isPointEntity(ent) ? 'left' : 'center';
         this.ctx.fillText(ent.name, cx, cy);
         this.ctx.shadowBlur = 0;
     }
@@ -503,12 +593,7 @@ export default class MedievalRenderer {
         ctx.restore();
     }
 
-    tracePath(pts, close) {
-        if (!pts.length) return;
-        this.ctx.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < pts.length; i++) this.ctx.lineTo(pts[i].x, pts[i].y);
-        if (close) this.ctx.closePath();
-    }
+
 
     tracePathOnCtx(ctx, pts, close) {
         if (!pts.length) return;
@@ -535,30 +620,147 @@ export default class MedievalRenderer {
         return `rgba(${r},${g},${b},${a})`;
     }
 
-    drawReferenceLayer(shapes) {
-        if (!shapes || shapes.length === 0) return;
-        const ctx = this.ctx;
-
+    drawCoastlineRipples(landEntities, targetCtx = null) {
+        if (!landEntities || landEntities.length === 0) return;
+        const ctx = targetCtx || this.ctx;
         ctx.save();
-        ctx.strokeStyle = '#00ffff'; // Cyan for high contrast visibility
-        ctx.lineWidth = 1 / this.transform.k;
-        ctx.setLineDash([4 / this.transform.k, 4 / this.transform.k]);
-        ctx.globalAlpha = 0.5;
 
-        shapes.forEach(shape => {
-            if (!shape.geometry || shape.geometry.length === 0) return;
+        // Settings for ripples
+        const rippleCount = 3;
+        const baseDist = 4 / this.transform.k;
+        const spacing = 3 / this.transform.k;
 
-            ctx.beginPath();
-            if (shape.type === 'Point') {
-                const p = shape.geometry[0];
-                const r = 2 / this.transform.k;
-                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-                ctx.stroke();
-            } else {
-                this.tracePathOnCtx(ctx, shape.geometry, shape.type === 'Polygon');
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        landEntities.forEach(ent => {
+            // Only draw ripples for Polities (Land), not rivers/points
+            if (ent.type !== 'polity' && !['nation-state', 'island', 'continent', 'landmass', 'band', 'tribe'].includes(ent.typology)) return;
+            // Using currentGeometry
+            if (!ent.currentGeometry || ent.currentGeometry.length < 2) return;
+
+            const isClosed = true; // Landmasses are polygons
+
+            for (let i = 0; i < rippleCount; i++) {
+                ctx.beginPath();
+                const offset = baseDist + (i * spacing);
+
+                this.tracePathOnCtx(ctx, ent.currentGeometry, isClosed);
+
+                ctx.lineWidth = offset * 2;
+                // Opacity fades out
+                ctx.strokeStyle = `rgba(40, 60, 80, ${0.15 - (i * 0.04)})`;
                 ctx.stroke();
             }
         });
+
+        ctx.restore();
+    }
+
+    traceRoughPath(pts, close, targetCtx = null) {
+        if (!pts.length) return;
+
+        const ctx = targetCtx || this.ctx;
+
+        // Don't roughen if zoomed out too far (optimization + visual noise reduction)
+        const useRough = this.transform.k > 0.2;
+
+        const moveTo = (p) => {
+            if (useRough) {
+                const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
+                ctx.moveTo(pp.x, pp.y);
+            } else {
+                ctx.moveTo(p.x, p.y);
+            }
+        };
+
+        const lineTo = (p) => {
+            if (useRough) {
+                const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
+                ctx.lineTo(pp.x, pp.y);
+            } else {
+                ctx.lineTo(p.x, p.y);
+            }
+        };
+
+        moveTo(pts[0]);
+        for (let i = 1; i < pts.length; i++) lineTo(pts[i]);
+
+        if (close) {
+            ctx.closePath();
+        }
+    }
+
+
+    renderWorldLayer(sortedEntities, t) {
+        // This renders the "Static" world: Land, Rivers, Water, Ripples.
+        // Selection highlights are NOT part of this, they are dynamic.
+        // So we render the "Base State" of entities.
+
+        const ctx = this.worldCtx;
+        ctx.clearRect(0, 0, this.width, this.height);
+
+        // Draw Background
+        ctx.save();
+        ctx.fillStyle = this.noisePattern || '#f3e9d2';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.restore();
+
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.scale(t.k, t.k);
+
+        const waterEntities = sortedEntities.filter(e => e && e.type === 'water' && e.currentGeometry && e.visible);
+        const worldEntities = sortedEntities.filter(e => e && e.type !== 'water' && e.visible);
+
+        // Sort
+        worldEntities.sort((a, b) => {
+            const typeScore = e => (e.type === 'polity' ? 1 : e.type === 'river' ? 2 : this._isPointEntity(e) ? 3 : 4);
+            return typeScore(a) - typeScore(b);
+        });
+
+        // 1. Draw Land & Rivers
+        worldEntities.forEach(ent => {
+            if (!ent.currentGeometry) return;
+            if (this._isPointEntity(ent)) {
+                this.drawPointMarker(ent, false, false, ctx);
+            } else if (ent.type === 'river') {
+                this.drawRiver(ent, false, false, ctx);
+            } else {
+                this.drawPolygon(ent, false, false, ctx);
+            }
+        });
+
+        // 2. Draw Water (Uses its own offscreen buffering, but now we composite it onto worldLayer)
+        if (waterEntities.length > 0 && this.waterLayer.width > 0) {
+            this.waterCtx.clearRect(0, 0, this.width, this.height);
+            this.waterCtx.save();
+            this.waterCtx.translate(t.x, t.y);
+            this.waterCtx.scale(t.k, t.k);
+            this.waterCtx.fillStyle = '#000000';
+            this.waterCtx.beginPath();
+            waterEntities.forEach(ent => this.tracePathOnCtx(this.waterCtx, ent.currentGeometry, true));
+            this.waterCtx.fill();
+            this.waterCtx.restore();
+
+            this.waterCtx.save();
+            this.waterCtx.globalCompositeOperation = 'source-in';
+            this.waterCtx.fillStyle = this.waterPattern;
+            this.waterCtx.fillRect(0, 0, this.width, this.height);
+            this.waterCtx.restore();
+
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            // SHADOW REMOVED: Was causing floating artifact due to transparency
+            // TRANSPARENCY: Allow land to be seen through water if they overlap
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(this.waterLayer, 0, 0);
+            ctx.restore();
+        }
+
+        // 3. Draw Ripples (On top of water, onto worldLayer)
+        // worldCtx already has transform applied from lines 702-703
+        this.drawCoastlineRipples(worldEntities, ctx);
 
         ctx.restore();
     }
