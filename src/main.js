@@ -363,6 +363,17 @@ export default class IlluminarchismApp {
         return map[typology] || typology;
     }
 
+    /**
+     * Helper to execute logic only if an entity is selected
+     */
+    _withSelectedEntity(callback) {
+        if (!this.selectedEntityId) return;
+        const ent = this.entities.find(en => en.id === this.selectedEntityId);
+        if (ent) {
+            callback(ent);
+        }
+    }
+
 
 
     // NEW HELPER: Safe Add Listener
@@ -483,13 +494,12 @@ export default class IlluminarchismApp {
 
         // Context Menu Listeners
         this.safeAddListener('ctx-name-input', 'input', (e) => {
-            const ent = this.entities.find(en => en.id === this.selectedEntityId);
-            if (ent) {
+            this._withSelectedEntity(ent => {
                 ent.name = e.target.value;
                 if (this.ctxHeader) this.ctxHeader.textContent = ent.name;
                 if (this.renderer) this.renderer.invalidateWorldLayer();
                 this.render();
-            }
+            });
         });
 
         this.safeAddListener('ctx-name-input', 'change', () => {
@@ -497,39 +507,45 @@ export default class IlluminarchismApp {
         });
 
         this.safeAddListener('ctx-color-input', 'input', (e) => {
-            const ent = this.entities.find(en => en.id === this.selectedEntityId);
-            if (ent) {
+            this._withSelectedEntity(ent => {
                 ent.color = e.target.value;
                 if (this.renderer) this.renderer.invalidateWorldLayer();
                 this.render();
-            }
+            });
         });
 
         this.safeAddListener('ctx-hatch-input', 'change', (e) => {
-            const ent = this.entities.find(en => en.id === this.selectedEntityId);
-            if (ent) {
+            this._withSelectedEntity(ent => {
                 ent.hatchStyle = e.target.value;
                 if (this.renderer) this.renderer.invalidateWorldLayer();
                 this.render();
-            }
+            });
         });
 
         this.safeAddListener('ctx-start-year', 'change', (e) => {
-            const ent = this.entities.find(en => en.id === this.selectedEntityId);
-            if (ent && ent.validRange) {
-                ent.validRange.start = parseInt(e.target.value);
-                this.updateEntities();
-                this.render();
-            }
+            this._withSelectedEntity(ent => {
+                if (ent.validRange) {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                        ent.validRange.start = val;
+                        this.updateEntities();
+                        this.render();
+                    }
+                }
+            });
         });
 
         this.safeAddListener('ctx-end-year', 'change', (e) => {
-            const ent = this.entities.find(en => en.id === this.selectedEntityId);
-            if (ent && ent.validRange) {
-                ent.validRange.end = parseInt(e.target.value);
-                this.updateEntities();
-                this.render();
-            }
+            this._withSelectedEntity(ent => {
+                if (ent.validRange) {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val)) {
+                        ent.validRange.end = val;
+                        this.updateEntities();
+                        this.render();
+                    }
+                }
+            });
         });
 
         // Initial render of notches
@@ -548,10 +564,10 @@ export default class IlluminarchismApp {
         if (this.ctxType) this.ctxType.textContent = ent.type === 'polity' ? (ent.typology || 'Polity') : ent.type;
 
         // Span
-        const start = ent.validRange ? ent.validRange.start : DEFAULT_EPOCH_START;
-        const end = ent.validRange ? ent.validRange.end : DEFAULT_EPOCH_END;
-        if (this.ctxStartYear) this.ctxStartYear.value = Number.isFinite(start) ? start : DEFAULT_EPOCH_START;
-        if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : DEFAULT_EPOCH_END;
+        const start = ent.validRange ? ent.validRange.start : -10000;
+        const end = ent.validRange ? ent.validRange.end : 2025;
+        if (this.ctxStartYear) this.ctxStartYear.value = Number.isFinite(start) ? start : -10000;
+        if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : 2025;
 
         // Color
         if (this.ctxColorInput) this.ctxColorInput.value = ent.color || '#000000';
@@ -846,9 +862,7 @@ export default class IlluminarchismApp {
     }
 
     updateSelectedMetadata() {
-        if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
-        if (ent) {
+        this._withSelectedEntity(ent => {
             ent.name = document.getElementById('info-name-input').value;
             ent.color = document.getElementById('info-color-input').value;
             ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
@@ -858,7 +872,7 @@ export default class IlluminarchismApp {
 
             this.renderRegistry();
             this.render();
-        }
+        });
     }
 
 
