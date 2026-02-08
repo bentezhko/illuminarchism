@@ -208,23 +208,41 @@
 
     <!-- Context Menu -->
     <div id="context-menu" class="context-menu" style="display: none;">
-        <div class="menu-header">Entity Details</div>
+        <div class="menu-header" id="ctx-header">Entity Details</div>
         <div class="menu-content">
             <div class="menu-row">
                 <label>Name:</label>
-                <span id="ctx-name"></span>
+                <input type="text" id="ctx-name-input" class="ctx-input">
             </div>
             <div class="menu-row">
                 <label>Type:</label>
                 <span id="ctx-type"></span>
             </div>
             <div class="menu-row">
-                <label>Years:</label>
-                <span id="ctx-years"></span>
+                <label>Span:</label>
+                <div style="display:flex; gap: 4px; align-items:center;">
+                    <input type="number" id="ctx-start-year" class="ctx-input-year" title="Start Year">
+                    <span style="font-size: 0.8rem;">to</span>
+                    <input type="number" id="ctx-end-year" class="ctx-input-year" title="End Year">
+                </div>
             </div>
             <div class="menu-row">
                 <label>Color:</label>
-                <div id="ctx-color-preview" class="color-preview"></div>
+                <input type="color" id="ctx-color-input">
+            </div>
+            <div class="menu-row">
+                <label>Texture:</label>
+                <select id="ctx-hatch-input" class="ctx-input">
+                    <option value="solid">Solid</option>
+                    <option value="diagonal-right">Diagonal (Right)</option>
+                    <option value="diagonal-left">Diagonal (Left)</option>
+                    <option value="vertical">Vertical</option>
+                    <option value="horizontal">Horizontal</option>
+                    <option value="cross">Cross Hatch</option>
+                    <option value="saltire">Saltire (X)</option>
+                    <option value="stipple">Stipple (Dots)</option>
+                    <option value="waves">Undy (Waves)</option>
+                </select>
             </div>
         </div>
     </div>

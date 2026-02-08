@@ -1025,3 +1025,40 @@ body:not(.panel-collapsed) #view-timeline {
     border-color: #8a3324;
     box-shadow: 0 0 4px rgba(138, 51, 36, 0.5);
 }
+.ctx-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed #5d4037;
+    font-family: 'IM Fell English', serif;
+    font-size: 0.9rem;
+    color: #2b2118;
+    width: 120px;
+    outline: none;
+}
+
+.ctx-input:focus {
+    border-bottom: 1px solid #8a3324;
+}
+
+.ctx-input-year {
+    width: 65px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid #5d4037;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    text-align: center;
+    padding: 2px;
+}
+
+#ctx-color-input {
+    width: 40px;
+    height: 25px;
+    padding: 0;
+    border: 1px solid #5d4037;
+    cursor: pointer;
+}
+
+#context-menu {
+    min-width: 300px;
+}

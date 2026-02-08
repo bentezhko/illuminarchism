@@ -473,10 +473,64 @@ export default class IlluminarchismApp {
 
         // Context Menu elements
         this.ctxMenu = document.getElementById('context-menu');
-        this.ctxName = document.getElementById('ctx-name');
+        this.ctxHeader = document.getElementById('ctx-header');
+        this.ctxNameInput = document.getElementById('ctx-name-input');
         this.ctxType = document.getElementById('ctx-type');
-        this.ctxYears = document.getElementById('ctx-years');
-        this.ctxColor = document.getElementById('ctx-color-preview');
+        this.ctxStartYear = document.getElementById('ctx-start-year');
+        this.ctxEndYear = document.getElementById('ctx-end-year');
+        this.ctxColorInput = document.getElementById('ctx-color-input');
+        this.ctxHatchInput = document.getElementById('ctx-hatch-input');
+
+        // Context Menu Listeners
+        this.safeAddListener('ctx-name-input', 'input', (e) => {
+            const ent = this.entities.find(en => en.id === this.selectedEntityId);
+            if (ent) {
+                ent.name = e.target.value;
+                if (this.ctxHeader) this.ctxHeader.textContent = ent.name;
+                if (this.renderer) this.renderer.invalidateWorldLayer();
+                this.render();
+            }
+        });
+
+        this.safeAddListener('ctx-name-input', 'change', () => {
+            this.renderRegistry();
+        });
+
+        this.safeAddListener('ctx-color-input', 'input', (e) => {
+            const ent = this.entities.find(en => en.id === this.selectedEntityId);
+            if (ent) {
+                ent.color = e.target.value;
+                if (this.renderer) this.renderer.invalidateWorldLayer();
+                this.render();
+            }
+        });
+
+        this.safeAddListener('ctx-hatch-input', 'change', (e) => {
+            const ent = this.entities.find(en => en.id === this.selectedEntityId);
+            if (ent) {
+                ent.hatchStyle = e.target.value;
+                if (this.renderer) this.renderer.invalidateWorldLayer();
+                this.render();
+            }
+        });
+
+        this.safeAddListener('ctx-start-year', 'change', (e) => {
+            const ent = this.entities.find(en => en.id === this.selectedEntityId);
+            if (ent && ent.validRange) {
+                ent.validRange.start = parseInt(e.target.value);
+                this.updateEntities();
+                this.render();
+            }
+        });
+
+        this.safeAddListener('ctx-end-year', 'change', (e) => {
+            const ent = this.entities.find(en => en.id === this.selectedEntityId);
+            if (ent && ent.validRange) {
+                ent.validRange.end = parseInt(e.target.value);
+                this.updateEntities();
+                this.render();
+            }
+        });
 
         // Initial render of notches
         if (this.timeline) this.timeline.renderNotches();
@@ -485,22 +539,25 @@ export default class IlluminarchismApp {
     showContextMenu(ent, x, y) {
         if (!this.ctxMenu) return;
 
-        // Populate Data
-        this.ctxName.textContent = ent.name || "Unknown";
-        this.ctxType.textContent = ent.type === 'polity' ? (ent.typology || 'Polity') : ent.type;
+        // Ensure the entity is selected for the listeners to work on the correct one
+        this.selectedEntityId = ent.id;
 
-        // Format Years
-        let yearText = "Eternal";
-        if (ent.validRange) {
-            const start = Number.isFinite(ent.validRange.start) ? ent.validRange.start : "Beginning";
-            const end = Number.isFinite(ent.validRange.end) ? ent.validRange.end : "Present";
-            yearText = `${start} - ${end}`;
-        }
-        this.ctxYears.textContent = yearText;
+        // Populate Data
+        if (this.ctxHeader) this.ctxHeader.textContent = ent.name || "Entity Details";
+        if (this.ctxNameInput) this.ctxNameInput.value = ent.name || "";
+        if (this.ctxType) this.ctxType.textContent = ent.type === 'polity' ? (ent.typology || 'Polity') : ent.type;
+
+        // Span
+        const start = ent.validRange ? ent.validRange.start : -10000;
+        const end = ent.validRange ? ent.validRange.end : 2025;
+        if (this.ctxStartYear) this.ctxStartYear.value = Number.isFinite(start) ? start : -10000;
+        if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : 2025;
 
         // Color
-        this.ctxColor.style.backgroundColor = ent.color || '#000000';
-        this.ctxColor.title = ent.color;
+        if (this.ctxColorInput) this.ctxColorInput.value = ent.color || '#000000';
+
+        // Texture
+        if (this.ctxHatchInput) this.ctxHatchInput.value = ent.hatchStyle || 'solid';
 
         // Position and Show
         this.ctxMenu.style.display = 'block';
