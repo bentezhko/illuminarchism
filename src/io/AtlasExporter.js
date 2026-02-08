@@ -4,38 +4,32 @@
  */
 
 export default class AtlasExporter {
-    /**
-     * Export entities to atlas JSON format
-     */
-    static exportAtlas(entities, metadata = {}) {
-        const atlas = {
-            meta: {
-                id: metadata.id || this.generateId(),
-                year: metadata.year || 1000,
-                layer: metadata.layer || 'custom',
-                description: metadata.description || 'Custom drawn atlas',
-                author: metadata.author || 'anonymous',
-                created: new Date().toISOString(),
-                version: '1.0'
-            },
-            style: {
-                color: metadata.color || '#264e86',
-                strokeWidth: metadata.strokeWidth || 2,
-                fillOpacity: metadata.fillOpacity || 0.4,
-                decorative: metadata.decorative || 'medieval-border'
-            },
-            entities: entities.map(e => this.entityToJSON(e, metadata.year))
-        };
-        
-        return atlas;
+    constructor(app) {
+        this.app = app;
     }
-    
+
     /**
-     * Convert HistoricalEntity to JSON format
+     * Export current session to atlas JSON format (v2)
+     */
+    exportAtlas() {
+        const meta = { ...this.app.atlasMeta };
+        if (!meta.id) meta.id = AtlasExporter.generateId();
+        meta.modified = new Date().toISOString();
+        meta.version = '2.0';
+
+        return {
+            meta,
+            entities: this.app.entities.map(e => e.toJSON()),
+            connections: this.app.connections || []
+        };
+    }
+
+    /**
+     * Convert HistoricalEntity to JSON format (Legacy/GeoJSON snapshot)
      */
     static entityToJSON(entity, year) {
         const geometry = entity.getGeometryAtYear(year);
-        
+
         return {
             id: entity.id,
             name: entity.name,
@@ -94,16 +88,34 @@ export default class AtlasExporter {
     }
     
     /**
-     * Download atlas as JSON file
+     * Download current atlas as JSON file
+     */
+    downloadAtlas(filename) {
+        const atlas = this.exportAtlas();
+        const json = JSON.stringify(atlas, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename || `atlas_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Download atlas as JSON file (Static version)
      */
     static downloadAtlas(atlas, filename) {
         const json = JSON.stringify(atlas, null, 2);
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
-        a.download = filename || `${atlas.meta.id}.json`;
+        a.download = filename || `${atlas.meta?.id || 'atlas'}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -132,7 +144,7 @@ export default class AtlasExporter {
     }
     
     /**
-     * Generate unique atlas ID
+     * Generate unique atlas ID (Static version)
      */
     static generateId() {
         const timestamp = Date.now();

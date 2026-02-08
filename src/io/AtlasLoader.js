@@ -21,7 +21,7 @@ export default class AtlasLoader {
                 this.parseAtlasData(json);
             } catch (err) {
                 console.error("Error loading atlas:", err);
-                alert("Failed to load atlas file. Invalid JSON.");
+                this.app.showMessage("Failed to load atlas file. Invalid JSON.");
             }
         };
 
@@ -40,11 +40,13 @@ export default class AtlasLoader {
 
         // Clear existing
         this.app.entities = [];
+        this.app.connections = [];
         this.app.selectedEntityId = null;
         this.app.hoveredEntityId = null;
 
         // Restore Metadata
         if (json.meta) {
+            this.app.atlasMeta = json.meta;
             console.log("Loading Atlas Meta:", json.meta);
         }
 
@@ -58,6 +60,11 @@ export default class AtlasLoader {
             const idNum = parseInt(ent.id);
             if (!isNaN(idNum) && idNum > maxId) maxId = idNum;
         });
+
+        // Restore Connections
+        if (json.connections && Array.isArray(json.connections)) {
+            this.app.connections = json.connections;
+        }
 
         // Initialize spatial index and renderer
         this.app.updateEntities();

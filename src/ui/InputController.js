@@ -77,7 +77,7 @@ export default class InputController {
 
                 // Priority 0: Transform Tool
                 if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
-                    const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
+                    const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
                         const isPoint = ent.currentGeometry.length === 1;
 
@@ -120,7 +120,7 @@ export default class InputController {
 
                 // Priority 1: Vertex Edit Mode
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
-                    const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
+                    const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
                         const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
                         if (hitIdx !== -1) {
@@ -191,7 +191,7 @@ export default class InputController {
 
             // Vertex Edit: Delete Point
             if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
-                const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
+                const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
                     const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
                     if (hitIdx !== -1 && ent.currentGeometry.length > 3) {
@@ -212,7 +212,7 @@ export default class InputController {
             }
 
             if (this.app.hoveredEntityId) {
-                const ent = this.app.entities.find(e => e.id === this.app.hoveredEntityId);
+                const ent = this.app.entitiesById.get(this.app.hoveredEntityId);
                 if (ent) {
                     this.app.selectEntity(ent.id, true);
                     this.app.focusSelectedEntity();
@@ -267,7 +267,7 @@ export default class InputController {
 
             // Handle Vertex Hover Effect
             if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
-                const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
+                const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
                     const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
                     this.app.highlightVertex(hitIdx !== -1 ? hitIdx : null);
@@ -361,7 +361,7 @@ export default class InputController {
                     dragTarget = e.target.dataset.id;
                 }
                 startX = e.clientX;
-                const ent = this.app.entities.find(en => en.id === dragTarget);
+                const ent = this.app.entitiesById.get(dragTarget);
                 if (ent) {
                     initialStartYear = ent.validRange.start;
                     initialEndYear = ent.validRange.end;
@@ -388,7 +388,7 @@ export default class InputController {
             const deltaPixels = e.clientX - startX;
             const deltaYears = Math.round((deltaPixels / trackWidth) * totalYears);
 
-            const ent = this.app.entities.find(en => en.id === dragTarget);
+            const ent = this.app.entitiesById.get(dragTarget);
             if (!ent) return;
 
             if (dragType === 'move') {

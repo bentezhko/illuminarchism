@@ -33,6 +33,9 @@ export default class IlluminarchismApp {
         this.exporter = new AtlasExporter(this);
 
         this.entities = [];
+        this.entitiesById = new Map();
+        this.connections = []; // { id, fromId, fromSide, targetId, toSide, year, confirmed }
+        this.atlasMeta = { version: '2.0', created: new Date().toISOString() };
         this.spatialIndex = null; // Quadtree instance
         this.currentWorldBounds = { x: -5000, y: -5000, w: 10000, h: 10000 };
         this.hoveredEntityId = null;
@@ -71,7 +74,7 @@ export default class IlluminarchismApp {
     // --- TRANSFORM LOGIC ---
     applyTransform(mode, originalGeo, startMouse, currentMouse, keepAspect) {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (!ent) return;
 
         // Invalidate cache during transform
@@ -528,6 +531,7 @@ export default class IlluminarchismApp {
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val)) {
                         ent.validRange.start = val;
+                        this.invalidateConnectionsFor(ent.id);
                         this.updateEntities();
                         this.render();
                     }
@@ -541,6 +545,7 @@ export default class IlluminarchismApp {
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val)) {
                         ent.validRange.end = val;
+                        this.invalidateConnectionsFor(ent.id);
                         this.updateEntities();
                         this.render();
                     }
@@ -603,7 +608,7 @@ export default class IlluminarchismApp {
 
     focusSelectedEntity() {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
             let c = { x: 0, y: 0 };
             if (ent.currentGeometry.length === 1) {
@@ -648,6 +653,32 @@ export default class IlluminarchismApp {
         }
     }
 
+    isConnectionValid(conn) {
+        const entFrom = this.entitiesById.get(conn.fromId);
+        const entTo = this.entitiesById.get(conn.targetId);
+
+        if (!entFrom || !entTo) return false;
+
+        // Domain check
+        if (entFrom.domain !== entTo.domain) return false;
+
+        // From side must match boundary
+        const boundaryYear = conn.fromSide === 'start' ? entFrom.validRange.start : entFrom.validRange.end;
+        if (boundaryYear !== conn.year) return false;
+
+        // Target must exist at year
+        if (conn.toSide === 'start') {
+            if (entTo.validRange.start !== conn.year) return false;
+        } else if (conn.toSide === 'end') {
+            if (entTo.validRange.end !== conn.year) return false;
+        } else {
+            // mid
+            if (conn.year < entTo.validRange.start || conn.year > entTo.validRange.end) return false;
+        }
+
+        return true;
+    }
+
     // Timeline View now handled by Timeline.js
     renderTimelineView() {
         this.timeline.renderView();
@@ -677,10 +708,10 @@ export default class IlluminarchismApp {
         if (name === 'draw') {
             hint.classList.add('visible');
             if (this.selectedEntityId && isAnnex) {
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                const ent = this.entitiesById.get(this.selectedEntityId);
                 hint.textContent = `VASSAL MODE: Create NEW ${this.drawCategory} entity linked to ${ent.name}.`;
             } else if (this.selectedEntityId) {
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                const ent = this.entitiesById.get(this.selectedEntityId);
                 hint.textContent = `EDITING: Redrawing geometry for ${ent.name} in ${this.currentYear}.`;
             } else {
                 if (this.drawTypology === 'city') hint.textContent = "Click once to place City.";
@@ -727,7 +758,7 @@ export default class IlluminarchismApp {
         const isAnnex = this.drawTypology === 'vassal';
 
         if (this.selectedEntityId) {
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
+            const ent = this.entitiesById.get(this.selectedEntityId);
             if (ent) {
                 if (isAnnex) {
                     const id = 'vassal_' + Date.now();
@@ -750,6 +781,7 @@ export default class IlluminarchismApp {
                 } else {
                     // Updating existing shape (no resampling to preserve corners)
                     ent.addKeyframe(this.currentYear, [...this.draftPoints], true);
+                    this.invalidateConnectionsFor(ent.id);
                     this.updateInfoPanel(ent);
                 }
             }
@@ -813,7 +845,7 @@ export default class IlluminarchismApp {
 
     selectEntity(id, showPanel = true) {
         this.selectedEntityId = id;
-        const ent = this.entities.find(e => e.id === id);
+        const ent = this.entitiesById.get(id);
         if (ent) {
             // --- SYNC DIAL ---
             // If the entity's domain is valid in current ontology, sync the dial
@@ -847,7 +879,7 @@ export default class IlluminarchismApp {
 
                 const parentRow = document.getElementById('info-parent-row');
                 if (ent.parentId) {
-                    const parent = this.entities.find(e => e.id === ent.parentId) || { name: 'Unknown' };
+                    const parent = this.entitiesById.get(ent.parentId) || { name: 'Unknown' };
                     document.getElementById('info-parent').textContent = parent.name;
                     parentRow.style.display = 'flex';
                 } else {
@@ -879,7 +911,7 @@ export default class IlluminarchismApp {
     // Vertex Editing Logic
     editVertex(index, newPos) {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
             ent.currentGeometry[index] = newPos;
             if (this.renderer) this.renderer.invalidateWorldLayer();
@@ -894,10 +926,11 @@ export default class IlluminarchismApp {
 
     finishVertexEdit() {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent) {
             // Commit change to timeline (preventResampling = true)
             ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
+            this.invalidateConnectionsFor(ent.id);
             this.updateInfoPanel(ent);
             this.renderTimelineNotches(); // Update notches as keyframes changed
         }
@@ -1011,6 +1044,9 @@ export default class IlluminarchismApp {
     }
 
     updateEntities() {
+        // Update lookup map
+        this.entitiesById = new Map(this.entities.map(e => [e.id, e]));
+
         // Invalidate renderer cache as geometry or visibility might have changed
         if (this.renderer) this.renderer.worldLayerValid = false;
 
@@ -1120,7 +1156,7 @@ export default class IlluminarchismApp {
 
     openInfoPanel() {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent) {
             this.infoPanel.update(ent);
             this.infoPanel.show();
@@ -1130,6 +1166,66 @@ export default class IlluminarchismApp {
     startEditing(id) {
         this.selectEntity(id, true);
         this.setActiveTool('transform');
+    }
+
+    showMessage(message, duration = 3000) {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+
+        const el = document.createElement('div');
+        el.className = 'notification';
+        el.textContent = message;
+        container.appendChild(el);
+
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-10px)';
+            el.style.transition = 'all 0.3s ease-out';
+            setTimeout(() => el.remove(), 300);
+        }, duration);
+    }
+
+    showConfirm(message, onConfirm) {
+        const modal = document.getElementById('confirm-modal');
+        const msgEl = document.getElementById('confirm-message');
+        const yesBtn = document.getElementById('confirm-yes');
+        const noBtn = document.getElementById('confirm-no');
+
+        if (!modal || !msgEl || !yesBtn || !noBtn) {
+            // Fallback
+            if (confirm(message)) onConfirm();
+            return;
+        }
+
+        msgEl.textContent = message;
+        modal.style.display = 'flex';
+
+        const close = () => {
+            modal.style.display = 'none';
+            yesBtn.onclick = null;
+            noBtn.onclick = null;
+        };
+
+        yesBtn.onclick = () => {
+            close();
+            onConfirm();
+        };
+
+        noBtn.onclick = () => {
+            close();
+        };
+    }
+
+    invalidateConnectionsFor(entityId) {
+        if (!this.connections) return;
+        this.connections.forEach(conn => {
+            if (conn.fromId === entityId || conn.targetId === entityId) {
+                conn.confirmed = false;
+            }
+        });
+        if (this.currentView === 'timeline') {
+            this.timeline.renderView();
+        }
     }
 }
 

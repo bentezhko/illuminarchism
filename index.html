@@ -249,6 +249,20 @@
 
     <canvas id="map-canvas"></canvas>
 
+    <!-- UI Components for Notifications and Dialogs -->
+    <div id="notification-container" class="pointer-events-none"></div>
+
+    <div id="confirm-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content parchment-theme">
+            <div class="modal-header">Inquiry</div>
+            <p id="confirm-message">Are you certain?</p>
+            <div class="modal-actions">
+                <button id="confirm-yes" class="btn-text">Confirm</button>
+                <button id="confirm-no" class="btn-text">Cancel</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
