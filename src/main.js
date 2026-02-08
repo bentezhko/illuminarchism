@@ -33,6 +33,8 @@ export default class IlluminarchismApp {
         this.exporter = new AtlasExporter(this);
 
         this.entities = [];
+        this.connections = []; // { id, fromId, fromSide, targetId, toSide, year, confirmed }
+        this.atlasMeta = { version: '2.0', created: new Date().toISOString() };
         this.spatialIndex = null; // Quadtree instance
         this.currentWorldBounds = { x: -5000, y: -5000, w: 10000, h: 10000 };
         this.hoveredEntityId = null;
@@ -528,6 +530,7 @@ export default class IlluminarchismApp {
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val)) {
                         ent.validRange.start = val;
+                        this.invalidateConnectionsFor(ent.id);
                         this.updateEntities();
                         this.render();
                     }
@@ -541,6 +544,7 @@ export default class IlluminarchismApp {
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val)) {
                         ent.validRange.end = val;
+                        this.invalidateConnectionsFor(ent.id);
                         this.updateEntities();
                         this.render();
                     }
@@ -648,6 +652,32 @@ export default class IlluminarchismApp {
         }
     }
 
+    isConnectionValid(conn) {
+        const entFrom = this.entities.find(e => e.id === conn.fromId);
+        const entTo = this.entities.find(e => e.id === conn.targetId);
+
+        if (!entFrom || !entTo) return false;
+
+        // Domain check
+        if (entFrom.domain !== entTo.domain) return false;
+
+        // From side must match boundary
+        const boundaryYear = conn.fromSide === 'start' ? entFrom.validRange.start : entFrom.validRange.end;
+        if (boundaryYear !== conn.year) return false;
+
+        // Target must exist at year
+        if (conn.toSide === 'start') {
+            if (entTo.validRange.start !== conn.year) return false;
+        } else if (conn.toSide === 'end') {
+            if (entTo.validRange.end !== conn.year) return false;
+        } else {
+            // mid
+            if (conn.year < entTo.validRange.start || conn.year > entTo.validRange.end) return false;
+        }
+
+        return true;
+    }
+
     // Timeline View now handled by Timeline.js
     renderTimelineView() {
         this.timeline.renderView();
@@ -750,6 +780,7 @@ export default class IlluminarchismApp {
                 } else {
                     // Updating existing shape (no resampling to preserve corners)
                     ent.addKeyframe(this.currentYear, [...this.draftPoints], true);
+                    this.invalidateConnectionsFor(ent.id);
                     this.updateInfoPanel(ent);
                 }
             }
@@ -898,6 +929,7 @@ export default class IlluminarchismApp {
         if (ent) {
             // Commit change to timeline (preventResampling = true)
             ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
+            this.invalidateConnectionsFor(ent.id);
             this.updateInfoPanel(ent);
             this.renderTimelineNotches(); // Update notches as keyframes changed
         }
@@ -1130,6 +1162,18 @@ export default class IlluminarchismApp {
     startEditing(id) {
         this.selectEntity(id, true);
         this.setActiveTool('transform');
+    }
+
+    invalidateConnectionsFor(entityId) {
+        if (!this.connections) return;
+        this.connections.forEach(conn => {
+            if (conn.fromId === entityId || conn.targetId === entityId) {
+                conn.confirmed = false;
+            }
+        });
+        if (this.currentView === 'timeline') {
+            this.timeline.renderView();
+        }
     }
 }
 
