@@ -428,7 +428,7 @@ export default class Timeline {
 
             // Create connection
             const conn = {
-                id: this.app.exporter.generateId(),
+                id: 'conn_' + Date.now(),
                 fromId: this.linkSource.id,
                 fromSide: this.linkSource.side,
                 targetId: entityId,
@@ -445,11 +445,17 @@ export default class Timeline {
     }
 
     renderConnections(svg) {
-        if (!this.app.connections) return;
+        if (!this.app.connections || this.app.connections.length === 0) return;
 
         const containerRect = this.viewContainer.getBoundingClientRect();
+        const entitiesById = new Map(this.app.entities.map(e => [e.id, e]));
 
         this.app.connections.forEach(conn => {
+            const fromEnt = entitiesById.get(conn.fromId);
+            const targetEnt = entitiesById.get(conn.targetId);
+
+            if (!fromEnt || !targetEnt) return;
+
             const fromEl = this.viewContainer.querySelector(`.timeline-bar[data-id="${conn.fromId}"]`);
             const toEl = this.viewContainer.querySelector(`.timeline-bar[data-id="${conn.targetId}"]`);
 
@@ -463,26 +469,9 @@ export default class Timeline {
             const epochEnd = parseInt(this.epochEnd.value);
             const totalYears = epochEnd - epochStart;
 
-            const getYearX = (year) => {
-                const percent = (year - epochStart) / totalYears;
-                // The track starts at 232px from left? No, let's use the bar's position.
-                // Wait, it's easier to just use the bar's boundaries.
-                return null; // not used yet
-            };
-
             let x1, y1, x2, y2;
 
-            // Source point
-            y1 = fromRect.top + fromRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
-            if (conn.fromSide === 'start') {
-                x1 = fromRect.left - containerRect.left;
-            } else {
-                x1 = fromRect.right - containerRect.left;
-            }
-
-            // Target point
-            y2 = toRect.top + toRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
-
+            // Target track used for X mapping
             const trackEl = toEl.parentElement;
             const trackRect = trackEl.getBoundingClientRect();
 
@@ -491,19 +480,23 @@ export default class Timeline {
                 return trackRect.left - containerRect.left + (pct * trackRect.width);
             };
 
-            if (conn.toSide === 'start') {
-                x2 = getXForYear(this.app.entities.find(e => e.id === conn.targetId).validRange.start);
-            } else if (conn.toSide === 'end') {
-                x2 = getXForYear(this.app.entities.find(e => e.id === conn.targetId).validRange.end);
+            // Source point
+            y1 = fromRect.top + fromRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
+            if (conn.fromSide === 'start') {
+                x1 = getXForYear(fromEnt.validRange.start);
             } else {
-                x2 = getXForYear(conn.year);
+                x1 = getXForYear(fromEnt.validRange.end);
             }
 
-            // Re-calculate x1 correctly too
-            if (conn.fromSide === 'start') {
-                x1 = getXForYear(this.app.entities.find(e => e.id === conn.fromId).validRange.start);
+            // Target point
+            y2 = toRect.top + toRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
+
+            if (conn.toSide === 'start') {
+                x2 = getXForYear(targetEnt.validRange.start);
+            } else if (conn.toSide === 'end') {
+                x2 = getXForYear(targetEnt.validRange.end);
             } else {
-                x1 = getXForYear(this.app.entities.find(e => e.id === conn.fromId).validRange.end);
+                x2 = getXForYear(conn.year);
             }
 
             const isValid = this.app.isConnectionValid(conn);
