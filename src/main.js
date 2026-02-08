@@ -33,6 +33,7 @@ export default class IlluminarchismApp {
         this.exporter = new AtlasExporter(this);
 
         this.entities = [];
+        this.entitiesById = new Map();
         this.connections = []; // { id, fromId, fromSide, targetId, toSide, year, confirmed }
         this.atlasMeta = { version: '2.0', created: new Date().toISOString() };
         this.spatialIndex = null; // Quadtree instance
@@ -73,7 +74,7 @@ export default class IlluminarchismApp {
     // --- TRANSFORM LOGIC ---
     applyTransform(mode, originalGeo, startMouse, currentMouse, keepAspect) {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (!ent) return;
 
         // Invalidate cache during transform
@@ -607,7 +608,7 @@ export default class IlluminarchismApp {
 
     focusSelectedEntity() {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
             let c = { x: 0, y: 0 };
             if (ent.currentGeometry.length === 1) {
@@ -653,8 +654,8 @@ export default class IlluminarchismApp {
     }
 
     isConnectionValid(conn) {
-        const entFrom = this.entities.find(e => e.id === conn.fromId);
-        const entTo = this.entities.find(e => e.id === conn.targetId);
+        const entFrom = this.entitiesById.get(conn.fromId);
+        const entTo = this.entitiesById.get(conn.targetId);
 
         if (!entFrom || !entTo) return false;
 
@@ -707,10 +708,10 @@ export default class IlluminarchismApp {
         if (name === 'draw') {
             hint.classList.add('visible');
             if (this.selectedEntityId && isAnnex) {
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                const ent = this.entitiesById.get(this.selectedEntityId);
                 hint.textContent = `VASSAL MODE: Create NEW ${this.drawCategory} entity linked to ${ent.name}.`;
             } else if (this.selectedEntityId) {
-                const ent = this.entities.find(e => e.id === this.selectedEntityId);
+                const ent = this.entitiesById.get(this.selectedEntityId);
                 hint.textContent = `EDITING: Redrawing geometry for ${ent.name} in ${this.currentYear}.`;
             } else {
                 if (this.drawTypology === 'city') hint.textContent = "Click once to place City.";
@@ -757,7 +758,7 @@ export default class IlluminarchismApp {
         const isAnnex = this.drawTypology === 'vassal';
 
         if (this.selectedEntityId) {
-            const ent = this.entities.find(e => e.id === this.selectedEntityId);
+            const ent = this.entitiesById.get(this.selectedEntityId);
             if (ent) {
                 if (isAnnex) {
                     const id = 'vassal_' + Date.now();
@@ -844,7 +845,7 @@ export default class IlluminarchismApp {
 
     selectEntity(id, showPanel = true) {
         this.selectedEntityId = id;
-        const ent = this.entities.find(e => e.id === id);
+        const ent = this.entitiesById.get(id);
         if (ent) {
             // --- SYNC DIAL ---
             // If the entity's domain is valid in current ontology, sync the dial
@@ -878,7 +879,7 @@ export default class IlluminarchismApp {
 
                 const parentRow = document.getElementById('info-parent-row');
                 if (ent.parentId) {
-                    const parent = this.entities.find(e => e.id === ent.parentId) || { name: 'Unknown' };
+                    const parent = this.entitiesById.get(ent.parentId) || { name: 'Unknown' };
                     document.getElementById('info-parent').textContent = parent.name;
                     parentRow.style.display = 'flex';
                 } else {
@@ -910,7 +911,7 @@ export default class IlluminarchismApp {
     // Vertex Editing Logic
     editVertex(index, newPos) {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
             ent.currentGeometry[index] = newPos;
             if (this.renderer) this.renderer.invalidateWorldLayer();
@@ -925,7 +926,7 @@ export default class IlluminarchismApp {
 
     finishVertexEdit() {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent) {
             // Commit change to timeline (preventResampling = true)
             ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
@@ -1043,6 +1044,9 @@ export default class IlluminarchismApp {
     }
 
     updateEntities() {
+        // Update lookup map
+        this.entitiesById = new Map(this.entities.map(e => [e.id, e]));
+
         // Invalidate renderer cache as geometry or visibility might have changed
         if (this.renderer) this.renderer.worldLayerValid = false;
 
@@ -1152,7 +1156,7 @@ export default class IlluminarchismApp {
 
     openInfoPanel() {
         if (!this.selectedEntityId) return;
-        const ent = this.entities.find(e => e.id === this.selectedEntityId);
+        const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent) {
             this.infoPanel.update(ent);
             this.infoPanel.show();

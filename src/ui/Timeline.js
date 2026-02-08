@@ -131,7 +131,7 @@ export default class Timeline {
 
         if (!this.app.selectedEntityId) return;
 
-        const ent = this.app.entities.find(e => e.id === this.app.selectedEntityId);
+        const ent = this.app.entitiesById.get(this.app.selectedEntityId);
         if (!ent) return;
 
         const min = parseInt(this.slider.min);
@@ -152,7 +152,7 @@ export default class Timeline {
 
     jumpToKeyframe(direction) {
         if (!this.app.selectedEntityId) return;
-        const ent = this.app.entities.find(e => e.id === this.app.selectedEntityId);
+        const ent = this.app.entitiesById.get(this.app.selectedEntityId);
         if (!ent || ent.timeline.length === 0) return;
 
         let targetYear = null;
@@ -416,8 +416,8 @@ export default class Timeline {
                 return;
             }
 
-            const sourceEnt = this.app.entities.find(e => e.id === this.linkSource.id);
-            const targetEnt = this.app.entities.find(e => e.id === entityId);
+            const sourceEnt = this.app.entitiesById.get(this.linkSource.id);
+            const targetEnt = this.app.entitiesById.get(entityId);
 
             if (sourceEnt.domain !== targetEnt.domain) {
                 alert("Connections can only be made between entities of the same domain.");
@@ -448,11 +448,10 @@ export default class Timeline {
         if (!this.app.connections || this.app.connections.length === 0) return;
 
         const containerRect = this.viewContainer.getBoundingClientRect();
-        const entitiesById = new Map(this.app.entities.map(e => [e.id, e]));
 
         this.app.connections.forEach(conn => {
-            const fromEnt = entitiesById.get(conn.fromId);
-            const targetEnt = entitiesById.get(conn.targetId);
+            const fromEnt = this.app.entitiesById.get(conn.fromId);
+            const targetEnt = this.app.entitiesById.get(conn.targetId);
 
             if (!fromEnt || !targetEnt) return;
 

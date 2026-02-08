@@ -30,7 +30,7 @@ export default class DrawTool {
         const isAnnex = this.app.drawTypology === 'vassal';
 
         if (this.app.selectedEntityId) {
-            const ent = this.app.entities.find(e => e.id === this.app.selectedEntityId);
+            const ent = this.app.entitiesById.get(this.app.selectedEntityId);
             if (ent) {
                 if (isAnnex) {
                     const id = 'vassal_' + Date.now();
