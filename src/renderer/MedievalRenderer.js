@@ -1,5 +1,6 @@
 import { getCentroid, getBoundingBox } from '../core/math.js';
 import { fbm, perturbPoint } from './filters.js';
+import { isLandTypology } from '../core/Ontology.js';
 
 export default class MedievalRenderer {
     constructor(canvasId) {
@@ -634,8 +635,8 @@ export default class MedievalRenderer {
         ctx.lineCap = 'round';
 
         landEntities.forEach(ent => {
-            // Only draw ripples for Polities (Land), not rivers/points
-            if (ent.type !== 'polity' && !['nation-state', 'island', 'continent', 'landmass', 'band', 'tribe'].includes(ent.typology)) return;
+            // Only draw ripples for land entities as defined in the ontology
+            if (!isLandTypology(ent.domain, ent.typology)) return;
             // Using currentGeometry
             if (!ent.currentGeometry || ent.currentGeometry.length < 2) return;
 
