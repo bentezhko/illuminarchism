@@ -514,19 +514,21 @@ export default class MedievalRenderer {
 
         let fontSize;
         let font;
-        if (ent.category === 'linguistic') {
-            fontSize = 14 / this.transform.k;
-            font = `italic ${fontSize}px "Cinzel"`;
-        } else if (ent.category === 'faith') {
-            fontSize = 13 / this.transform.k;
-            font = `italic bold ${fontSize}px "Cinzel"`;
+        let baseSize = 14;
+        let style = '';
+
+        if (ent.category === 'faith') {
+            baseSize = 13;
+            style = 'italic bold';
         } else if (this._isPointEntity(ent)) {
-            fontSize = 12 / this.transform.k;
-            font = `bold ${fontSize}px "Cinzel"`;
-        } else {
-            fontSize = 14 / this.transform.k;
-            font = `${fontSize}px "Cinzel"`;
+            baseSize = 12;
+            style = 'bold';
+        } else if (ent.category === 'linguistic') {
+            style = 'italic';
         }
+
+        fontSize = baseSize / this.transform.k;
+        font = `${style} ${fontSize}px "Cinzel"`.trim();
 
         this.ctx.font = font;
         this.ctx.textAlign = this._isPointEntity(ent) ? 'left' : 'center';
