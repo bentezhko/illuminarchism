@@ -13,7 +13,7 @@ export default class AtlasExporter {
      */
     exportAtlas() {
         const meta = { ...this.app.atlasMeta };
-        if (!meta.id) meta.id = this.generateId();
+        if (!meta.id) meta.id = AtlasExporter.generateId();
         meta.modified = new Date().toISOString();
         meta.version = '2.0';
 
@@ -143,15 +143,6 @@ export default class AtlasExporter {
         return atlas;
     }
     
-    /**
-     * Generate unique atlas ID
-     */
-    generateId() {
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substr(2, 9);
-        return `atlas-${timestamp}-${random}`;
-    }
-
     /**
      * Generate unique atlas ID (Static version)
      */

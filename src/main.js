@@ -1168,6 +1168,54 @@ export default class IlluminarchismApp {
         this.setActiveTool('transform');
     }
 
+    showMessage(message, duration = 3000) {
+        const container = document.getElementById('notification-container');
+        if (!container) return;
+
+        const el = document.createElement('div');
+        el.className = 'notification';
+        el.textContent = message;
+        container.appendChild(el);
+
+        setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-10px)';
+            el.style.transition = 'all 0.3s ease-out';
+            setTimeout(() => el.remove(), 300);
+        }, duration);
+    }
+
+    showConfirm(message, onConfirm) {
+        const modal = document.getElementById('confirm-modal');
+        const msgEl = document.getElementById('confirm-message');
+        const yesBtn = document.getElementById('confirm-yes');
+        const noBtn = document.getElementById('confirm-no');
+
+        if (!modal || !msgEl || !yesBtn || !noBtn) {
+            // Fallback
+            if (confirm(message)) onConfirm();
+            return;
+        }
+
+        msgEl.textContent = message;
+        modal.style.display = 'flex';
+
+        const close = () => {
+            modal.style.display = 'none';
+            yesBtn.onclick = null;
+            noBtn.onclick = null;
+        };
+
+        yesBtn.onclick = () => {
+            close();
+            onConfirm();
+        };
+
+        noBtn.onclick = () => {
+            close();
+        };
+    }
+
     invalidateConnectionsFor(entityId) {
         if (!this.connections) return;
         this.connections.forEach(conn => {

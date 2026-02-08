@@ -21,7 +21,7 @@ export default class AtlasLoader {
                 this.parseAtlasData(json);
             } catch (err) {
                 console.error("Error loading atlas:", err);
-                alert("Failed to load atlas file. Invalid JSON.");
+                this.app.showMessage("Failed to load atlas file. Invalid JSON.");
             }
         };
 

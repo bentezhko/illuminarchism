@@ -402,7 +402,7 @@ export default class Timeline {
         if (!this.linkSource) {
             // Pick source (must be a boundary)
             if (side === 'mid') {
-                alert("Please select a boundary (start or end) of an entity as the source of the connection.");
+                this.app.showMessage("Please select a boundary (start or end) of an entity as the source of the connection.");
                 return;
             }
             this.linkSource = { id: entityId, side, year };
@@ -420,7 +420,7 @@ export default class Timeline {
             const targetEnt = this.app.entitiesById.get(entityId);
 
             if (sourceEnt.domain !== targetEnt.domain) {
-                alert("Connections can only be made between entities of the same domain.");
+                this.app.showMessage("Connections can only be made between entities of the same domain.");
                 this.linkSource = null;
                 this.renderView();
                 return;
@@ -449,14 +449,20 @@ export default class Timeline {
 
         const containerRect = this.viewContainer.getBoundingClientRect();
 
+        // Cache timeline bar elements for performance
+        const barElements = new Map();
+        this.viewContainer.querySelectorAll('.timeline-bar[data-id]').forEach(el => {
+            barElements.set(el.dataset.id, el);
+        });
+
         this.app.connections.forEach(conn => {
             const fromEnt = this.app.entitiesById.get(conn.fromId);
             const targetEnt = this.app.entitiesById.get(conn.targetId);
 
             if (!fromEnt || !targetEnt) return;
 
-            const fromEl = this.viewContainer.querySelector(`.timeline-bar[data-id="${conn.fromId}"]`);
-            const toEl = this.viewContainer.querySelector(`.timeline-bar[data-id="${conn.targetId}"]`);
+            const fromEl = barElements.get(conn.fromId);
+            const toEl = barElements.get(conn.targetId);
 
             if (!fromEl || !toEl) return;
 
@@ -481,11 +487,6 @@ export default class Timeline {
 
             // Source point
             y1 = fromRect.top + fromRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
-            if (conn.fromSide === 'start') {
-                x1 = getXForYear(fromEnt.validRange.start);
-            } else {
-                x1 = getXForYear(fromEnt.validRange.end);
-            }
 
             // Target point
             y2 = toRect.top + toRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
@@ -496,6 +497,12 @@ export default class Timeline {
                 x2 = getXForYear(targetEnt.validRange.end);
             } else {
                 x2 = getXForYear(conn.year);
+            }
+
+            if (conn.fromSide === 'start') {
+                x1 = getXForYear(fromEnt.validRange.start);
+            } else {
+                x1 = getXForYear(fromEnt.validRange.end);
             }
 
             const isValid = this.app.isConnectionValid(conn);
@@ -538,10 +545,10 @@ export default class Timeline {
                         conn.confirmed = true;
                         this.renderView();
                     } else {
-                        if (confirm("This connection is logically invalid. Delete it?")) {
+                        this.app.showConfirm("This connection is logically invalid. Delete it?", () => {
                             this.app.connections = this.app.connections.filter(c => c.id !== conn.id);
                             this.renderView();
-                        }
+                        });
                     }
                 };
 
