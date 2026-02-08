@@ -548,10 +548,10 @@ export default class IlluminarchismApp {
         if (this.ctxType) this.ctxType.textContent = ent.type === 'polity' ? (ent.typology || 'Polity') : ent.type;
 
         // Span
-        const start = ent.validRange ? ent.validRange.start : -10000;
-        const end = ent.validRange ? ent.validRange.end : 2025;
-        if (this.ctxStartYear) this.ctxStartYear.value = Number.isFinite(start) ? start : -10000;
-        if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : 2025;
+        const start = ent.validRange ? ent.validRange.start : DEFAULT_EPOCH_START;
+        const end = ent.validRange ? ent.validRange.end : DEFAULT_EPOCH_END;
+        if (this.ctxStartYear) this.ctxStartYear.value = Number.isFinite(start) ? start : DEFAULT_EPOCH_START;
+        if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : DEFAULT_EPOCH_END;
 
         // Color
         if (this.ctxColorInput) this.ctxColorInput.value = ent.color || '#000000';
