@@ -42,9 +42,6 @@ export default class IlluminarchismApp {
         this.draftCursor = null;
         this.activeTool = 'pan';
 
-        // Reference Layer State
-        this.referenceShapes = []; // Array of { geometry: [{x,y}...], type: 'LineString'|'Polygon' }
-        this.showReferenceLayer = true;
 
         // New ontology-aware drawing state
         this.drawDomain = 'political';  // Level 1: Domain
@@ -473,12 +470,6 @@ export default class IlluminarchismApp {
             fileInput.addEventListener('change', (e) => this.loader.loadFromJSON(e));
         }
 
-        // Reference Import
-        const refInput = document.getElementById('ref-input');
-        this.safeAddListener('btn-import-ref', 'click', () => { if (refInput) refInput.click(); });
-        if (refInput) {
-            refInput.addEventListener('change', (e) => this.loader.loadReferenceFromJSON(e));
-        }
 
         // Context Menu elements
         this.ctxMenu = document.getElementById('context-menu');
@@ -743,7 +734,7 @@ export default class IlluminarchismApp {
         this.selectedEntityId = null;
         document.getElementById('info-panel').style.display = 'none';
         this.renderTimelineNotches(); // Clear notches
-        if (this.activeTool === 'draw') this.setTool('draw');
+        if (this.activeTool === 'draw') this.setActiveTool('draw');
         this.render();
     }
 
@@ -813,10 +804,6 @@ export default class IlluminarchismApp {
         }
     }
 
-    setReferenceShapes(shapes) {
-        this.referenceShapes = shapes;
-        this.render();
-    }
 
     // Vertex Editing Logic
     editVertex(index, newPos) {
@@ -824,7 +811,7 @@ export default class IlluminarchismApp {
         const ent = this.entities.find(e => e.id === this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry[index]) {
             ent.currentGeometry[index] = newPos;
-            if (this.renderer) this.renderer.worldLayerValid = false;
+            if (this.renderer) this.renderer.invalidateWorldLayer();
             this.render();
         }
     }
@@ -862,14 +849,16 @@ export default class IlluminarchismApp {
     checkHover(wp) {
         // Safety checks to prevent crashes
         if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
-        // CHANGED: Allow hover in pan mode for unified Navigate tool
-        if (this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform') return;
+
+        // We still want to know what's under the mouse for deselection logic,
+        // but we might skip cursor updates or heavy rendering in certain tools.
+        const isModalTool = this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform';
 
         try {
             let fid = null;
 
             // Use Spatial Index for Hit Testing
-            const searchSize = 20 / (this.renderer.transform.k || 1); // Prevent division by zero
+            const searchSize = 25 / (this.renderer.transform.k || 1); // Prevent division by zero
             const searchBox = {
                 x: wp.x - searchSize / 2,
                 y: wp.y - searchSize / 2,
@@ -914,7 +903,7 @@ export default class IlluminarchismApp {
 
                 let hit = false;
                 if (e.currentGeometry.length === 1) {
-                    if (distance(wp, e.currentGeometry[0]) < 10 / (this.renderer.transform.k || 1)) hit = true;
+                    if (distance(wp, e.currentGeometry[0]) < 25 / (this.renderer.transform.k || 1)) hit = true;
                 } else if (e.type === 'river') {
                     const pts = e.currentGeometry;
                     for (let j = 0; j < pts.length - 1; j++) {
@@ -935,9 +924,13 @@ export default class IlluminarchismApp {
 
             if (fid !== this.hoveredEntityId) {
                 this.hoveredEntityId = fid;
-                this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ?
-                    (fid ? 'pointer' : 'not-allowed') :
-                    (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
+
+                // Only update cursor if not in a modal tool that manages its own cursor
+                if (!isModalTool) {
+                    this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ?
+                        (fid ? 'pointer' : 'not-allowed') :
+                        (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
+                }
                 this.render();
             }
         } catch (error) {

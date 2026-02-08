@@ -147,6 +147,10 @@ export default class MedievalRenderer {
         this.noisePattern = this.ctx.createPattern(c, 'repeat');
     }
 
+    invalidateWorldLayer() {
+        this.worldLayerValid = false;
+    }
+
     createWaterTexture() {
         const size = 64;
         const c = document.createElement('canvas');
@@ -221,14 +225,6 @@ export default class MedievalRenderer {
         this.drawGrid();
         ctx.restore();
 
-        // 0. DRAW REFERENCE LAYER (Underlay)
-        if (window.illuminarchismApp && window.illuminarchismApp.referenceShapes) {
-            ctx.save();
-            ctx.translate(t.x, t.y);
-            ctx.scale(t.k, t.k);
-            this.drawReferenceLayer(window.illuminarchismApp.referenceShapes);
-            ctx.restore();
-        }
 
         // FIXED: Safe spread and sort
         const sorted = [...entities].sort((a, b) => {
@@ -284,9 +280,37 @@ export default class MedievalRenderer {
         }
         if (activeTool === 'transform' && selectedId) {
             const ent = entities.find(e => e && e.id === selectedId);
-            if (ent && ent.currentGeometry && !this._isPointEntity(ent)) this.drawTransformBox(ent.currentGeometry);
+            if (ent && ent.currentGeometry) {
+                if (this._isPointEntity(ent)) {
+                    this.drawPointTransform(ent.currentGeometry[0]);
+                } else {
+                    this.drawTransformBox(ent.currentGeometry);
+                }
+            }
         }
 
+        ctx.restore();
+    }
+
+    drawPointTransform(pt) {
+        const ctx = this.ctx;
+        const t = this.transform;
+        const r = 10 / t.k;
+
+        ctx.save();
+        ctx.strokeStyle = '#2b2118';
+        ctx.lineWidth = 1 / t.k;
+        ctx.setLineDash([5 / t.k, 5 / t.k]);
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Small "move" indicator handles
+        const hSize = 4 / t.k;
+        ctx.fillStyle = '#fff';
+        ctx.setLineDash([]);
+        ctx.fillRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
+        ctx.strokeRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
         ctx.restore();
     }
 
@@ -656,33 +680,6 @@ export default class MedievalRenderer {
         }
     }
 
-    drawReferenceLayer(shapes) {
-        if (!shapes || shapes.length === 0) return;
-        const ctx = this.ctx;
-
-        ctx.save();
-        ctx.strokeStyle = '#00ffff'; // Cyan for high contrast visibility
-        ctx.lineWidth = 1 / this.transform.k;
-        ctx.setLineDash([4 / this.transform.k, 4 / this.transform.k]);
-        ctx.globalAlpha = 0.5;
-
-        shapes.forEach(shape => {
-            if (!shape.geometry || shape.geometry.length === 0) return;
-
-            ctx.beginPath();
-            if (shape.type === 'Point') {
-                const p = shape.geometry[0];
-                const r = 2 / this.transform.k;
-                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-                ctx.stroke();
-            } else {
-                this.tracePathOnCtx(ctx, shape.geometry, shape.type === 'Polygon');
-                ctx.stroke();
-            }
-        });
-
-        ctx.restore();
-    }
 
     renderWorldLayer(sortedEntities, t) {
         // This renders the "Static" world: Land, Rivers, Water, Ripples.

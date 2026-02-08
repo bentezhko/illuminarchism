@@ -69,32 +69,51 @@ export default class InputController {
         c.addEventListener('mousedown', (e) => {
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
+            // Force hover check on click to ensure hoveredEntityId is up to date
+            this.app.checkHover(wp);
+
             // Left Click (button 0)
             if (e.button === 0) {
 
                 // Priority 0: Transform Tool
                 if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
                     const ent = this.app.entities.find(en => en.id === this.app.selectedEntityId);
-                    if (ent && ent.currentGeometry && ent.type !== 'city') {
-                        const bbox = getBoundingBox(ent.currentGeometry);
-                        // Check handles
-                        const handle = this.getTransformHandle(wp, bbox, this.renderer.transform.k);
-                        if (handle) {
-                            this.isDragging = true;
-                            this.transformMode = handle;
-                            this.transformStart = wp;
-                            this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
-                            c.style.cursor = 'nwse-resize';
-                            return;
-                        }
-                        // Check Inside Box (Move)
-                        if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
-                            this.isDragging = true;
-                            this.transformMode = 'move';
-                            this.transformStart = wp;
-                            this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
-                            c.style.cursor = 'move';
-                            return;
+                    if (ent && ent.currentGeometry) {
+                        const isPoint = ent.currentGeometry.length === 1;
+
+                        if (isPoint) {
+                            // For points, only 'move' is supported, and we check distance to the point
+                            const pt = ent.currentGeometry[0];
+                            const d = distance(wp, pt);
+                            if (d < 25 / this.renderer.transform.k) {
+                                this.isDragging = true;
+                                this.transformMode = 'move';
+                                this.transformStart = wp;
+                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
+                                c.style.cursor = 'move';
+                                return;
+                            }
+                        } else {
+                            const bbox = getBoundingBox(ent.currentGeometry);
+                            // Check handles
+                            const handle = this.getTransformHandle(wp, bbox, this.renderer.transform.k);
+                            if (handle) {
+                                this.isDragging = true;
+                                this.transformMode = handle;
+                                this.transformStart = wp;
+                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
+                                c.style.cursor = 'nwse-resize';
+                                return;
+                            }
+                            // Check Inside Box (Move)
+                            if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
+                                this.isDragging = true;
+                                this.transformMode = 'move';
+                                this.transformStart = wp;
+                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
+                                c.style.cursor = 'move';
+                                return;
+                            }
                         }
                     }
                 }
@@ -143,8 +162,13 @@ export default class InputController {
                     return;
                 }
 
-                // Priority 4: Default Navigation (Pan)
+                // Priority 4: Default Navigation (Pan) & Deselection
                 // If not in a specific modal tool, Left Click creates Pan interaction
+                const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
+                if (deselectOnClickEmptyTools.includes(this.app.activeTool) && !this.app.hoveredEntityId) {
+                    this.app.deselect();
+                }
+
                 this.isDragging = true;
                 this.lastX = e.clientX;
                 this.lastY = e.clientY;
@@ -188,11 +212,10 @@ export default class InputController {
             }
 
             if (this.app.hoveredEntityId) {
-                // this.app.selectEntity(this.app.hoveredEntityId, true); // Don't auto-select on right click? Maybe yes.
-                // Actually, let's keep selection separate.
-
                 const ent = this.app.entities.find(e => e.id === this.app.hoveredEntityId);
                 if (ent) {
+                    this.app.selectEntity(ent.id, true);
+                    this.app.focusSelectedEntity();
                     this.app.showContextMenu(ent, e.clientX, e.clientY);
                 }
             } else {
