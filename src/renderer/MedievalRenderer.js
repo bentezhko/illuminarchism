@@ -512,11 +512,23 @@ export default class MedievalRenderer {
             cx = c.x; cy = c.y;
         }
 
-        let font = '';
-        if (ent.category === 'linguistic') font = `italic ${14 / this.transform.k}px "Cinzel"`;
-        else if (ent.category === 'faith') font = `italic bold ${13 / this.transform.k}px "Cinzel"`;
-        else if (this._isPointEntity(ent)) font = `bold ${12 / this.transform.k}px "Cinzel"`;
-        else font = `${14 / this.transform.k}px "Cinzel"`;
+        let fontSize;
+        let font;
+        let baseSize = 14;
+        let style = '';
+
+        if (ent.category === 'faith') {
+            baseSize = 13;
+            style = 'italic bold';
+        } else if (this._isPointEntity(ent)) {
+            baseSize = 12;
+            style = 'bold';
+        } else if (ent.category === 'linguistic') {
+            style = 'italic';
+        }
+
+        fontSize = baseSize / this.transform.k;
+        font = `${style} ${fontSize}px "Cinzel"`.trim();
 
         this.ctx.font = font;
         this.ctx.textAlign = this._isPointEntity(ent) ? 'left' : 'center';
@@ -525,7 +537,7 @@ export default class MedievalRenderer {
         if (!isSelected && !this._isPointEntity(ent)) { // Always draw selected or points (points have icons)
             const metrics = this.ctx.measureText(ent.name);
             const w = metrics.width;
-            const h = parseInt(font); // approx height
+            const h = fontSize; // approx height
             const x = cx - w / 2; // centered
             const y = cy - h / 2;
 
