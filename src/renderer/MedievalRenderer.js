@@ -38,7 +38,6 @@ export default class MedievalRenderer {
         this.canvas.height = this.height;
 
         this.waterLayer.width = this.width;
-        this.waterLayer.width = this.width;
         this.waterLayer.height = this.height;
 
         this.worldLayer.width = this.width;
