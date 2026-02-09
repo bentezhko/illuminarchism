@@ -426,7 +426,8 @@ export default class Timeline {
             this.renderView();
         } else {
             // Pick target
-            if (entityId === this.linkSource.id && Math.abs(year - this.linkSource.year) < 1) {
+            if (entityId === this.linkSource.id) {
+                // Prevent self-linking
                 this.linkSource = null;
                 this.isLinking = false;
                 this.renderView();
