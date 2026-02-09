@@ -20,7 +20,7 @@ export default class Timeline {
         this.isPlaying = false;
         this.playInterval = null;
         this.isLinking = false;
-        this.linkSource = null; // { id, side, year }
+        this.linkSource = null; // { id, year }
 
         this.init();
     }
@@ -355,7 +355,7 @@ export default class Timeline {
                             if (this.isLinking) {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                this.handleTimelineClick(ent.id, 'start', ent.validRange.start);
+                                this.handleTimelineClick(ent.id, ent.validRange.start);
                             }
                         });
                         bar.appendChild(handleL);
@@ -368,7 +368,7 @@ export default class Timeline {
                             if (this.isLinking) {
                                 e.stopPropagation();
                                 e.preventDefault();
-                                this.handleTimelineClick(ent.id, 'end', ent.validRange.end);
+                                this.handleTimelineClick(ent.id, ent.validRange.end);
                             }
                         });
                         bar.appendChild(handleR);
@@ -383,7 +383,7 @@ export default class Timeline {
                             const rect = bar.getBoundingClientRect();
                             const pct = (e.clientX - rect.left) / rect.width;
                             const year = Math.round(ent.validRange.start + pct * (ent.validRange.end - ent.validRange.start));
-                            this.handleTimelineClick(ent.id, 'mid', year);
+                            this.handleTimelineClick(ent.id, year);
                         } else {
                             this.app.selectEntity(ent.id);
                         }
@@ -428,10 +428,10 @@ export default class Timeline {
         container.appendChild(svgLayer);
     }
 
-    handleTimelineClick(entityId, side, year) {
+    handleTimelineClick(entityId, year) {
         if (!this.linkSource) {
             // Pick source (can be anywhere now)
-            this.linkSource = { id: entityId, side, year };
+            this.linkSource = { id: entityId, year };
             this.renderView();
         } else {
             // Pick target
