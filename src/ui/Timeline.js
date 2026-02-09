@@ -525,8 +525,7 @@ export default class Timeline {
             // Target point
             y2 = toRect.top + toRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
 
-            const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
-            const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
+            const { fromYear, toYear } = this.app.getConnectionYears(conn);
 
             x1 = getXForYear(fromYear);
             x2 = getXForYear(toYear);
@@ -602,8 +601,7 @@ export default class Timeline {
     showLinkInfo(e, conn, fromEnt, toEnt) {
         if (!this.linkInfo) return;
 
-        const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
-        const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
+        const { fromYear, toYear } = this.app.getConnectionYears(conn);
 
         this.linkInfo.innerHTML = `
             <div class="tooltip-title">Connection</div>

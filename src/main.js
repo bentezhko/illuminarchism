@@ -656,6 +656,12 @@ export default class IlluminarchismApp {
         }
     }
 
+    getConnectionYears(conn) {
+        const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
+        const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
+        return { fromYear, toYear };
+    }
+
     isConnectionValid(conn) {
         const entFrom = this.entitiesById.get(conn.fromId);
         const entTo = this.entitiesById.get(conn.targetId);
@@ -666,8 +672,7 @@ export default class IlluminarchismApp {
         if (entFrom.domain !== entTo.domain) return false;
 
         // Check temporal validity
-        const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
-        const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
+        const { fromYear, toYear } = this.getConnectionYears(conn);
 
         // Ensure both ends exist in their respective entities' timelines
         if (fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end) return false;
@@ -1224,8 +1229,7 @@ export default class IlluminarchismApp {
 
             if (!entFrom || !entTo) return false;
 
-            const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
-            const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
+            const { fromYear, toYear } = this.getConnectionYears(conn);
 
             // Auto-delete if strictly outside the new range
             const fromOutside = fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end;
