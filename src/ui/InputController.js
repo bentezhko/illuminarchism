@@ -428,8 +428,13 @@ export default class InputController {
 
         window.addEventListener('mouseup', () => {
             if (isDraggingBar) {
+                const targetId = dragTarget;
                 isDraggingBar = false;
                 dragTarget = null;
+
+                // Invalidate or delete connections if range changed
+                this.app.invalidateConnectionsFor(targetId);
+
                 this.app.updateInfoPanel(); // Refresh UI if open
                 this.app.render(); // Refresh map
             }

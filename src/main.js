@@ -629,6 +629,7 @@ export default class IlluminarchismApp {
         const mapCanvas = document.getElementById('map-canvas');
         const timelineDiv = document.getElementById('view-timeline');
         const toolbar = document.getElementById('toolbar');
+        const linkBtn = document.getElementById('btn-timeline-link');
 
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
 
@@ -640,6 +641,7 @@ export default class IlluminarchismApp {
                 timelineDiv.style.display = 'none'; // Explicitly hide
             }
             if (toolbar) toolbar.style.display = 'flex';
+            if (linkBtn) linkBtn.style.display = 'none';
             this.render();
         } else {
             document.getElementById('btn-view-timeline').classList.add('active');
@@ -649,6 +651,7 @@ export default class IlluminarchismApp {
                 timelineDiv.style.display = 'block'; // Explicitly show
             }
             if (toolbar) toolbar.style.display = 'none';
+            if (linkBtn) linkBtn.style.display = 'inline-block';
             this.timeline.renderView();
         }
     }
@@ -1212,11 +1215,31 @@ export default class IlluminarchismApp {
 
     invalidateConnectionsFor(entityId) {
         if (!this.connections) return;
-        this.connections.forEach(conn => {
-            if (conn.fromId === entityId || conn.targetId === entityId) {
-                conn.confirmed = false;
+
+        this.connections = this.connections.filter(conn => {
+            if (conn.fromId !== entityId && conn.targetId !== entityId) return true;
+
+            const entFrom = this.entitiesById.get(conn.fromId);
+            const entTo = this.entitiesById.get(conn.targetId);
+
+            if (!entFrom || !entTo) return false;
+
+            const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
+            const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
+
+            // Auto-delete if strictly outside the new range
+            const fromOutside = fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end;
+            const toOutside = toYear < entTo.validRange.start || toYear > entTo.validRange.end;
+
+            if (fromOutside || toOutside) {
+                return false; // Remove connection
             }
+
+            // Otherwise mark as unconfirmed to draw attention
+            conn.confirmed = false;
+            return true;
         });
+
         if (this.currentView === 'timeline') {
             this.timeline.renderView();
         }

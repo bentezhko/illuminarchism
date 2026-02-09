@@ -51,6 +51,16 @@ export default class Timeline {
         const nextBtn = document.getElementById('btn-next-key');
         if (prevBtn) prevBtn.addEventListener('click', () => this.jumpToKeyframe(-1));
         if (nextBtn) nextBtn.addEventListener('click', () => this.jumpToKeyframe(1));
+
+        // Link button in header
+        const linkBtn = document.getElementById('btn-timeline-link');
+        if (linkBtn) {
+            linkBtn.addEventListener('click', () => {
+                this.isLinking = !this.isLinking;
+                this.linkSource = null;
+                this.renderView();
+            });
+        }
     }
 
     updateBounds() {
@@ -211,7 +221,7 @@ export default class Timeline {
         svgLayer.style.width = '100%';
         svgLayer.style.height = '100%';
         svgLayer.style.pointerEvents = 'none';
-        svgLayer.style.zIndex = '1';
+        svgLayer.style.zIndex = '10'; // Above tracks, but below handles if possible
 
         // Define arrow marker
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
@@ -249,19 +259,12 @@ export default class Timeline {
         const header = document.createElement('div');
         header.className = 'timeline-header';
 
-        // Link Tool Button
-        const linkBtn = document.createElement('button');
-        linkBtn.className = `btn-text ${this.isLinking ? 'active' : ''}`;
-        linkBtn.style.marginRight = '1rem';
-        linkBtn.style.zIndex = '10';
-        linkBtn.textContent = this.isLinking ? 'Linking...' : 'Link Entities';
-        linkBtn.onclick = (e) => {
-            e.stopPropagation();
-            this.isLinking = !this.isLinking;
-            this.linkSource = null;
-            this.renderView();
-        };
-        header.appendChild(linkBtn);
+        // Sync header L button state
+        const linkBtn = document.getElementById('btn-timeline-link');
+        if (linkBtn) {
+            if (this.isLinking) linkBtn.classList.add('active');
+            else linkBtn.classList.remove('active');
+        }
 
         container.appendChild(header);
 
@@ -335,6 +338,7 @@ export default class Timeline {
                 if (widthP > 0) {
                     const bar = document.createElement('div');
                     bar.className = 'timeline-bar';
+                    bar.style.zIndex = '20'; // Ensure it's above SVG layer for clicks
                     if (this.isLinking && this.linkSource && this.linkSource.id === ent.id) {
                         bar.classList.add('linking-source');
                     }
@@ -346,29 +350,35 @@ export default class Timeline {
                     if (Number.isFinite(ent.validRange.start)) {
                         const handleL = document.createElement('div');
                         handleL.className = 'timeline-handle handle-l';
-                        handleL.onclick = (e) => {
+                        handleL.style.zIndex = '30';
+                        handleL.addEventListener('mousedown', (e) => {
                             if (this.isLinking) {
                                 e.stopPropagation();
+                                e.preventDefault();
                                 this.handleTimelineClick(ent.id, 'start', ent.validRange.start);
                             }
-                        };
+                        });
                         bar.appendChild(handleL);
                     }
                     if (Number.isFinite(ent.validRange.end)) {
                         const handleR = document.createElement('div');
                         handleR.className = 'timeline-handle handle-r';
-                        handleR.onclick = (e) => {
+                        handleR.style.zIndex = '30';
+                        handleR.addEventListener('mousedown', (e) => {
                             if (this.isLinking) {
                                 e.stopPropagation();
+                                e.preventDefault();
                                 this.handleTimelineClick(ent.id, 'end', ent.validRange.end);
                             }
-                        };
+                        });
                         bar.appendChild(handleR);
                     }
 
-                    bar.onclick = (e) => {
+                    // Use mousedown to be more responsive and avoid click-through issues
+                    bar.addEventListener('mousedown', (e) => {
                         if (this.isLinking) {
                             e.stopPropagation();
+                            e.preventDefault();
                             // Calculate year from click position
                             const rect = bar.getBoundingClientRect();
                             const pct = (e.clientX - rect.left) / rect.width;
@@ -377,7 +387,7 @@ export default class Timeline {
                         } else {
                             this.app.selectEntity(ent.id);
                         }
-                    };
+                    });
                     track.appendChild(bar);
                 }
                 row.appendChild(track);
@@ -422,7 +432,6 @@ export default class Timeline {
         if (!this.linkSource) {
             // Pick source (can be anywhere now)
             this.linkSource = { id: entityId, side, year };
-            console.log("Link source selected:", this.linkSource);
             this.renderView();
         } else {
             // Pick target
