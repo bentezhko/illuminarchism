@@ -3,7 +3,7 @@
  * Manages camera transformations (pan, zoom) for world coordinates
  */
 
-import { CONFIG } from '../core/Entity.js';
+import { CONFIG } from '../config.js';
 
 export default class Viewport {
     constructor(width, height) {

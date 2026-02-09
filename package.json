@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Historical Atlas Editor",
   "scripts": {
-    "build": "mkdir -p dist && cp -r index.html src _headers atlases dist/ || true"
+    "build": "rm -rf dist && mkdir -p dist && cp index.html dist/ && cp -r src dist/ && cp _headers dist/ && cp -r atlases dist/"
   },
   "keywords": [
     "atlas",

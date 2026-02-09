@@ -4,7 +4,7 @@
  * Features: hand-drawn wobble, watercolor fills, parchment texture
  */
 
-import { CONFIG } from '../core/Entity.js';
+import { CONFIG } from '../config.js';
 
 export default class InkRenderer {
     constructor(canvasId) {

@@ -1,10 +1,7 @@
 # Cloudflare Pages headers configuration
 # Ensure JavaScript modules are served with correct MIME type
 
-/src/*.js
-  Content-Type: application/javascript; charset=utf-8
-
-/src/*/*.js
+/src/**.js
   Content-Type: application/javascript; charset=utf-8
 
 /*.js
