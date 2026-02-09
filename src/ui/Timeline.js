@@ -461,13 +461,13 @@ export default class Timeline {
                 return;
             }
 
-            // Create connection with fromYear and toYear
+            // Create connection with fromYear and toYear (enforced same year)
             const conn = {
                 id: 'conn_' + Date.now(),
                 fromId: this.linkSource.id,
                 fromYear: this.linkSource.year,
                 targetId: entityId,
-                toYear: year,
+                toYear: this.linkSource.year,
                 confirmed: true
             };
 
@@ -536,15 +536,15 @@ export default class Timeline {
             const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
 
             // Curved path
-            const dx = Math.abs(x2 - x1);
-            const dy = Math.abs(y2 - y1);
-            const midX = (x1 + x2) / 2;
-            const midY = (y1 + y2) / 2;
+            const dx = x2 - x1;
+            const dy = y2 - y1;
 
-            // Draw a curve
-            const cp1x = x1 + (x2 - x1) * 0.5;
+            // Add a horizontal "bow" to the curve even if x1 == x2 (vertical connection)
+            // This provides a more organic/manuscript feel.
+            const bow = 40;
+            const cp1x = x1 + dx * 0.5 + bow;
             const cp1y = y1;
-            const cp2x = x1 + (x2 - x1) * 0.5;
+            const cp2x = x1 + dx * 0.5 + bow;
             const cp2y = y2;
 
             path.setAttribute('d', `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`);
