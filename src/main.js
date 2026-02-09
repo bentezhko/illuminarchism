@@ -662,19 +662,13 @@ export default class IlluminarchismApp {
         // Domain check
         if (entFrom.domain !== entTo.domain) return false;
 
-        // From side must match boundary
-        const boundaryYear = conn.fromSide === 'start' ? entFrom.validRange.start : entFrom.validRange.end;
-        if (boundaryYear !== conn.year) return false;
+        // Check temporal validity
+        const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
+        const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
 
-        // Target must exist at year
-        if (conn.toSide === 'start') {
-            if (entTo.validRange.start !== conn.year) return false;
-        } else if (conn.toSide === 'end') {
-            if (entTo.validRange.end !== conn.year) return false;
-        } else {
-            // mid
-            if (conn.year < entTo.validRange.start || conn.year > entTo.validRange.end) return false;
-        }
+        // Ensure both ends exist in their respective entities' timelines
+        if (fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end) return false;
+        if (toYear < entTo.validRange.start || toYear > entTo.validRange.end) return false;
 
         return true;
     }

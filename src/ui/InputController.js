@@ -326,6 +326,13 @@ export default class InputController {
                 this.app.focusSelectedEntity();
             }
 
+            // LINKING KEYBIND
+            if (e.code === 'KeyL' && this.app.currentView === 'timeline') {
+                this.app.timeline.isLinking = !this.app.timeline.isLinking;
+                this.app.timeline.linkSource = null;
+                this.app.timeline.renderView();
+            }
+
             if (this.app.activeTool === 'draw') {
                 if (e.key === 'Enter') this.app.commitDraft();
                 if (e.key === 'Escape') this.app.cancelDraft();

@@ -750,6 +750,52 @@ input[type=range]::-webkit-slider-runnable-track {
     font-size: 1.5rem;
 }
 
+/* --- Timeline Link Tooltip --- */
+.timeline-tooltip {
+    background: var(--parchment-bg);
+    border: 1px solid var(--ink-primary);
+    padding: 8px 12px;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3);
+    font-family: 'IM Fell English', serif;
+    font-size: 0.9rem;
+    color: var(--ink-primary);
+    border-radius: 4px;
+    max-width: 250px;
+}
+
+.timeline-tooltip .tooltip-title {
+    font-family: 'Cinzel', serif;
+    font-weight: bold;
+    color: var(--rubric-red);
+    border-bottom: 1px dashed var(--gold-leaf);
+    margin-bottom: 4px;
+    padding-bottom: 2px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.timeline-tooltip .tooltip-hint {
+    margin-top: 8px;
+    font-size: 0.7rem;
+    color: var(--ink-faded);
+    font-style: italic;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding-top: 4px;
+}
+
+/* --- Linking Highlight --- */
+@keyframes moving-dots {
+    0% { outline-offset: 2px; outline-color: var(--rubric-red); }
+    50% { outline-offset: 4px; outline-color: var(--gold-leaf); }
+    100% { outline-offset: 2px; outline-color: var(--rubric-red); }
+}
+
+.timeline-bar.linking-source {
+    outline: 2px dashed var(--rubric-red);
+    animation: moving-dots 1s infinite linear;
+    z-index: 20;
+}
+
 /* --- View Switcher --- */
 .view-switch {
     display: flex;
