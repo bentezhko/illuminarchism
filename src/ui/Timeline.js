@@ -383,6 +383,14 @@ export default class Timeline {
                             this.hideLinkInfo();
                         }
                     });
+
+                    // Entity Details context menu
+                    bar.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.app.selectEntity(ent.id, true);
+                        this.app.showContextMenu(ent, e.clientX, e.clientY);
+                    });
                     track.appendChild(bar);
                 }
                 row.appendChild(track);
@@ -598,6 +606,12 @@ export default class Timeline {
                             });
                         }
                     }
+                });
+
+                el.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.showLinkEditor(e, conn, fromEnt, targetEnt);
                 });
             };
 
