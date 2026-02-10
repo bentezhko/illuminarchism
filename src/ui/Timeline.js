@@ -223,36 +223,7 @@ export default class Timeline {
         svgLayer.style.pointerEvents = 'none';
         svgLayer.style.zIndex = '100'; // Above everything including bars and labels
 
-        // Define arrow marker
-        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-        marker.setAttribute('id', 'arrowhead');
-        marker.setAttribute('markerWidth', '10');
-        marker.setAttribute('markerHeight', '7');
-        marker.setAttribute('refX', '9');
-        marker.setAttribute('refY', '3.5');
-        marker.setAttribute('orient', 'auto');
-        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
-        polygon.setAttribute('fill', 'var(--rubric-red)');
-        marker.appendChild(polygon);
-        defs.appendChild(marker);
-
-        // Define arrow marker for invalid
-        const markerInvalid = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-        markerInvalid.setAttribute('id', 'arrowhead-invalid');
-        markerInvalid.setAttribute('markerWidth', '10');
-        markerInvalid.setAttribute('markerHeight', '7');
-        markerInvalid.setAttribute('refX', '9');
-        markerInvalid.setAttribute('refY', '3.5');
-        markerInvalid.setAttribute('orient', 'auto');
-        const polygonInvalid = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-        polygonInvalid.setAttribute('points', '0 0, 10 3.5, 0 7');
-        polygonInvalid.setAttribute('fill', '#ff0000');
-        markerInvalid.appendChild(polygonInvalid);
-        defs.appendChild(markerInvalid);
-
-        svgLayer.appendChild(defs);
+        // Markers removed as per request (dropping visual arrow part)
         // container.appendChild(svgLayer); // Moved to end
 
         // Header
@@ -381,11 +352,35 @@ export default class Timeline {
                             e.preventDefault();
                             // Calculate year from click position
                             const rect = bar.getBoundingClientRect();
-                            const pct = (e.clientX - rect.left) / rect.width;
+                            const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                             const year = Math.round(ent.validRange.start + pct * (ent.validRange.end - ent.validRange.start));
                             this.handleTimelineClick(ent.id, year);
                         } else {
                             this.app.selectEntity(ent.id);
+                        }
+                    });
+
+                    // Real-time year indicator on hover
+                    bar.addEventListener('mousemove', (e) => {
+                        if (this.isLinking) {
+                            if (this.linkInfo && this.linkInfo.classList.contains('editor-mode')) return;
+
+                            const rect = bar.getBoundingClientRect();
+                            const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                            const year = Math.round(ent.validRange.start + pct * (ent.validRange.end - ent.validRange.start));
+
+                            if (this.linkInfo) {
+                                this.linkInfo.innerHTML = `<div class="tooltip-year-hint">${this.app.formatYear(year)}</div>`;
+                                this.linkInfo.style.display = 'block';
+                                this.linkInfo.style.pointerEvents = 'none';
+                                this.updateLinkInfoPos(e);
+                            }
+                        }
+                    });
+
+                    bar.addEventListener('mouseleave', () => {
+                        if (this.isLinking) {
+                            this.hideLinkInfo();
                         }
                     });
                     track.appendChild(bar);
@@ -533,73 +528,90 @@ export default class Timeline {
             const isValid = this.app.isConnectionValid(conn);
             const isConfirmed = conn.confirmed;
 
-            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-
-            // Curved path
+            // Curved path coordinates
             const dx = x2 - x1;
             const dy = y2 - y1;
-
-            // Add a horizontal "bow" to the curve even if x1 == x2 (vertical connection)
-            // This provides a more organic/manuscript feel.
-            const bow = 40;
+            // Increased bow for better visibility and testing
+            const bow = 60;
             const cp1x = x1 + dx * 0.5 + bow;
             const cp1y = y1;
             const cp2x = x1 + dx * 0.5 + bow;
             const cp2y = y2;
+            const d = `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
 
-            path.setAttribute('d', `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`);
+            // Hit area (invisible thick path)
+            const hitPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            hitPath.setAttribute('data-testid', 'connection-hit-path');
+            hitPath.setAttribute('d', d);
+            hitPath.setAttribute('fill', 'none');
+            // Use almost-transparent stroke for better hit detection in some browsers
+            hitPath.setAttribute('stroke', 'rgba(0,0,0,0.01)');
+            hitPath.setAttribute('stroke-width', '15');
+            hitPath.style.pointerEvents = 'auto';
+            hitPath.style.cursor = 'pointer';
+
+            // Visual path
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute('d', d);
             path.setAttribute('fill', 'none');
-
             const color = (isValid && isConfirmed) ? 'var(--rubric-red)' : '#ff0000';
             path.setAttribute('stroke', color);
             path.setAttribute('stroke-width', '2');
-
             if (!isValid || !isConfirmed) {
                 path.setAttribute('stroke-dasharray', '4,4');
             }
+            path.style.pointerEvents = 'none'; // Clicks go to hitPath
 
-            path.setAttribute('marker-end', (isValid && isConfirmed) ? 'url(#arrowhead)' : 'url(#arrowhead-invalid)');
-
-            // Interactions in linking mode
-            path.style.pointerEvents = 'auto';
-            path.style.cursor = 'pointer';
-
-            path.onmouseenter = (e) => {
-                this.showLinkInfo(e, conn, fromEnt, targetEnt);
-            };
-            path.onmousemove = (e) => {
-                this.updateLinkInfoPos(e);
-            };
-            path.onmouseleave = () => {
-                this.hideLinkInfo();
-            };
-
-            path.onclick = (e) => {
-                e.stopPropagation();
-                if (this.isLinking) {
-                    this.app.showConfirm(`Connection: ${fromEnt.name} (${fromYear}) → ${targetEnt.name} (${toYear}). Delete?`, () => {
-                        this.app.connections = this.app.connections.filter(c => c.id !== conn.id);
-                        this.renderView();
-                    });
-                } else if (!isConfirmed || !isValid) {
-                    if (this.app.isConnectionValid(conn)) {
-                        conn.confirmed = true;
-                        this.renderView();
+            // Interactions on hitPath
+            const setupInteractions = (el) => {
+                el.addEventListener('mouseenter', (e) => {
+                    e.stopPropagation();
+                    if (this.isLinking) {
+                        this.showLinkEditor(e, conn, fromEnt, targetEnt);
                     } else {
-                        this.app.showConfirm("This connection is logically invalid. Delete it?", () => {
-                            this.app.connections = this.app.connections.filter(c => c.id !== conn.id);
-                            this.renderView();
-                        });
+                        this.showLinkInfo(e, conn, fromEnt, targetEnt);
                     }
-                }
+                });
+                el.addEventListener('mousemove', (e) => {
+                    e.stopPropagation();
+                    if (this.isLinking) return;
+                    this.updateLinkInfoPos(e);
+                });
+                el.addEventListener('mouseleave', (e) => {
+                    e.stopPropagation();
+                    if (!this.linkInfo.classList.contains('editor-mode')) {
+                        this.hideLinkInfo();
+                    }
+                });
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (this.isLinking) {
+                        this.showLinkEditor(e, conn, fromEnt, targetEnt);
+                    } else if (!isConfirmed || !isValid) {
+                        if (this.app.isConnectionValid(conn)) {
+                            conn.confirmed = true;
+                            this.renderView();
+                        } else {
+                            this.app.showConfirm("This connection is logically invalid. Delete it?", () => {
+                                this.app.connections = this.app.connections.filter(c => c.id !== conn.id);
+                                this.renderView();
+                            });
+                        }
+                    }
+                });
             };
 
+            setupInteractions(hitPath);
+
+            svg.appendChild(hitPath);
             svg.appendChild(path);
         });
     }
 
     showLinkInfo(e, conn, fromEnt, toEnt) {
         if (!this.linkInfo) return;
+        this.linkInfo.classList.remove('editor-mode');
+        this.linkInfo.style.pointerEvents = 'none';
 
         const { fromYear, toYear } = this.app.getConnectionYears(conn);
 
@@ -609,10 +621,96 @@ export default class Timeline {
                 <strong>From:</strong> ${fromEnt.name} (${this.app.formatYear(fromYear)})<br>
                 <strong>To:</strong> ${toEnt.name} (${this.app.formatYear(toYear)})
             </div>
-            ${this.isLinking ? '<div class="tooltip-hint">Click to delete</div>' : ''}
         `;
         this.linkInfo.style.display = 'block';
         this.updateLinkInfoPos(e);
+    }
+
+    showLinkEditor(e, conn, fromEnt, toEnt) {
+        if (!this.linkInfo) return;
+        this.linkInfo.classList.add('editor-mode');
+        this.linkInfo.style.pointerEvents = 'auto';
+
+        const { fromYear, toYear } = this.app.getConnectionYears(conn);
+        const currentYear = fromYear; // They are forced same year anyway
+
+        this.linkInfo.innerHTML = `
+            <div class="tooltip-title">Edit Connection</div>
+            <div class="tooltip-content" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="font-size:0.8rem;">
+                    <strong>${fromEnt.name}</strong> ↔ <strong>${toEnt.name}</strong>
+                </div>
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <label>Year:</label>
+                    <input type="number" id="link-year-input" value="${currentYear}" style="width:60px;">
+                </div>
+                <div class="snap-buttons" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                    <button class="small-btn" id="snap-from-start">Src Start</button>
+                    <button class="small-btn" id="snap-from-end">Src End</button>
+                    <button class="small-btn" id="snap-to-start">Tgt Start</button>
+                    <button class="small-btn" id="snap-to-end">Tgt End</button>
+                </div>
+                <div style="display:flex; gap:4px; margin-top:5px;">
+                    <button class="small-btn" id="delete-link" style="background:var(--rubric-red); color:white; flex:1;">Delete</button>
+                    <button class="small-btn" id="close-editor" style="flex:1;">Close</button>
+                </div>
+            </div>
+        `;
+
+        this.linkInfo.style.display = 'block';
+        this.updateLinkInfoPos(e);
+
+        // Bind events
+        const input = document.getElementById('link-year-input');
+        input.onchange = (ev) => {
+            const val = parseInt(ev.target.value);
+            if (!isNaN(val)) {
+                conn.fromYear = val;
+                conn.toYear = val;
+                this.app.render();
+                this.renderView();
+            }
+        };
+
+        document.getElementById('snap-from-start').onclick = () => {
+            const yr = fromEnt.validRange.start;
+            if (Number.isFinite(yr)) {
+                conn.fromYear = yr; conn.toYear = yr;
+                this.app.render(); this.renderView();
+            }
+        };
+        document.getElementById('snap-from-end').onclick = () => {
+            const yr = fromEnt.validRange.end;
+            if (Number.isFinite(yr)) {
+                conn.fromYear = yr; conn.toYear = yr;
+                this.app.render(); this.renderView();
+            }
+        };
+        document.getElementById('snap-to-start').onclick = () => {
+            const yr = toEnt.validRange.start;
+            if (Number.isFinite(yr)) {
+                conn.fromYear = yr; conn.toYear = yr;
+                this.app.render(); this.renderView();
+            }
+        };
+        document.getElementById('snap-to-end').onclick = () => {
+            const yr = toEnt.validRange.end;
+            if (Number.isFinite(yr)) {
+                conn.fromYear = yr; conn.toYear = yr;
+                this.app.render(); this.renderView();
+            }
+        };
+        document.getElementById('delete-link').onclick = () => {
+            this.app.showConfirm(`Delete connection between ${fromEnt.name} and ${toEnt.name}?`, () => {
+                this.app.connections = this.app.connections.filter(c => c.id !== conn.id);
+                this.hideLinkInfo();
+                this.renderView();
+            });
+        };
+
+        document.getElementById('close-editor').onclick = () => {
+            this.hideLinkInfo();
+        };
     }
 
     updateLinkInfoPos(e) {
