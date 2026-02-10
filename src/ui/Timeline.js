@@ -221,7 +221,7 @@ export default class Timeline {
         svgLayer.style.width = '100%';
         svgLayer.style.height = '100%';
         svgLayer.style.pointerEvents = 'none';
-        svgLayer.style.zIndex = '10'; // Above tracks, but below handles if possible
+        svgLayer.style.zIndex = '100'; // Above everything including bars and labels
 
         // Define arrow marker
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
@@ -338,7 +338,7 @@ export default class Timeline {
                 if (widthP > 0) {
                     const bar = document.createElement('div');
                     bar.className = 'timeline-bar';
-                    bar.style.zIndex = '20'; // Ensure it's above SVG layer for clicks
+                    bar.style.zIndex = '20';
                     if (this.isLinking && this.linkSource && this.linkSource.id === ent.id) {
                         bar.classList.add('linking-source');
                     }
