@@ -223,8 +223,23 @@ export default class Timeline {
         svgLayer.style.pointerEvents = 'none';
         svgLayer.style.zIndex = '100'; // Above everything including bars and labels
 
-        // Markers removed as per request (dropping visual arrow part)
-        // container.appendChild(svgLayer); // Moved to end
+        // Arrow marker definitions
+        const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+        const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+        marker.setAttribute("id", "arrowhead");
+        marker.setAttribute("viewBox", "0 0 10 10");
+        marker.setAttribute("refX", "8");
+        marker.setAttribute("refY", "5");
+        marker.setAttribute("markerWidth", "6");
+        marker.setAttribute("markerHeight", "6");
+        marker.setAttribute("orient", "auto-start-reverse");
+
+        const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        arrowPath.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
+        arrowPath.setAttribute("fill", "var(--rubric-red)");
+        marker.appendChild(arrowPath);
+        defs.appendChild(marker);
+        svgLayer.appendChild(defs);
 
         // Header
         const header = document.createElement('div');
@@ -537,14 +552,16 @@ export default class Timeline {
             const isConfirmed = conn.confirmed;
 
             // Curved path coordinates
-            const dx = x2 - x1;
             const dy = y2 - y1;
-            // Increased bow for better visibility and testing
-            const bow = 60;
-            const cp1x = x1 + dx * 0.5 + bow;
+            // Reduced bow as per request
+            const bow = 30;
+
+            // Start horizontal, end vertical to point "to the entity"
+            const cp1x = x1 + bow;
             const cp1y = y1;
-            const cp2x = x1 + dx * 0.5 + bow;
-            const cp2y = y2;
+            const cp2x = x2;
+            const cp2y = y2 - Math.sign(dy) * bow;
+
             const d = `M ${x1} ${y1} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${x2} ${y2}`;
 
             // Hit area (invisible thick path)
@@ -567,6 +584,8 @@ export default class Timeline {
             path.setAttribute('stroke-width', '2');
             if (!isValid || !isConfirmed) {
                 path.setAttribute('stroke-dasharray', '4,4');
+            } else {
+                path.setAttribute('marker-end', 'url(#arrowhead)');
             }
             path.style.pointerEvents = 'none'; // Clicks go to hitPath
 
