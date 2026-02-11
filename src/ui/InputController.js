@@ -326,6 +326,13 @@ export default class InputController {
                 this.app.focusSelectedEntity();
             }
 
+            // LINKING KEYBIND
+            if (e.code === 'KeyL' && this.app.currentView === 'timeline') {
+                this.app.timeline.isLinking = !this.app.timeline.isLinking;
+                this.app.timeline.linkSource = null;
+                this.app.timeline.renderView();
+            }
+
             if (this.app.activeTool === 'draw') {
                 if (e.key === 'Enter') this.app.commitDraft();
                 if (e.key === 'Escape') this.app.cancelDraft();
@@ -421,8 +428,13 @@ export default class InputController {
 
         window.addEventListener('mouseup', () => {
             if (isDraggingBar) {
+                const targetId = dragTarget;
                 isDraggingBar = false;
                 dragTarget = null;
+
+                // Invalidate or delete connections if range changed
+                this.app.invalidateConnectionsFor(targetId);
+
                 this.app.updateInfoPanel(); // Refresh UI if open
                 this.app.render(); // Refresh map
             }

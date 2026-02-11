@@ -629,6 +629,7 @@ export default class IlluminarchismApp {
         const mapCanvas = document.getElementById('map-canvas');
         const timelineDiv = document.getElementById('view-timeline');
         const toolbar = document.getElementById('toolbar');
+        const linkBtn = document.getElementById('btn-timeline-link');
 
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
 
@@ -640,6 +641,7 @@ export default class IlluminarchismApp {
                 timelineDiv.style.display = 'none'; // Explicitly hide
             }
             if (toolbar) toolbar.style.display = 'flex';
+            if (linkBtn) linkBtn.style.display = 'none';
             this.render();
         } else {
             document.getElementById('btn-view-timeline').classList.add('active');
@@ -649,8 +651,15 @@ export default class IlluminarchismApp {
                 timelineDiv.style.display = 'block'; // Explicitly show
             }
             if (toolbar) toolbar.style.display = 'none';
+            if (linkBtn) linkBtn.style.display = 'inline-block';
             this.timeline.renderView();
         }
+    }
+
+    getConnectionYears(conn) {
+        const fromYear = conn.fromYear !== undefined ? conn.fromYear : conn.year;
+        const toYear = conn.toYear !== undefined ? conn.toYear : (conn.year !== undefined ? conn.year : fromYear);
+        return { fromYear, toYear };
     }
 
     isConnectionValid(conn) {
@@ -662,19 +671,12 @@ export default class IlluminarchismApp {
         // Domain check
         if (entFrom.domain !== entTo.domain) return false;
 
-        // From side must match boundary
-        const boundaryYear = conn.fromSide === 'start' ? entFrom.validRange.start : entFrom.validRange.end;
-        if (boundaryYear !== conn.year) return false;
+        // Check temporal validity
+        const { fromYear, toYear } = this.getConnectionYears(conn);
 
-        // Target must exist at year
-        if (conn.toSide === 'start') {
-            if (entTo.validRange.start !== conn.year) return false;
-        } else if (conn.toSide === 'end') {
-            if (entTo.validRange.end !== conn.year) return false;
-        } else {
-            // mid
-            if (conn.year < entTo.validRange.start || conn.year > entTo.validRange.end) return false;
-        }
+        // Ensure both ends exist in their respective entities' timelines
+        if (fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end) return false;
+        if (toYear < entTo.validRange.start || toYear > entTo.validRange.end) return false;
 
         return true;
     }
@@ -1218,11 +1220,30 @@ export default class IlluminarchismApp {
 
     invalidateConnectionsFor(entityId) {
         if (!this.connections) return;
-        this.connections.forEach(conn => {
-            if (conn.fromId === entityId || conn.targetId === entityId) {
-                conn.confirmed = false;
+
+        this.connections = this.connections.filter(conn => {
+            if (conn.fromId !== entityId && conn.targetId !== entityId) return true;
+
+            const entFrom = this.entitiesById.get(conn.fromId);
+            const entTo = this.entitiesById.get(conn.targetId);
+
+            if (!entFrom || !entTo) return false;
+
+            const { fromYear, toYear } = this.getConnectionYears(conn);
+
+            // Auto-delete if strictly outside the new range
+            const fromOutside = fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end;
+            const toOutside = toYear < entTo.validRange.start || toYear > entTo.validRange.end;
+
+            if (fromOutside || toOutside) {
+                return false; // Remove connection
             }
+
+            // Otherwise mark as unconfirmed to draw attention
+            conn.confirmed = false;
+            return true;
         });
+
         if (this.currentView === 'timeline') {
             this.timeline.renderView();
         }

@@ -9,7 +9,7 @@ import {
     PARCHMENT_VERTEX_SHADER,
     PARCHMENT_FRAGMENT_SHADER 
 } from './shaders/MedievalShader.js';
-import { CONFIG } from '../core/Entity.js';
+import { CONFIG } from '../config.js';
 
 export default class WebGLRenderer {
     constructor(canvas) {
