@@ -420,13 +420,17 @@ export default class IlluminarchismApp {
             document.body.classList.toggle('panel-collapsed');
         });
 
-        // Speed Buttons
-        document.querySelectorAll('.speed-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.playbackSpeed = parseFloat(e.target.dataset.speed);
-                document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-            });
+        // Speed Cycle Logic
+        this.speedOptions = [0.5, 1, 2, 4, 8, 16];
+        this.safeAddListener('btn-speed-cycle', 'click', () => {
+            let currentIndex = this.speedOptions.indexOf(this.playbackSpeed);
+            if (currentIndex === -1) currentIndex = 1; // Default to 1x
+
+            const nextIndex = (currentIndex + 1) % this.speedOptions.length;
+            this.playbackSpeed = this.speedOptions[nextIndex];
+
+            const btn = document.getElementById('btn-speed-cycle');
+            if (btn) btn.textContent = `${this.playbackSpeed}x`;
         });
         // Play button listener moved to Timeline.js but we can keep it here if ref undefined or do nothing.
         // Timeline.js captures it by ID 'btn-play'.
