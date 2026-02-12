@@ -54,8 +54,7 @@ export default class IlluminarchismApp {
         // Legacy aliases for backward compatibility
         this.drawCategory = 'political';
         this.drawType = 'polity';
-        this.playbackSpeed = 10;
-        this.playbackSpeed = 10;
+        this.playbackSpeed = 1;
         this.highlightedVertexIndex = null;
         this.currentView = 'map'; // map | timeline
 
@@ -274,8 +273,9 @@ export default class IlluminarchismApp {
     }
 
     formatYear(year) {
-        if (year < 0) return `${Math.abs(year)} BC`;
-        return `${year} AD`;
+        const rounded = Math.floor(year);
+        if (rounded < 0) return `${Math.abs(rounded)} BC`;
+        return `${rounded} AD`;
     }
 
 
@@ -423,7 +423,7 @@ export default class IlluminarchismApp {
         // Speed Buttons
         document.querySelectorAll('.speed-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.playbackSpeed = parseInt(e.target.dataset.speed);
+                this.playbackSpeed = parseFloat(e.target.dataset.speed);
                 document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
             });

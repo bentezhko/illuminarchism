@@ -177,17 +177,18 @@
             </div>
         </div>
         <div class="timeline-wrapper">
-            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">Prev</button>
-            <button id="btn-play" title="Play History">Play</button>
-            <button id="btn-next-key" class="time-btn" title="Next Keyframe">Next</button>
+            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">&lt;-</button>
+            <button id="btn-play" title="Play History">&gt;</button>
+            <button id="btn-next-key" class="time-btn" title="Next Keyframe">-&gt;</button>
 
-            <div class="speed-control" title="Temporal Velocity (Years/Tick)">
+            <div class="speed-control" title="Temporal Velocity (Years/Second)">
                 <div class="speed-btn-group">
-                    <button class="speed-btn" data-speed="5">0.5x</button>
-                    <button class="speed-btn active" data-speed="10">1x</button>
-                    <button class="speed-btn" data-speed="20">2x</button>
-                    <button class="speed-btn" data-speed="40">4x</button>
-                    <button class="speed-btn" data-speed="80">8x</button>
+                    <button class="speed-btn" data-speed="0.5">0.5x</button>
+                    <button class="speed-btn active" data-speed="1">1x</button>
+                    <button class="speed-btn" data-speed="2">2x</button>
+                    <button class="speed-btn" data-speed="4">4x</button>
+                    <button class="speed-btn" data-speed="8">8x</button>
+                    <button class="speed-btn" data-speed="16">16x</button>
                 </div>
             </div>
 
@@ -196,7 +197,6 @@
                 <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
             </div>
         </div>
-        <div style="font-size: 0.8rem; color: var(--ink-faded);">The Chronometer</div>
     </div>
 
     <div class="debug-info pointer-events-auto">
