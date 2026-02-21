@@ -88,9 +88,14 @@ export class Quadtree {
      */
     retrieve(range) {
         let found = [];
-        if (!this.intersects(this.bounds, range)) return found;
+        const intersectsBounds = this.intersects(this.bounds, range);
 
-        if (this.divided) {
+        // If range is outside bounds:
+        // - If depth > 0, we can safely return empty (strict containment).
+        // - If depth == 0, we must check 'this.objects' for outliers, but can skip children.
+        if (!intersectsBounds && this.depth > 0) return found;
+
+        if (this.divided && intersectsBounds) {
             // If range intersects with children, search them
             if (this.intersects(this.nodes[0].bounds, range)) found = found.concat(this.nodes[0].retrieve(range));
             if (this.intersects(this.nodes[1].bounds, range)) found = found.concat(this.nodes[1].retrieve(range));
