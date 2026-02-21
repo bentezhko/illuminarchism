@@ -102,7 +102,7 @@ describe("HistoricalEntity", () => {
             expect(entity.domain).toBe("political");
 
             // Check defaults
-            expect(entity.typology).toBe("nation-state"); // Default for political? No, default in _initFromConfig is 'nation-state' if config.typology is missing
+            expect(entity.typology).toBe("nation-state");
             expect(entity.timeline).toEqual([]);
             expect(entity.validRange).toEqual({ start: -Infinity, end: Infinity });
             expect(entity.visible).toBe(true);
@@ -132,8 +132,8 @@ describe("HistoricalEntity", () => {
             };
 
             const entity = HistoricalEntity.fromJSON(data);
-            // Current implementation takes the object as is
-            expect(entity.validRange).toEqual({ start: null, end: null });
+            // Should convert nulls back to Infinity
+            expect(entity.validRange).toEqual({ start: -Infinity, end: Infinity });
         });
 
         test("should use defaults if validRange is missing in new format", () => {

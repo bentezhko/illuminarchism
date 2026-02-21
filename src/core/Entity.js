@@ -505,7 +505,14 @@ export default class HistoricalEntity {
 
             // Restore timeline and valid range
             ent.timeline = data.timeline || [];
-            ent.validRange = data.validRange || { start: -Infinity, end: Infinity };
+            if (data.validRange) {
+                ent.validRange = {
+                    start: data.validRange.start !== null ? data.validRange.start : -Infinity,
+                    end: data.validRange.end !== null ? data.validRange.end : Infinity
+                };
+            } else {
+                ent.validRange = { start: -Infinity, end: Infinity };
+            }
 
             return ent;
         } else {
