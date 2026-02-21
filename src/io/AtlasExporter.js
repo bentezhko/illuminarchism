@@ -61,6 +61,9 @@ export default class AtlasExporter {
                     coordinates[0][1] !== coordinates[coordinates.length - 1][1]) {
                     coordinates.push([...coordinates[0]]);
                 }
+                // Ensure valid linear ring (at least 4 points: start, p2, p3, end=start)
+                if (coordinates.length < 4) return null;
+
                 return {
                     type: 'Polygon',
                     coordinates: [coordinates]

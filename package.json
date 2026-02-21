@@ -11,5 +11,8 @@
     "map"
   ],
   "author": "bentezhko",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "jsdom": "^28.1.0"
+  }
 }
