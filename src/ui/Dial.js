@@ -7,12 +7,50 @@ export default class Dial {
     }
 
     /**
-     * Set the currently hovered wheel to display full value
+     * Set the currently hovered wheel to update the main tooltip
      * @param {string|null} wheel 'domain', 'form', 'rank', or null
      */
     setHover(wheel) {
         this.hoveredWheel = wheel;
-        this.updateDisplay();
+        this.updateTooltip();
+    }
+
+    /**
+     * Update the main dial container tooltip based on hover state
+     */
+    updateTooltip() {
+        const dialEl = document.getElementById('entity-dial');
+        if (!dialEl) return;
+
+        // Default state
+        if (!this.hoveredWheel) {
+            dialEl.title = "Ontology: Domain - Form - Rank";
+            return;
+        }
+
+        // Get current data
+        const domainData = this.app.ontologyTaxonomy[this.app.drawDomain];
+        if (!domainData) return;
+
+        if (this.hoveredWheel === 'domain') {
+            dialEl.title = domainData.domain ? domainData.domain.name : "";
+        } else if (this.hoveredWheel === 'form') {
+            if (domainData.types) {
+                const typeData = domainData.types.find(t => t.value === this.app.drawTypology);
+                dialEl.title = typeData ? typeData.label : "";
+            } else {
+                dialEl.title = "";
+            }
+        } else if (this.hoveredWheel === 'rank') {
+            const possibleSubtypes = this._getSubtypesForTypology(this.app.drawTypology);
+            if (possibleSubtypes && possibleSubtypes.length > 0) {
+                const subData = possibleSubtypes.find(s => s.value === this.app.drawSubtype);
+                // If drawSubtype is null but subtypes exist, subData is undefined -> ""
+                dialEl.title = subData ? subData.label : "";
+            } else {
+                dialEl.title = ""; // Void rank
+            }
+        }
     }
 
     /**
@@ -28,28 +66,16 @@ export default class Dial {
         // 1. DOMAIN
         const domainData = this.app.ontologyTaxonomy[this.app.drawDomain];
         if (domainData && domainData.domain) {
-            if (this.hoveredWheel === 'domain') {
-                domainEl.textContent = domainData.domain.name;
-            } else if (this.hoveredWheel) {
-                domainEl.textContent = '';
-            } else {
-                domainEl.textContent = domainData.domain.abbr;
-            }
+            domainEl.textContent = domainData.domain.abbr;
         }
 
         // 2. FORM (Typology)
         if (domainData && domainData.types) {
             const typeData = domainData.types.find(t => t.value === this.app.drawTypology);
             if (typeData) {
-                if (this.hoveredWheel === 'form') {
-                    formEl.textContent = typeData.label;
-                } else if (this.hoveredWheel) {
-                    formEl.textContent = '';
-                } else {
-                    formEl.textContent = typeData.abbr;
-                }
+                formEl.textContent = typeData.abbr;
             } else {
-                formEl.textContent = this.hoveredWheel ? '' : "---";
+                formEl.textContent = "---";
             }
         }
 
@@ -61,19 +87,17 @@ export default class Dial {
                 this.app.drawSubtype = possibleSubtypes[0].value;
             }
             const subData = possibleSubtypes.find(s => s.value === this.app.drawSubtype);
-
-            if (this.hoveredWheel === 'rank') {
-                rankEl.textContent = subData ? subData.label : '';
-            } else if (this.hoveredWheel) {
-                rankEl.textContent = '';
-            } else {
-                rankEl.textContent = subData ? subData.abbr : "---";
-            }
+            rankEl.textContent = subData ? subData.abbr : "---";
             rankEl.parentElement.style.opacity = '1';
         } else {
             this.app.drawSubtype = null;
-            rankEl.textContent = this.hoveredWheel ? '' : "___";
+            rankEl.textContent = "___";
             rankEl.parentElement.style.opacity = '0.3';
+        }
+
+        // Also update tooltip in case selection changed while hovering
+        if (this.hoveredWheel) {
+            this.updateTooltip();
         }
     }
 
