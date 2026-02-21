@@ -1219,14 +1219,16 @@ export default class IlluminarchismApp {
 }
 
 // Global hook
-window.onload = () => {
-    try {
-        window.illuminarchismApp = new IlluminarchismApp();
-        // Remove loading overlay if successful
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) overlay.style.display = 'none';
-    } catch (e) {
-        console.error("Initialization Failed:", e);
-        alert("App Initialization Failed: " + e.message + "\nCheck console for details.");
-    }
-};
+if (typeof window !== 'undefined') {
+    window.onload = () => {
+        try {
+            window.illuminarchismApp = new IlluminarchismApp();
+            // Remove loading overlay if successful
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        } catch (e) {
+            console.error("Initialization Failed:", e);
+            alert("App Initialization Failed: " + e.message + "\nCheck console for details.");
+        }
+    };
+}
