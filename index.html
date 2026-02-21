@@ -27,6 +27,15 @@
                 <button class="view-btn" id="btn-view-timeline">Timeline</button>
             </div>
 
+            <div class="header-center-controls">
+                <button id="btn-play" title="Play History">></button>
+                <div id="year-display">1000 AD</div>
+                <div class="speed-control" title="Temporal Velocity (Click to Cycle)">
+                    <button id="btn-speed-cycle" class="speed-btn active" style="min-width: 40px;">1x</button>
+                </div>
+                <button class="btn-text" id="btn-toggle-chronographer" title="Toggle Chronographer">Chronographer</button>
+            </div>
+
             <div class="file-controls">
                 <button class="btn-text" id="btn-save" title="Download .atlas JSON">S</button>
                 <button class="btn-text" id="btn-load" title="Upload .atlas JSON">U</button>
@@ -162,33 +171,27 @@
     <div id="draw-hint"></div>
     <!-- Button Reset View Removed -->
 
-    <div id="temporal-controls" class="pointer-events-auto">
-        <button id="btn-toggle-time-panel" title="Toggle Panel">▼</button>
-        <div id="year-display">1000 AD</div>
-        <div
-            style="display:flex; justify-content:space-between; width:100%; max-width:900px; margin-bottom:0.5rem; font-size:0.8rem; color:var(--rubric-red);">
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <span>Epoch Start:</span>
+    <div id="temporal-controls" class="pointer-events-auto" style="display:none;">
+        <div class="chrono-controls-row">
+            <div class="epoch-group">
+                <span>Start:</span>
                 <input type="number" id="epoch-start" value="-10000" class="epoch-input">
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <span>Epoch End:</span>
+
+            <div class="keyframe-nav">
+                 <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">&lt;-</button>
+                 <button id="btn-next-key" class="time-btn" title="Next Keyframe">-&gt;</button>
+            </div>
+
+            <div class="epoch-group">
+                <span>End:</span>
                 <input type="number" id="epoch-end" value="2025" class="epoch-input">
             </div>
         </div>
-        <div class="timeline-wrapper">
-            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">&lt;-</button>
-            <button id="btn-play" title="Play History">&gt;</button>
-            <button id="btn-next-key" class="time-btn" title="Next Keyframe">-&gt;</button>
 
-            <div class="speed-control" title="Temporal Velocity (Click to Cycle)">
-                <button id="btn-speed-cycle" class="speed-btn active" style="min-width: 40px;">1x</button>
-            </div>
-
-            <div id="timeline-track-container">
-                <div id="keyframe-notches"></div>
-                <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
-            </div>
+        <div id="timeline-track-container" style="width: 100%; margin-top: 10px;">
+            <div id="keyframe-notches"></div>
+            <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
         </div>
     </div>
 

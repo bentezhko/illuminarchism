@@ -368,9 +368,15 @@ export default class IlluminarchismApp {
         // Timeline.js handles 'change' on epoch-start/end to update bounds.
         // We can remove the logic here to avoid double binding.
 
-        // Toggle Timeline Panel
-        this.safeAddListener('btn-toggle-time-panel', 'click', () => {
-            document.body.classList.toggle('panel-collapsed');
+        // Toggle Chronographer Panel
+        this.safeAddListener('btn-toggle-chronographer', 'click', () => {
+            const panel = document.getElementById('temporal-controls');
+            const btn = document.getElementById('btn-toggle-chronographer');
+            if (panel) {
+                const isHidden = panel.style.display === 'none';
+                panel.style.display = isHidden ? 'flex' : 'none';
+                if (btn) btn.classList.toggle('active', isHidden);
+            }
         });
 
         // Speed Cycle Logic
