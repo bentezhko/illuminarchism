@@ -4,7 +4,7 @@ import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
 import { distance, getCentroid, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
 
-import { DOMAINS, buildTaxonomyForUI, getTypologiesForDomain, POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC_SUBTYPES } from './core/Ontology.js';
+import { buildTaxonomyForUI } from './core/Ontology.js';
 import { Quadtree } from './core/SpatialIndex.js';
 import RegistryRenderer from './ui/RegistryRenderer.js';
 import Timeline from './ui/Timeline.js';
