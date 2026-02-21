@@ -503,11 +503,6 @@ export default class MedievalRenderer {
         }
     }
 
-    // Backward compatibility
-    drawCityMarker(ent, isHovered, isSelected) {
-        this.drawPointMarker(ent, isHovered, isSelected);
-    }
-
     drawLabel(ent, isSelected) {
         let cx, cy;
         if (this._isPointEntity(ent)) {
