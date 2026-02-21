@@ -103,39 +103,50 @@ export function resampleGeometry(points, targetCount, isClosed = true) {
     for (let i = 0; i < segments; i++) {
         totalLength += distance(sourcePoints[i], sourcePoints[(i + 1) % sourcePoints.length]);
     }
-    const step = totalLength / targetCount;
+    const step = totalLength / (isClosed ? targetCount : (targetCount - 1));
     const newPoints = [];
-    let currentDist = 0, currentIdx = 0, nextIdx = 1;
+    let currentIdx = 0;
+    let nextIdx = 1;
     let segmentDist = distance(sourcePoints[0], sourcePoints[1]);
     let distTraveledOnSegment = 0;
     newPoints.push({ x: sourcePoints[0].x, y: sourcePoints[0].y });
-    const loopLimit = isClosed ? targetCount : targetCount - 1;
+    const loopLimit = targetCount;
+
     for (let i = 1; i < loopLimit; i++) {
-        currentDist += step;
-        if (segmentDist === 0) {
-            currentIdx = nextIdx;
-            nextIdx = (nextIdx + 1) % sourcePoints.length;
-            segmentDist = distance(sourcePoints[currentIdx], sourcePoints[nextIdx]);
-            continue;
-        }
-        while (distTraveledOnSegment + step > segmentDist) {
+        let currentStepRemaining = step;
+
+        while (distTraveledOnSegment + currentStepRemaining > segmentDist) {
             const remainingOnSeg = segmentDist - distTraveledOnSegment;
-            currentDist -= remainingOnSeg;
-            currentIdx = nextIdx;
-            nextIdx = (nextIdx + 1);
-            if (isClosed) nextIdx = nextIdx % sourcePoints.length;
-            if (!isClosed && nextIdx >= sourcePoints.length) break;
-            segmentDist = distance(sourcePoints[currentIdx], sourcePoints[nextIdx]);
+            currentStepRemaining -= remainingOnSeg;
             distTraveledOnSegment = 0;
-            if (segmentDist === 0) break;
+
+            currentIdx = nextIdx;
+            nextIdx++;
+            if (isClosed) {
+                nextIdx = nextIdx % sourcePoints.length;
+            } else {
+                if (nextIdx >= sourcePoints.length) break;
+            }
+            segmentDist = distance(sourcePoints[currentIdx], sourcePoints[nextIdx]);
         }
-        distTraveledOnSegment += step;
+
+        if (!isClosed && nextIdx >= sourcePoints.length) break;
+
+        distTraveledOnSegment += currentStepRemaining;
         const t = distTraveledOnSegment / segmentDist;
-        const x = lerp(sourcePoints[currentIdx].x, sourcePoints[nextIdx].x, t) || sourcePoints[currentIdx].x;
-        const y = lerp(sourcePoints[currentIdx].y, sourcePoints[nextIdx].y, t) || sourcePoints[currentIdx].y;
+        // Handle zero-length segments or precision issues
+        const x = isNaN(t) ? sourcePoints[currentIdx].x : lerp(sourcePoints[currentIdx].x, sourcePoints[nextIdx].x, t);
+        const y = isNaN(t) ? sourcePoints[currentIdx].y : lerp(sourcePoints[currentIdx].y, sourcePoints[nextIdx].y, t);
         newPoints.push({ x, y });
     }
-    if (!isClosed && newPoints.length < targetCount) newPoints.push({ ...sourcePoints[sourcePoints.length - 1] });
+
+    if (!isClosed) {
+        while (newPoints.length < targetCount) {
+            newPoints.push({ ...sourcePoints[sourcePoints.length - 1] });
+        }
+        // Force exact end point to avoid floating point errors
+        newPoints[targetCount - 1] = { ...sourcePoints[sourcePoints.length - 1] };
+    }
     return newPoints;
 }
 
