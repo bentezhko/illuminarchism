@@ -28,8 +28,8 @@
             </div>
 
             <div class="file-controls">
-                <button class="btn-text" id="btn-save" title="Download .atlas JSON">Save</button>
-                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">Load</button>
+                <button class="btn-text" id="btn-save" title="Download .atlas JSON">S</button>
+                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">U</button>
                 <button class="btn-text" id="btn-timeline-link" title="Link Entities (L)" style="display:none;">L</button>
                 <button id="btn-ontology" title="View Taxonomy">Help</button>
                 <input type="file" id="file-input" accept=".json,.atlas">
@@ -177,18 +177,12 @@
             </div>
         </div>
         <div class="timeline-wrapper">
-            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">Prev</button>
-            <button id="btn-play" title="Play History">Play</button>
-            <button id="btn-next-key" class="time-btn" title="Next Keyframe">Next</button>
+            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">&lt;-</button>
+            <button id="btn-play" title="Play History">&gt;</button>
+            <button id="btn-next-key" class="time-btn" title="Next Keyframe">-&gt;</button>
 
-            <div class="speed-control" title="Temporal Velocity (Years/Tick)">
-                <div class="speed-btn-group">
-                    <button class="speed-btn" data-speed="5">0.5x</button>
-                    <button class="speed-btn active" data-speed="10">1x</button>
-                    <button class="speed-btn" data-speed="20">2x</button>
-                    <button class="speed-btn" data-speed="40">4x</button>
-                    <button class="speed-btn" data-speed="80">8x</button>
-                </div>
+            <div class="speed-control" title="Temporal Velocity (Click to Cycle)">
+                <button id="btn-speed-cycle" class="speed-btn active" style="min-width: 40px;">1x</button>
             </div>
 
             <div id="timeline-track-container">
@@ -196,7 +190,6 @@
                 <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
             </div>
         </div>
-        <div style="font-size: 0.8rem; color: var(--ink-faded);">The Chronometer</div>
     </div>
 
     <div class="debug-info pointer-events-auto">

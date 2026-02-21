@@ -111,10 +111,12 @@ export default class Timeline {
 
     play() {
         this.isPlaying = true;
-        if (this.playButton) this.playButton.textContent = '⏸';
+        if (this.playButton) this.playButton.textContent = 'II';
 
         this.playInterval = setInterval(() => {
-            let newYear = this.app.currentYear + this.app.playbackSpeed;
+            // New Standard: 1x = 2 years per second.
+            // Formula: (playbackSpeed * 2) / 20 ticks = playbackSpeed / 10
+            let newYear = this.app.currentYear + (this.app.playbackSpeed / 10);
             const min = parseInt(this.slider.min);
             const max = parseInt(this.slider.max);
 
@@ -126,7 +128,7 @@ export default class Timeline {
 
     stop() {
         this.isPlaying = false;
-        if (this.playButton) this.playButton.textContent = '▶';
+        if (this.playButton) this.playButton.textContent = '>';
         if (this.playInterval) {
             clearInterval(this.playInterval);
             this.playInterval = null;
