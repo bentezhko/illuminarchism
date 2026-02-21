@@ -142,7 +142,7 @@ export function resampleGeometry(points, targetCount, isClosed = true) {
 
     if (!isClosed) {
         while (newPoints.length < targetCount) {
-             newPoints.push({ ...sourcePoints[sourcePoints.length - 1] });
+            newPoints.push({ ...sourcePoints[sourcePoints.length - 1] });
         }
         // Force exact end point to avoid floating point errors
         newPoints[targetCount - 1] = { ...sourcePoints[sourcePoints.length - 1] };
