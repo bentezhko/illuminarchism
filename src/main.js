@@ -279,53 +279,6 @@ export default class IlluminarchismApp {
     }
 
 
-    // --- NEW: Helper to update the dial state using new ontology ---
-    updateDialDisplay() {
-        const domainEl = document.getElementById('val-domain');
-        const formEl = document.getElementById('val-form');
-        const rankEl = document.getElementById('val-rank');
-
-        // 1. Get Domain abbreviation from ontology
-        const domainData = this.ontologyTaxonomy[this.drawDomain];
-        if (domainData && domainData.domain) {
-            domainEl.textContent = domainData.domain.abbr;
-        } else {
-            // Fallback to legacy category map
-            const catAbbrMap = {
-                'political': 'POL', 'geographical': 'GEO', 'cultural': 'CUL',
-                'linguistic': 'LIN', 'faith': 'FAI', 'religious': 'REL',
-                'geographic': 'GEO'
-            };
-            domainEl.textContent = catAbbrMap[this.drawDomain] || catAbbrMap[this.drawCategory] || 'UNK';
-        }
-
-        // 2. Get Typology abbreviation
-        if (domainData && domainData.types) {
-            const currentTypology = domainData.types.find(t => t.value === this.drawTypology);
-            if (currentTypology) {
-                formEl.textContent = currentTypology.abbr;
-            } else {
-                // Fallback to the first available typology in the domain
-                formEl.textContent = domainData.types.length > 0 ? domainData.types[0].abbr : '---';
-            }
-        } else {
-            formEl.textContent = '---';
-        }
-
-        // 3. Rank/Subtype (Level 3) - Show admin levels when available
-        const subtypes = this._getSubtypesForTypology(this.drawTypology);
-        if (subtypes && subtypes.length > 0) {
-            const currentSubtype = subtypes.find(s => s.value === this.drawSubtype);
-            rankEl.textContent = currentSubtype ? currentSubtype.abbr : subtypes[0].abbr;
-        } else {
-            rankEl.textContent = '---';
-        }
-
-        // Sync legacy properties
-        this.drawCategory = this._domainToCategory(this.drawDomain);
-        this.drawType = this._typologyToType(this.drawTypology);
-    }
-
     // Dial Logic Delegated to Dial.js
     updateDialDisplay() {
         this.dial.updateDisplay();
