@@ -232,10 +232,10 @@ export default class MedievalRenderer {
 
 
         // FIXED: Safe spread and sort
-        const sorted = [...entities].sort((a, b) => {
-            // Sorting only affects visual stacking relative to each other, not the render pipeline phase
-            return 0; // Maintain insertion/natural sort roughly
-        });
+        // OPTIMIZATION: Removed redundant sort and copy.
+        // Original code: const sorted = [...entities].sort((a, b) => 0);
+        // Sorting only affects visual stacking relative to each other, not the render pipeline phase
+        const sorted = entities; // Maintain insertion/natural sort roughly
 
         // --- LAYER CACHING LOGIC ---
         // If the cache is invalid (or first run), re-render the static world
