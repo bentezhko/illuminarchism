@@ -679,7 +679,7 @@ export default class Timeline {
                 </div>
                 <div style="display:flex; align-items:center; gap:5px;">
                     <label>Year:</label>
-                    <input type="number" id="link-year-input" value="${currentYear}" style="width:60px;">
+                    <input type="number" id="link-year-input" value="${escapeHTML(currentYear)}" style="width:60px;">
                 </div>
                 <div class="snap-buttons" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
                     <button class="small-btn" id="snap-from-start">Src Start</button>
