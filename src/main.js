@@ -350,7 +350,7 @@ export default class IlluminarchismApp {
         this.uiRefs.playBtn = document.getElementById('btn-play');
 
         if (this.uiRefs.display) {
-            this.uiRefs.display.textContent = this.formatYear(this.currentYear);
+            this.uiRefs.display.innerHTML = this.formatYear(this.currentYear); // Use innerHTML for HTML formatting
         }
 
         if (this.uiRefs.slider) {
@@ -1084,7 +1084,7 @@ export default class IlluminarchismApp {
         }
 
         const d = document.querySelector('.debug-info');
-        if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
+        if (d) d.innerHTML = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
     }
 
     render() {
