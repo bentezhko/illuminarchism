@@ -533,12 +533,12 @@ h1 span {
     gap: 1rem;
     z-index: 1000;
     box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
-    transform: translateY(100%); /* Hidden by default */
+    transform: translateY(0); /* Open by default */
     transition: transform 0.3s ease-in-out;
 }
 
-#temporal-controls.open {
-    transform: translateY(0);
+#temporal-controls.closed {
+    transform: translateY(100%);
 }
 
 #btn-toggle-chronographer {
@@ -594,8 +594,10 @@ h1 span {
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--rubric-red);
-    min-width: 100px;
+    width: 140px; /* Fixed width to prevent layout shift */
     text-align: center;
+    border-left: 1px solid transparent; /* Invisible borders for spacing */
+    border-right: 1px solid transparent;
 }
 
 .time-btn {

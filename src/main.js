@@ -373,13 +373,13 @@ export default class IlluminarchismApp {
             const panel = document.getElementById('temporal-controls');
             const btn = document.getElementById('btn-toggle-chronographer');
             if (panel) {
-                const isOpen = panel.classList.contains('open');
-                if (isOpen) {
-                    panel.classList.remove('open');
-                    if (btn) btn.textContent = '▲'; // Show "Up" when closed (to pull up)
-                } else {
-                    panel.classList.add('open');
+                const isClosed = panel.classList.contains('closed');
+                if (isClosed) {
+                    panel.classList.remove('closed');
                     if (btn) btn.textContent = '▼'; // Show "Down" when open (to hide)
+                } else {
+                    panel.classList.add('closed');
+                    if (btn) btn.textContent = '▲'; // Show "Up" when closed (to pull up)
                 }
             }
         });
