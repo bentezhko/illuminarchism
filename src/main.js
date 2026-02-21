@@ -274,8 +274,9 @@ export default class IlluminarchismApp {
 
     formatYear(year) {
         const rounded = Math.floor(year);
-        if (rounded < 0) return `${Math.abs(rounded)} BC`;
-        return `${rounded} AD`;
+        // Returns HTML to separate Year and Era for styling
+        if (rounded < 0) return `<span>${Math.abs(rounded)}</span><span style="font-size:0.8em; color:var(--ink-faded);">BC</span>`;
+        return `<span>${rounded}</span><span style="font-size:0.8em; color:var(--ink-faded);">AD</span>`;
     }
 
 
@@ -349,7 +350,7 @@ export default class IlluminarchismApp {
         this.uiRefs.playBtn = document.getElementById('btn-play');
 
         if (this.uiRefs.display) {
-            this.uiRefs.display.textContent = this.formatYear(this.currentYear);
+            this.uiRefs.display.innerHTML = this.formatYear(this.currentYear); // Use innerHTML for HTML formatting
         }
 
         if (this.uiRefs.slider) {
@@ -368,23 +369,36 @@ export default class IlluminarchismApp {
         // Timeline.js handles 'change' on epoch-start/end to update bounds.
         // We can remove the logic here to avoid double binding.
 
-        // Toggle Timeline Panel
-        this.safeAddListener('btn-toggle-time-panel', 'click', () => {
-            document.body.classList.toggle('panel-collapsed');
+        // Toggle Chronographer Panel
+        this.safeAddListener('btn-toggle-chronographer', 'click', () => {
+            const panel = document.getElementById('temporal-controls');
+            const btn = document.getElementById('btn-toggle-chronographer');
+            if (panel) {
+                const isClosed = panel.classList.contains('closed');
+                if (isClosed) {
+                    panel.classList.remove('closed');
+                    if (btn) btn.textContent = '▼'; // Show "Down" when open (to hide)
+                } else {
+                    panel.classList.add('closed');
+                    if (btn) btn.textContent = '▲'; // Show "Up" when closed (to pull up)
+                }
+            }
         });
 
-        // Speed Cycle Logic
-        this.speedOptions = [0.5, 1, 2, 4, 8, 16];
-        this.safeAddListener('btn-speed-cycle', 'click', () => {
-            let currentIndex = this.speedOptions.indexOf(this.playbackSpeed);
-            if (currentIndex === -1) currentIndex = 1; // Default to 1x
+        // Speed Slider Logic
+        this.speedOptions = [-16, -8, -4, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 8, 16];
+        const speedSlider = document.getElementById('speed-slider');
+        const speedDisplay = document.getElementById('speed-display');
 
-            const nextIndex = (currentIndex + 1) % this.speedOptions.length;
-            this.playbackSpeed = this.speedOptions[nextIndex];
-
-            const btn = document.getElementById('btn-speed-cycle');
-            if (btn) btn.textContent = `${this.playbackSpeed}x`;
-        });
+        this.playbackSpeed = 1; // Default
+        if (speedSlider) {
+            speedSlider.value = this.speedOptions.indexOf(1); // Set initial slider position
+            speedSlider.addEventListener('input', (e) => {
+                const index = parseInt(e.target.value);
+                this.playbackSpeed = this.speedOptions[index];
+                if (speedDisplay) speedDisplay.textContent = `${this.playbackSpeed}x`;
+            });
+        }
         // Play button listener moved to Timeline.js but we can keep it here if ref undefined or do nothing.
         // Timeline.js captures it by ID 'btn-play'.
 
@@ -1072,7 +1086,7 @@ export default class IlluminarchismApp {
         }
 
         const d = document.querySelector('.debug-info');
-        if (d) d.textContent = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
+        if (d) d.innerHTML = `Year: ${this.formatYear(this.currentYear)} | Active: ${cnt}`;
     }
 
     render() {
@@ -1208,14 +1222,16 @@ export default class IlluminarchismApp {
 }
 
 // Global hook
-window.onload = () => {
-    try {
-        window.illuminarchismApp = new IlluminarchismApp();
-        // Remove loading overlay if successful
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) overlay.style.display = 'none';
-    } catch (e) {
-        console.error("Initialization Failed:", e);
-        alert("App Initialization Failed: " + e.message + "\nCheck console for details.");
-    }
-};
+if (typeof window !== 'undefined') {
+    window.onload = () => {
+        try {
+            window.illuminarchismApp = new IlluminarchismApp();
+            // Remove loading overlay if successful
+            const overlay = document.getElementById('loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        } catch (e) {
+            console.error("Initialization Failed:", e);
+            alert("App Initialization Failed: " + e.message + "\nCheck console for details.");
+        }
+    };
+}

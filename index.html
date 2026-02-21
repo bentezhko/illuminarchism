@@ -27,11 +27,21 @@
                 <button class="view-btn" id="btn-view-timeline">Timeline</button>
             </div>
 
+            <div class="header-center-controls">
+                <button id="btn-play" title="Play History">▶</button>
+                <div id="year-display">1000 AD</div>
+                <div class="speed-control" title="Temporal Velocity">
+                    <input type="range" id="speed-slider" min="0" max="12" step="1" value="8" style="width: 80px;">
+                    <span id="speed-display">1x</span>
+                </div>
+            </div>
+
             <div class="file-controls">
                 <button class="btn-text" id="btn-save" title="Download .atlas JSON">S</button>
                 <button class="btn-text" id="btn-load" title="Upload .atlas JSON">U</button>
                 <button class="btn-text" id="btn-timeline-link" title="Link Entities (L)" style="display:none;">L</button>
-                <button id="btn-ontology" title="View Taxonomy">Help</button>
+                <button class="btn-text" id="btn-toggle-registry" title="Open Atlas Registry">R</button>
+                <button id="btn-ontology" title="View Taxonomy">?</button>
                 <input type="file" id="file-input" accept=".json,.atlas">
             </div>
         </header>
@@ -64,8 +74,6 @@
 
     </div>
 
-    <button id="btn-toggle-registry" title="Open Atlas Registry">Registry</button>
-
     <!-- Use strict display:none to hide timeline initially -->
     <div id="view-timeline" class="pointer-events-auto" style="display:none;">
         <!-- Timeline API content injected here -->
@@ -89,10 +97,10 @@
         <div class="ontology-section">
             <div class="ontology-title">Keyboard Shortcuts</div>
             <ul style="margin: 0.5rem 0; padding-left: 1.2rem; font-size: 0.9rem;">
-                <li><strong>Navigate:</strong> Left Click + Drag (Pan) / Arrows</li>
+                <li><strong>Navigate:</strong> Left Click + Drag (Pan)</li>
+                <li><strong>Time:</strong> Arrow Left/Right (-/+ 1 Year), Spacebar (Play/Pause)</li>
                 <li><strong>Inspect:</strong> Right Click (Context Menu)</li>
                 <li><strong>Zoom:</strong> Scroll Wheel</li>
-                <li><strong>Time:</strong> Spacebar (Play/Pause)</li>
                 <li><strong>Draw:</strong> Click (Point), Middle/Enter (Finish), Esc (Cancel)</li>
                 <li><strong>Edit:</strong> Drag Vertex (Move), Click Line (Split)</li>
             </ul>
@@ -163,32 +171,27 @@
     <!-- Button Reset View Removed -->
 
     <div id="temporal-controls" class="pointer-events-auto">
-        <button id="btn-toggle-time-panel" title="Toggle Panel">▼</button>
-        <div id="year-display">1000 AD</div>
-        <div
-            style="display:flex; justify-content:space-between; width:100%; max-width:900px; margin-bottom:0.5rem; font-size:0.8rem; color:var(--rubric-red);">
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <span>Epoch Start:</span>
+        <button id="btn-toggle-chronographer" title="Toggle Chronographer">▼</button>
+        <div class="chrono-controls-row">
+            <div class="epoch-group">
+                <span>Start:</span>
                 <input type="number" id="epoch-start" value="-10000" class="epoch-input">
             </div>
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <span>Epoch End:</span>
+
+            <div class="keyframe-nav">
+                 <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">&lt;-</button>
+                 <button id="btn-next-key" class="time-btn" title="Next Keyframe">-&gt;</button>
+            </div>
+
+            <div class="epoch-group">
+                <span>End:</span>
                 <input type="number" id="epoch-end" value="2025" class="epoch-input">
             </div>
         </div>
-        <div class="timeline-wrapper">
-            <button id="btn-prev-key" class="time-btn" title="Previous Keyframe">&lt;-</button>
-            <button id="btn-play" title="Play History">&gt;</button>
-            <button id="btn-next-key" class="time-btn" title="Next Keyframe">-&gt;</button>
 
-            <div class="speed-control" title="Temporal Velocity (Click to Cycle)">
-                <button id="btn-speed-cycle" class="speed-btn active" style="min-width: 40px;">1x</button>
-            </div>
-
-            <div id="timeline-track-container">
-                <div id="keyframe-notches"></div>
-                <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
-            </div>
+        <div id="timeline-track-container" style="width: 100%; margin-top: 10px;">
+            <div id="keyframe-notches"></div>
+            <input type="range" id="time-slider" min="-10000" max="2025" value="1000" step="1">
         </div>
     </div>
 
