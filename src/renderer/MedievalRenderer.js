@@ -710,8 +710,19 @@ export default class MedievalRenderer {
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
 
-        const waterEntities = sortedEntities.filter(e => e && e.type === 'water' && e.currentGeometry && e.visible);
-        const worldEntities = sortedEntities.filter(e => e && e.type !== 'water' && e.visible);
+        const waterEntities = [];
+        const worldEntities = [];
+        for (let i = 0; i < sortedEntities.length; i++) {
+            const e = sortedEntities[i];
+            if (!e || !e.visible) continue;
+            if (e.type === 'water') {
+                if (e.currentGeometry) {
+                    waterEntities.push(e);
+                }
+            } else {
+                worldEntities.push(e);
+            }
+        }
 
         // Sort
         worldEntities.sort((a, b) => {
