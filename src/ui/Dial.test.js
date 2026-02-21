@@ -54,8 +54,7 @@ describe("Dial", () => {
         // Check rank if Ontology.js is working as expected
         // 'sovereign' is a valid subtype for 'nation-state'
         // But let's check if rankEl has content
-        expect(rankEl.textContent).not.toBe("");
-    });
+        expect(rankEl.textContent).toBe("SOV");
 
     test("setHover('domain') shows full name and hides others", () => {
         dial.setHover('domain');
