@@ -10,6 +10,13 @@ import {
     PARCHMENT_FRAGMENT_SHADER 
 } from './shaders/MedievalShader.js';
 import { CONFIG } from '../config.js';
+import {
+    resampleGeometry,
+    alignPolygonClosed,
+    alignPolylineOpen,
+    getCentroid,
+    lerp
+} from '../core/math.js';
 
 export default class WebGLRenderer {
     constructor(canvas) {
@@ -47,6 +54,13 @@ export default class WebGLRenderer {
         this.parchmentBuffer = null;
         this.lineBuffer = null;
         
+        // Cache state for optimization
+        this.lastRenderState = {
+            validRange: { start: -Infinity, end: -Infinity },
+            entities: null,
+            vertexCount: 0
+        };
+
         // Animation
         this.startTime = Date.now();
         
@@ -211,28 +225,114 @@ export default class WebGLRenderer {
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
     
-    uploadGeometry(entities, currentYear) {
+    rebuildBuffer(entities, currentYear) {
         const gl = this.gl;
         const vertices = [];
         
+        // Calculate global valid range for this buffer
+        let validStart = -Infinity;
+        let validEnd = Infinity;
+
         // Convert entities to vertex data
         for (const entity of entities) {
-            const geometry = entity.getGeometryAtYear(currentYear);
-            if (!geometry || geometry.length < 3) continue;
+            // Find active keyframes
+            if (entity.timeline.length === 0) continue;
+
+            let prev = null, next = null;
+            let pIndex = -1;
+
+            for (let i = 0; i < entity.timeline.length; i++) {
+                const frame = entity.timeline[i];
+                if (frame.year <= currentYear) {
+                    prev = frame;
+                    pIndex = i;
+                }
+                if (frame.year >= currentYear && !next) {
+                    next = frame;
+                }
+            }
+
+            if (!prev && !next) continue;
+            if (!prev) prev = next;
+            if (!next) next = prev;
+
+            // Determine the validity of this segment
+            let entityStart, entityEnd;
+
+            if (prev !== next) {
+                // Between keyframes
+                entityStart = prev.year;
+                entityEnd = next.year;
+            } else {
+                // On or outside keyframes (clamped)
+                if (currentYear < prev.year) {
+                    entityStart = -Infinity;
+                    entityEnd = prev.year;
+                } else if (currentYear > prev.year) {
+                    entityStart = prev.year;
+                    entityEnd = Infinity;
+                } else {
+                    // Exact match
+                    entityStart = prev.year;
+                    entityEnd = prev.year;
+                }
+            }
+
+            validStart = Math.max(validStart, entityStart);
+            validEnd = Math.min(validEnd, entityEnd);
+
+            // Prepare geometry
+            let startGeo = prev.geometry;
+            let endGeo = next.geometry;
+
+            const isLineType = entity.type === 'river' ||
+                             entity.typology === 'river' ||
+                             entity.typology === 'coast';
+            const isClosed = !isLineType;
+
+            // Align geometries
+            if (startGeo.length !== endGeo.length) {
+                startGeo = resampleGeometry(startGeo, CONFIG.RESAMPLE_COUNT, isClosed);
+                endGeo = resampleGeometry(endGeo, CONFIG.RESAMPLE_COUNT, isClosed);
+            }
+
+            if (!isLineType) {
+                endGeo = alignPolygonClosed(startGeo, endGeo);
+            } else {
+                endGeo = alignPolylineOpen(startGeo, endGeo);
+            }
+
+            // Pre-calculate centroids for alignment (similar to Entity.js but we apply it to vertices)
+            // Wait, Entity.js morphs by interpolating centroid AND offset.
+            // Linear interpolation of points `mix(p1, p2, t)` IS mathematically equivalent
+            // to `mix(c1+off1, c2+off2, t)` IF points correspond.
+            // The alignment ensures points correspond.
+            // So we don't need explicit centroid logic here if startGeo and endGeo are aligned.
             
             // Parse color
             const color = this.hexToRgb(entity.color);
             
-            // Triangulate polygon (simple fan triangulation)
-            for (let i = 1; i < geometry.length - 1; i++) {
-                // Triangle: p0, pi, pi+1
-                this.addVertex(vertices, geometry[0], color, entity.validRange.start);
-                this.addVertex(vertices, geometry[i], color, entity.validRange.start);
-                this.addVertex(vertices, geometry[i + 1], color, entity.validRange.start);
+            // Triangulate
+            if (startGeo.length >= 3) {
+                 for (let i = 1; i < startGeo.length - 1; i++) {
+                    this.addVertex(vertices,
+                        startGeo[0], endGeo[0],
+                        startGeo[i], endGeo[i],
+                        startGeo[i+1], endGeo[i+1],
+                        color,
+                        entity.validRange.start,
+                        prev.year, next.year
+                    );
+                 }
             }
         }
         
-        if (vertices.length === 0) return 0;
+        // Handle case where validStart/End are still default
+        if (validStart === -Infinity) validStart = currentYear; // No constraints?
+        if (validEnd === Infinity) validEnd = currentYear;
+
+        // Ensure buffer range is reasonable
+        // If we found NO entities, vertices is empty.
         
         // Upload to GPU
         if (!this.geometryBuffer) {
@@ -242,15 +342,30 @@ export default class WebGLRenderer {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.geometryBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
         
-        return vertices.length / 8; // 8 floats per vertex
+        // Update cache state
+        this.lastRenderState.validRange = { start: validStart, end: validEnd };
+        this.lastRenderState.entities = entities; // Store reference
+        this.lastRenderState.vertexCount = vertices.length / 12; // 12 floats per vertex
+
+        return this.lastRenderState.vertexCount;
+    }
+
+    addVertex(vertices, p1Start, p1End, p2Start, p2End, p3Start, p3End, color, validStart, yearStart, yearEnd) {
+        // Triangle 1
+        this.pushVertex(vertices, p1Start, p1End, color, validStart, yearStart, yearEnd);
+        this.pushVertex(vertices, p2Start, p2End, color, validStart, yearStart, yearEnd);
+        this.pushVertex(vertices, p3Start, p3End, color, validStart, yearStart, yearEnd);
     }
     
-    addVertex(vertices, point, color, year) {
+    pushVertex(vertices, pStart, pEnd, color, validStart, yearStart, yearEnd) {
         vertices.push(
-            point.x, point.y,           // position
-            point.x, point.y,           // texCoord
-            color[0], color[1], color[2], // color
-            year                         // year attribute
+            pStart.x, pStart.y,     // a_position (Start)
+            pEnd.x, pEnd.y,         // a_nextPosition (End)
+            pStart.x, pStart.y,     // a_texCoord
+            color[0], color[1], color[2], // a_color
+            validStart,             // a_validStart
+            yearStart,              // a_yearStart
+            yearEnd                 // a_yearEnd
         );
     }
     
@@ -357,8 +472,31 @@ export default class WebGLRenderer {
         this.clear();
         this.renderParchment();
         
-        // Upload and render geometry
-        const vertexCount = this.uploadGeometry(entities, currentYear);
+        // Check if we need to rebuild geometry buffer
+        // Rebuild if:
+        // 1. Entities list reference changed (new entities)
+        // 2. Current year is outside the valid range of the current buffer
+        // 3. Buffer is empty (first run)
+
+        // Note: checking entities reference is fast, but if content of entities changed (e.g. keyframe added),
+        // the reference might be same. Ideally we need a dirty flag.
+        // For now assuming immutable entities list or reference change on update.
+        // If an entity is modified, the caller should probably pass a new array or we need a version.
+
+        // To be safe, if we don't have a versioning system, we might miss updates if only inner properties change.
+        // But the task assumes optimization of the render loop where entities are mostly static.
+
+        const needsRebuild =
+            this.lastRenderState.entities !== entities ||
+            currentYear < this.lastRenderState.validRange.start ||
+            currentYear > this.lastRenderState.validRange.end ||
+            !this.geometryBuffer;
+
+        let vertexCount = this.lastRenderState.vertexCount;
+
+        if (needsRebuild) {
+             vertexCount = this.rebuildBuffer(entities, currentYear);
+        }
         
         if (vertexCount > 0) {
             // Use main program
@@ -380,25 +518,37 @@ export default class WebGLRenderer {
             gl.uniform1f(paperLocation, this.settings.paperRoughness);
             
             // Set vertex attributes
-            const stride = 8 * 4; // 8 floats * 4 bytes
+            const stride = 12 * 4; // 12 floats * 4 bytes
             const positionLocation = gl.getAttribLocation(this.mainProgram, 'a_position');
+            const nextPosLocation = gl.getAttribLocation(this.mainProgram, 'a_nextPosition');
             const texCoordLocation = gl.getAttribLocation(this.mainProgram, 'a_texCoord');
             const colorLocation = gl.getAttribLocation(this.mainProgram, 'a_color');
-            const yearAttrLocation = gl.getAttribLocation(this.mainProgram, 'a_year');
+            const validStartLocation = gl.getAttribLocation(this.mainProgram, 'a_validStart');
+            const yearStartLocation = gl.getAttribLocation(this.mainProgram, 'a_yearStart');
+            const yearEndLocation = gl.getAttribLocation(this.mainProgram, 'a_yearEnd');
             
             gl.bindBuffer(gl.ARRAY_BUFFER, this.geometryBuffer);
             
             gl.enableVertexAttribArray(positionLocation);
             gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, stride, 0);
             
+            gl.enableVertexAttribArray(nextPosLocation);
+            gl.vertexAttribPointer(nextPosLocation, 2, gl.FLOAT, false, stride, 8);
+
             gl.enableVertexAttribArray(texCoordLocation);
-            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 8);
+            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 16);
             
             gl.enableVertexAttribArray(colorLocation);
-            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, stride, 16);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, stride, 24);
+
+            gl.enableVertexAttribArray(validStartLocation);
+            gl.vertexAttribPointer(validStartLocation, 1, gl.FLOAT, false, stride, 36);
+
+            gl.enableVertexAttribArray(yearStartLocation);
+            gl.vertexAttribPointer(yearStartLocation, 1, gl.FLOAT, false, stride, 40);
             
-            gl.enableVertexAttribArray(yearAttrLocation);
-            gl.vertexAttribPointer(yearAttrLocation, 1, gl.FLOAT, false, stride, 28);
+            gl.enableVertexAttribArray(yearEndLocation);
+            gl.vertexAttribPointer(yearEndLocation, 1, gl.FLOAT, false, stride, 44);
             
             // Draw
             gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
