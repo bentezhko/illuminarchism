@@ -27,6 +27,9 @@ export default class HistoricalEntity {
         this.id = id;
         this.name = name;
 
+        // Caching for expensive geometry operations
+        this._geometryCache = new Map();
+
         // Detect if using legacy format (arg3 is a string category) or new format (arg3 is config object)
         if (typeof arg3 === 'string') {
             // Legacy format: category, type, color, parentId, hatchStyle
@@ -330,6 +333,7 @@ export default class HistoricalEntity {
     // ========================================================================
 
     addKeyframe(year, geometry, preventResampling = false) {
+        this._geometryCache.clear();
         this.timeline = this.timeline.filter(k => k.year !== year);
         let finalGeo;
 
@@ -388,25 +392,36 @@ export default class HistoricalEntity {
         if (!next) return prev.geometry;
         if (prev === next) return prev.geometry;
 
-        let startGeo = prev.geometry;
-        let endGeo = next.geometry;
-
         // --- SMART MORPHING ---
-        const isLineType = this.type === 'river' ||
-            this.typology === 'river' ||
-            this.typology === 'coast';
+        // Use cache to avoid expensive resampling and alignment
+        const cacheKey = `${prev.year}-${next.year}`;
+        let cached = this._geometryCache.get(cacheKey);
 
-        if (startGeo.length !== endGeo.length) {
-            const isClosed = !isLineType;
-            startGeo = resampleGeometry(startGeo, CONFIG.RESAMPLE_COUNT, isClosed);
-            endGeo = resampleGeometry(endGeo, CONFIG.RESAMPLE_COUNT, isClosed);
+        if (!cached) {
+            let startGeo = prev.geometry;
+            let endGeo = next.geometry;
+
+            const isLineType = this.type === 'river' ||
+                this.typology === 'river' ||
+                this.typology === 'coast';
+
+            if (startGeo.length !== endGeo.length) {
+                const isClosed = !isLineType;
+                startGeo = resampleGeometry(startGeo, CONFIG.RESAMPLE_COUNT, isClosed);
+                endGeo = resampleGeometry(endGeo, CONFIG.RESAMPLE_COUNT, isClosed);
+            }
+
+            if (!isLineType) {
+                endGeo = alignPolygonClosed(startGeo, endGeo);
+            } else {
+                endGeo = alignPolylineOpen(startGeo, endGeo);
+            }
+
+            cached = { startGeo, endGeo };
+            this._geometryCache.set(cacheKey, cached);
         }
 
-        if (!isLineType) {
-            endGeo = alignPolygonClosed(startGeo, endGeo);
-        } else {
-            endGeo = alignPolylineOpen(startGeo, endGeo);
-        }
+        const { startGeo, endGeo } = cached;
 
         const t = (targetYear - prev.year) / (next.year - prev.year);
         const morphed = [];
