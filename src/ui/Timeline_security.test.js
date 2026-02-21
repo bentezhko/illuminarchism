@@ -2,6 +2,7 @@ import { test, expect, beforeAll } from "bun:test";
 
 // Mock DOM
 global.document = {
+    addEventListener: () => {},
     getElementById: () => ({
         addEventListener: () => {},
         style: {},

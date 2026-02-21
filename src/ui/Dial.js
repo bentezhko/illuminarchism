@@ -3,6 +3,54 @@ import { POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC
 export default class Dial {
     constructor(app) {
         this.app = app;
+        this.hoveredWheel = null;
+    }
+
+    /**
+     * Set the currently hovered wheel to update the main tooltip
+     * @param {string|null} wheel 'domain', 'form', 'rank', or null
+     */
+    setHover(wheel) {
+        this.hoveredWheel = wheel;
+        this.updateTooltip();
+    }
+
+    /**
+     * Update the main dial container tooltip based on hover state
+     */
+    updateTooltip() {
+        const dialEl = document.getElementById('entity-dial');
+        if (!dialEl) return;
+
+        // Default state
+        if (!this.hoveredWheel) {
+            dialEl.title = "Ontology: Domain - Form - Rank";
+            return;
+        }
+
+        // Get current data
+        const domainData = this.app.ontologyTaxonomy[this.app.drawDomain];
+        if (!domainData) return;
+
+        if (this.hoveredWheel === 'domain') {
+            dialEl.title = domainData.domain ? domainData.domain.name : "";
+        } else if (this.hoveredWheel === 'form') {
+            if (domainData.types) {
+                const typeData = domainData.types.find(t => t.value === this.app.drawTypology);
+                dialEl.title = typeData ? typeData.label : "";
+            } else {
+                dialEl.title = "";
+            }
+        } else if (this.hoveredWheel === 'rank') {
+            const possibleSubtypes = this._getSubtypesForTypology(this.app.drawTypology);
+            if (possibleSubtypes && possibleSubtypes.length > 0) {
+                const subData = possibleSubtypes.find(s => s.value === this.app.drawSubtype);
+                // If drawSubtype is null but subtypes exist, subData is undefined -> ""
+                dialEl.title = subData ? subData.label : "";
+            } else {
+                dialEl.title = ""; // Void rank
+            }
+        }
     }
 
     /**
@@ -45,6 +93,11 @@ export default class Dial {
             this.app.drawSubtype = null;
             rankEl.textContent = "___";
             rankEl.parentElement.style.opacity = '0.3';
+        }
+
+        // Also update tooltip in case selection changed while hovering
+        if (this.hoveredWheel) {
+            this.updateTooltip();
         }
     }
 

@@ -410,12 +410,18 @@ export default class IlluminarchismApp {
         // Add Dial Listeners
         this.safeAddListener('val-domain', 'wheel', (e) => { e.preventDefault(); this.dial.cycle('domain'); });
         this.safeAddListener('val-domain', 'click', () => { this.dial.cycle('domain'); });
+        this.safeAddListener('dial-domain', 'mouseenter', () => { this.dial.setHover('domain'); });
+        this.safeAddListener('dial-domain', 'mouseleave', () => { this.dial.setHover(null); });
 
         this.safeAddListener('val-form', 'wheel', (e) => { e.preventDefault(); this.dial.cycle('form'); });
         this.safeAddListener('val-form', 'click', () => { this.dial.cycle('form'); });
+        this.safeAddListener('dial-form', 'mouseenter', () => { this.dial.setHover('form'); });
+        this.safeAddListener('dial-form', 'mouseleave', () => { this.dial.setHover(null); });
 
         this.safeAddListener('val-rank', 'wheel', (e) => { e.preventDefault(); this.dial.cycle('rank'); });
         this.safeAddListener('val-rank', 'click', () => { this.dial.cycle('rank'); });
+        this.safeAddListener('dial-rank', 'mouseenter', () => { this.dial.setHover('rank'); });
+        this.safeAddListener('dial-rank', 'mouseleave', () => { this.dial.setHover(null); });
 
         // Registry Toggle
         this.safeAddListener('btn-toggle-registry', 'click', () => {
