@@ -1,4 +1,4 @@
-import { DOMAINS, getTypologiesForDomain, POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC_SUBTYPES } from '../core/Ontology.js';
+import { POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC_SUBTYPES } from '../core/Ontology.js';
 
 export default class Dial {
     constructor(app) {
