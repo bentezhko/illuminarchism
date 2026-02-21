@@ -32,7 +32,10 @@ describe("validateEntity", () => {
         };
         const result = validateEntity(entity);
         expect(result.valid).toBe(false);
-        expect(result.errors).toContain("Invalid domain: invalid-domain");
+        expect(result.errors).toEqual([
+            "Invalid domain: invalid-domain",
+            "Invalid typology 'archaic-state' for domain 'invalid-domain'"
+        ]);
     });
 
     test("should return error for invalid typology in valid domain", () => {
