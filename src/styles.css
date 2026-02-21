@@ -61,7 +61,7 @@ header {
 
 .header-center-controls {
     display: grid;
-    grid-template-columns: 40px 140px 80px; /* Fixed columns for buttons, year, speed */
+    grid-template-columns: 40px 140px 120px; /* Increased speed column width */
     align-items: center;
     gap: 1rem;
     padding: 0.5rem 1rem;
@@ -695,14 +695,21 @@ input[type=range]::-webkit-slider-runnable-track {
     font-size: 0.8rem;
     font-family: 'Cinzel', serif;
     color: var(--ink-faded);
-    background: rgba(255, 255, 255, 0.3);
     padding: 0.2rem 0.5rem;
-    border-radius: 12px;
-    border: 1px solid var(--ink-faded);
 }
 
-.speed-control input {
-    width: 60px;
+#speed-slider {
+    width: 80px;
+    accent-color: var(--rubric-red);
+    cursor: pointer;
+    height: 4px;
+}
+
+#speed-display {
+    width: 30px;
+    text-align: right;
+    font-weight: bold;
+    color: var(--ink-primary);
 }
 
 #map-canvas {

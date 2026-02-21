@@ -30,8 +30,9 @@
             <div class="header-center-controls">
                 <button id="btn-play" title="Play History">▶</button>
                 <div id="year-display">1000 AD</div>
-                <div class="speed-control" title="Temporal Velocity (Click to Cycle)">
-                    <button id="btn-speed-cycle" class="speed-btn active" style="min-width: 40px;">1x</button>
+                <div class="speed-control" title="Temporal Velocity">
+                    <input type="range" id="speed-slider" min="0" max="12" step="1" value="8" style="width: 80px;">
+                    <span id="speed-display">1x</span>
                 </div>
             </div>
 
