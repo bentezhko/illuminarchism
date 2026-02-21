@@ -1,6 +1,12 @@
 import { getCentroid, getBoundingBox } from '../core/math.js';
 import { fbm, perturbPoint } from './filters.js';
 
+const GRID_CONFIG = {
+    CELL_SIZE: 100,
+    EXTENT: 30,
+    COLOR: 'rgba(138, 51, 36, 0.05)'
+};
+
 export default class MedievalRenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -604,9 +610,10 @@ export default class MedievalRenderer {
 
     drawGrid() {
         const ctx = this.ctx;
-        const sz = 100; const cnt = 30;
+        const sz = GRID_CONFIG.CELL_SIZE;
+        const cnt = GRID_CONFIG.EXTENT;
         ctx.beginPath();
-        ctx.strokeStyle = 'rgba(138, 51, 36, 0.05)';
+        ctx.strokeStyle = GRID_CONFIG.COLOR;
         ctx.lineWidth = 1 / this.transform.k;
         for (let i = -cnt; i <= cnt; i++) {
             ctx.moveTo(i * sz, -cnt * sz); ctx.lineTo(i * sz, cnt * sz);
