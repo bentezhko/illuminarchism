@@ -610,7 +610,8 @@ export default class MedievalRenderer {
 
     drawGrid() {
         const ctx = this.ctx;
-        const sz = GRID_CONFIG.CELL_SIZE; const cnt = GRID_CONFIG.EXTENT;
+        const sz = GRID_CONFIG.CELL_SIZE;
+        const cnt = GRID_CONFIG.EXTENT;
         ctx.beginPath();
         ctx.strokeStyle = GRID_CONFIG.COLOR;
         ctx.lineWidth = 1 / this.transform.k;
