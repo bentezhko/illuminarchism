@@ -138,3 +138,16 @@ export function resampleGeometry(points, targetCount, isClosed = true) {
     if (!isClosed && newPoints.length < targetCount) newPoints.push({ ...sourcePoints[sourcePoints.length - 1] });
     return newPoints;
 }
+
+export function escapeHTML(str) {
+    if (str == null) return '';
+    return str.toString().replace(/[&<>"']/g, function(m) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[m];
+    });
+}
