@@ -619,6 +619,13 @@ export function buildTaxonomyForUI() {
  * Validate entity against ontology
  */
 export function validateEntity(entity) {
+    if (!entity) {
+        return {
+            valid: false,
+            errors: ['Entity is null or undefined']
+        };
+    }
+
     const errors = [];
 
     // Check domain
