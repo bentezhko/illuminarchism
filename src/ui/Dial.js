@@ -3,6 +3,16 @@ import { POLITICAL_SUBTYPES, LINGUISTIC_SUBTYPES, RELIGIOUS_SUBTYPES, GEOGRAPHIC
 export default class Dial {
     constructor(app) {
         this.app = app;
+        this.hoveredWheel = null;
+    }
+
+    /**
+     * Set the currently hovered wheel to display full value
+     * @param {string|null} wheel 'domain', 'form', 'rank', or null
+     */
+    setHover(wheel) {
+        this.hoveredWheel = wheel;
+        this.updateDisplay();
     }
 
     /**
@@ -18,16 +28,28 @@ export default class Dial {
         // 1. DOMAIN
         const domainData = this.app.ontologyTaxonomy[this.app.drawDomain];
         if (domainData && domainData.domain) {
-            domainEl.textContent = domainData.domain.abbr;
+            if (this.hoveredWheel === 'domain') {
+                domainEl.textContent = domainData.domain.name;
+            } else if (this.hoveredWheel) {
+                domainEl.textContent = '';
+            } else {
+                domainEl.textContent = domainData.domain.abbr;
+            }
         }
 
         // 2. FORM (Typology)
         if (domainData && domainData.types) {
             const typeData = domainData.types.find(t => t.value === this.app.drawTypology);
             if (typeData) {
-                formEl.textContent = typeData.abbr;
+                if (this.hoveredWheel === 'form') {
+                    formEl.textContent = typeData.label;
+                } else if (this.hoveredWheel) {
+                    formEl.textContent = '';
+                } else {
+                    formEl.textContent = typeData.abbr;
+                }
             } else {
-                formEl.textContent = "---";
+                formEl.textContent = this.hoveredWheel ? '' : "---";
             }
         }
 
@@ -39,11 +61,18 @@ export default class Dial {
                 this.app.drawSubtype = possibleSubtypes[0].value;
             }
             const subData = possibleSubtypes.find(s => s.value === this.app.drawSubtype);
-            rankEl.textContent = subData ? subData.abbr : "---";
+
+            if (this.hoveredWheel === 'rank') {
+                rankEl.textContent = subData ? subData.label : '';
+            } else if (this.hoveredWheel) {
+                rankEl.textContent = '';
+            } else {
+                rankEl.textContent = subData ? subData.abbr : "---";
+            }
             rankEl.parentElement.style.opacity = '1';
         } else {
             this.app.drawSubtype = null;
-            rankEl.textContent = "___";
+            rankEl.textContent = this.hoveredWheel ? '' : "___";
             rankEl.parentElement.style.opacity = '0.3';
         }
     }
