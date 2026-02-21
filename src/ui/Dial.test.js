@@ -75,8 +75,7 @@ describe("Dial", () => {
         dial.setHover('rank');
         expect(domainEl.textContent).toBe("");
         expect(formEl.textContent).toBe("");
-        // Verify rank content is not abbreviation (which is likely 3 chars) and not empty
-        expect(rankEl.textContent.length).toBeGreaterThan(3);
+        expect(rankEl.textContent).toBe("Sovereign Unit");
         expect(rankEl.textContent).not.toBe("SOV"); // Abbr for Sovereign
     });
 
