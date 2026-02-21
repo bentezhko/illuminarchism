@@ -274,8 +274,9 @@ export default class IlluminarchismApp {
 
     formatYear(year) {
         const rounded = Math.floor(year);
-        if (rounded < 0) return `${Math.abs(rounded)} BC`;
-        return `${rounded} AD`;
+        // Returns HTML to separate Year and Era for styling
+        if (rounded < 0) return `<span>${Math.abs(rounded)}</span><span style="font-size:0.8em; color:var(--ink-faded);">BC</span>`;
+        return `<span>${rounded}</span><span style="font-size:0.8em; color:var(--ink-faded);">AD</span>`;
     }
 
 

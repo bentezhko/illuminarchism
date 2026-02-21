@@ -63,6 +63,18 @@ export default class Timeline {
                 this.renderView();
             });
         }
+
+        // Global Keyboard Navigation for Time
+        document.addEventListener('keydown', (e) => {
+            // Ignore if input is focused
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.key === 'ArrowLeft') {
+                this.setYear(this.app.currentYear - 1);
+            } else if (e.key === 'ArrowRight') {
+                this.setYear(this.app.currentYear + 1);
+            }
+        });
     }
 
     updateBounds() {
@@ -92,7 +104,7 @@ export default class Timeline {
         this.app.currentYear = year;
 
         if (this.yearDisplay) {
-            this.yearDisplay.textContent = this.app.formatYear(year);
+            this.yearDisplay.innerHTML = this.app.formatYear(year); // Use innerHTML for Era styling
         }
         if (this.slider) {
             this.slider.value = year;
@@ -113,7 +125,7 @@ export default class Timeline {
 
     play() {
         this.isPlaying = true;
-        if (this.playButton) this.playButton.textContent = 'II';
+        if (this.playButton) this.playButton.textContent = '||';
 
         this.playInterval = setInterval(() => {
             // New Standard: 1x = 2 years per second.
@@ -130,7 +142,7 @@ export default class Timeline {
 
     stop() {
         this.isPlaying = false;
-        if (this.playButton) this.playButton.textContent = '>';
+        if (this.playButton) this.playButton.textContent = '▶';
         if (this.playInterval) {
             clearInterval(this.playInterval);
             this.playInterval = null;

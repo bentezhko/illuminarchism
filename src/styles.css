@@ -60,7 +60,8 @@ header {
 }
 
 .header-center-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: 40px 140px 80px; /* Fixed columns for buttons, year, speed */
     align-items: center;
     gap: 1rem;
     padding: 0.5rem 1rem;
@@ -124,7 +125,7 @@ h1 span {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 1rem;
+    /* margin-left: 1rem; -- Removed to fit in file controls group */
 }
 
 /* Ontology InfoCard (Modal) */
@@ -418,29 +419,7 @@ h1 span {
 }
 
 #btn-toggle-registry {
-    position: absolute;
-    right: 1rem;
-    top: 80px;
-    background: var(--parchment-dark);
-    border: 2px solid var(--gold-leaf);
-    color: var(--ink-primary);
-    padding: 0.5rem;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    box-shadow: var(--ui-shadow);
-    z-index: 11;
-    pointer-events: auto;
-    /* FIXED: Enable interactions */
-}
-
-#btn-toggle-registry:hover {
-    background: var(--gold-leaf);
-    color: white;
+    /* Integrated into header controls */
 }
 
 /* Info Panel - Simplified */
@@ -523,14 +502,14 @@ h1 span {
     left: 0;
     width: 100%;
     height: 150px;
-    padding: 1rem 2rem;
+    padding: 0.5rem 1rem; /* Reduced padding */
     background: var(--parchment-bg);
     border-top: 2px solid var(--rubric-red);
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 1rem;
+    justify-content: center; /* Reduced gap */
+    gap: 0.5rem;
     z-index: 1000;
     box-shadow: 0 -4px 10px rgba(0,0,0,0.2);
     transform: translateY(0); /* Open by default */
@@ -594,10 +573,13 @@ h1 span {
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--rubric-red);
-    width: 140px; /* Fixed width to prevent layout shift */
+    width: 100%; /* Fill grid cell */
     text-align: center;
-    border-left: 1px solid transparent; /* Invisible borders for spacing */
+    border-left: 1px solid transparent; /* Invisible borders */
     border-right: 1px solid transparent;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem; /* Space between year and AD/BC */
 }
 
 .time-btn {
@@ -647,11 +629,11 @@ h1 span {
 
 #timeline-track-container {
     position: relative;
-    flex-grow: 1;
-    margin: 0 10px;
-    height: 30px;
+    width: 100%; /* Ensure full width */
+    height: 50px; /* Taller track area */
     display: flex;
     align-items: center;
+    margin: 0;
 }
 
 .keyframe-notch {
