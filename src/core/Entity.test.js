@@ -170,4 +170,123 @@ describe("HistoricalEntity", () => {
             expect(entity.boundaryType).toBe("fuzzy");
         });
     });
+
+    describe("getGeometryAtYear", () => {
+        test("should return null if targetYear is out of valid range", () => {
+            const entity = new HistoricalEntity("ent", "Test", {
+                validRange: { start: 1000, end: 2000 }
+            });
+            entity.addKeyframe(1000, [{x:0, y:0}]);
+            // addKeyframe expands range by 100 years -> 900 to 2100
+
+            expect(entity.getGeometryAtYear(800)).toBeNull();
+            expect(entity.getGeometryAtYear(2200)).toBeNull();
+        });
+
+        test("should return null if timeline is empty", () => {
+            const entity = new HistoricalEntity("ent", "Test", {
+                validRange: { start: 1000, end: 2000 }
+            });
+            expect(entity.getGeometryAtYear(1500)).toBeNull();
+        });
+
+        test("should return single keyframe geometry regardless of year if only one keyframe exists (within range)", () => {
+            const entity = new HistoricalEntity("ent", "Test", {
+                validRange: { start: 1000, end: 2000 }
+            });
+            const geo = [{x:0, y:0}];
+            entity.addKeyframe(1000, geo, true);
+
+            // Should return geo for any year inside range
+            expect(entity.getGeometryAtYear(1000)).toEqual(geo);
+            expect(entity.getGeometryAtYear(1500)).toEqual(geo);
+        });
+
+        test("should interpolate between two keyframes (Polygon)", () => {
+            const entity = new HistoricalEntity("ent", "Test", {
+                domain: "political",
+                typology: "nation-state" // Polygon
+            });
+
+            const geo1 = [
+                {x:0, y:0}, {x:10, y:0}, {x:10, y:10}, {x:0, y:10}
+            ];
+            const geo2 = [
+                {x:10, y:10}, {x:20, y:10}, {x:20, y:20}, {x:10, y:20}
+            ];
+
+            entity.addKeyframe(1000, geo1, true); // prevent resampling to keep points clean
+            entity.addKeyframe(2000, geo2, true);
+
+            const mid = entity.getGeometryAtYear(1500);
+
+            expect(mid).toHaveLength(4);
+            expect(mid[0]).toEqual({x: 5, y: 5});
+            expect(mid[2]).toEqual({x: 15, y: 15});
+        });
+
+        test("should interpolate between two keyframes (Polyline/River)", () => {
+             const entity = new HistoricalEntity("ent", "Test", {
+                domain: "geographic",
+                typology: "river" // LineString
+            });
+
+            const geo1 = [
+                {x:0, y:0}, {x:10, y:0}
+            ];
+            const geo2 = [
+                {x:0, y:10}, {x:10, y:10}
+            ];
+
+            entity.addKeyframe(1000, geo1, true);
+            entity.addKeyframe(2000, geo2, true);
+
+            const mid = entity.getGeometryAtYear(1500);
+
+            // Midpoint: (0, 5), (10, 5)
+            expect(mid).toHaveLength(2);
+            expect(mid[0]).toEqual({x: 0, y: 5});
+            expect(mid[1]).toEqual({x: 10, y: 5});
+        });
+
+        test("should resample geometry when point counts differ", () => {
+            const entity = new HistoricalEntity("ent", "Test", {
+                domain: "political"
+            });
+
+            // Triangle
+            const geo1 = [
+                {x:0, y:0}, {x:10, y:0}, {x:5, y:10}
+            ];
+            // Square
+            const geo2 = [
+                {x:0, y:0}, {x:10, y:0}, {x:10, y:10}, {x:0, y:10}
+            ];
+
+            entity.addKeyframe(1000, geo1, true);
+            entity.addKeyframe(2000, geo2, true);
+
+            const mid = entity.getGeometryAtYear(1500);
+
+            // Should be resampled to CONFIG.RESAMPLE_COUNT (100)
+            expect(mid.length).toBe(100);
+        });
+
+        test("should handle single point entity correctly", () => {
+             const entity = new HistoricalEntity("ent", "Test", {
+                domain: "political",
+                typology: "city" // Point
+            });
+
+            const geo1 = [{x:0, y:0}];
+            const geo2 = [{x:10, y:10}];
+
+            entity.addKeyframe(1000, geo1);
+            entity.addKeyframe(2000, geo2);
+
+            const mid = entity.getGeometryAtYear(1500);
+            expect(mid).toHaveLength(1);
+            expect(mid[0]).toEqual({x: 5, y: 5});
+        });
+    });
 });
