@@ -26,6 +26,9 @@ export default class MedievalRenderer {
         this.waterPattern = null;
         this.patternCache = {};
 
+        this._cachedWaterEntities = [];
+        this._cachedWorldEntities = [];
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
         this.createParchmentTexture();
@@ -34,6 +37,13 @@ export default class MedievalRenderer {
 
     _isPointEntity(ent) {
         return !!(ent && ent.currentGeometry && ent.currentGeometry.length === 1);
+    }
+
+    _getEntityScore(e) {
+        if (e.type === 'polity') return 1;
+        if (e.type === 'river') return 2;
+        if (this._isPointEntity(e)) return 3;
+        return 4;
     }
 
     resize() {
@@ -231,16 +241,10 @@ export default class MedievalRenderer {
         ctx.restore();
 
 
-        // FIXED: Safe spread and sort
-        const sorted = [...entities].sort((a, b) => {
-            // Sorting only affects visual stacking relative to each other, not the render pipeline phase
-            return 0; // Maintain insertion/natural sort roughly
-        });
-
         // --- LAYER CACHING LOGIC ---
         // If the cache is invalid (or first run), re-render the static world
         if (!this.worldLayerValid) {
-            this.renderWorldLayer(sorted, t);
+            this.renderWorldLayer(entities, t);
             this.worldLayerValid = true;
         }
 
@@ -255,7 +259,7 @@ export default class MedievalRenderer {
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
 
-        sorted.forEach(ent => {
+        entities.forEach(ent => {
             if (!ent || !ent.currentGeometry || !ent.visible) return;
             const isHovered = ent.id === hoveredId;
             const isSelected = ent.id === selectedId;
@@ -712,8 +716,11 @@ export default class MedievalRenderer {
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
 
-        const waterEntities = [];
-        const worldEntities = [];
+        const waterEntities = this._cachedWaterEntities;
+        waterEntities.length = 0;
+        const worldEntities = this._cachedWorldEntities;
+        worldEntities.length = 0;
+
         for (let i = 0; i < sortedEntities.length; i++) {
             const e = sortedEntities[i];
             if (!e || !e.visible) continue;
@@ -727,10 +734,7 @@ export default class MedievalRenderer {
         }
 
         // Sort
-        worldEntities.sort((a, b) => {
-            const typeScore = e => (e.type === 'polity' ? 1 : e.type === 'river' ? 2 : this._isPointEntity(e) ? 3 : 4);
-            return typeScore(a) - typeScore(b);
-        });
+        worldEntities.sort((a, b) => this._getEntityScore(a) - this._getEntityScore(b));
 
         // 1. Draw Land & Rivers
         worldEntities.forEach(ent => {
