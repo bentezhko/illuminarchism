@@ -386,10 +386,10 @@ export default class IlluminarchismApp {
         });
 
         // Speed Cycle Logic
-        this.speedOptions = [0.5, 1, 2, 4, 8, 16];
+        this.speedOptions = [0, 0.5, 1, 2, 4, 8, 16]; // Added 0x
         this.safeAddListener('btn-speed-cycle', 'click', () => {
             let currentIndex = this.speedOptions.indexOf(this.playbackSpeed);
-            if (currentIndex === -1) currentIndex = 1; // Default to 1x
+            if (currentIndex === -1) currentIndex = 2; // Default to 1x (index 2 now)
 
             const nextIndex = (currentIndex + 1) % this.speedOptions.length;
             this.playbackSpeed = this.speedOptions[nextIndex];

@@ -112,10 +112,12 @@ h1 span {
     box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* Ontology Button */
-#btn-ontology {
+/* Ontology Button & Registry Button (Shared Style) */
+#btn-ontology,
+#btn-toggle-registry {
     width: 30px;
     height: 30px;
+    min-width: 30px; /* Force minimum width to avoid flex shrink/grow issues */
     border-radius: 50%;
     background: var(--rubric-red);
     color: white;
@@ -125,6 +127,7 @@ h1 span {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0; /* Override default button padding */
     /* margin-left: 1rem; -- Removed to fit in file controls group */
 }
 
