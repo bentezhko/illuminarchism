@@ -376,16 +376,10 @@ export default class IlluminarchismApp {
                 const isOpen = panel.classList.contains('open');
                 if (isOpen) {
                     panel.classList.remove('open');
-                    if (btn) {
-                        btn.textContent = '▼';
-                        btn.classList.remove('active');
-                    }
+                    if (btn) btn.textContent = '▲'; // Show "Up" when closed (to pull up)
                 } else {
                     panel.classList.add('open');
-                    if (btn) {
-                        btn.textContent = '▲';
-                        btn.classList.add('active');
-                    }
+                    if (btn) btn.textContent = '▼'; // Show "Down" when open (to hide)
                 }
             }
         });

@@ -541,6 +541,31 @@ h1 span {
     transform: translateY(0);
 }
 
+#btn-toggle-chronographer {
+    position: absolute;
+    top: -26px; /* Position above the panel border */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 26px;
+    background: #3e2723; /* Dark background as in image */
+    color: #ffcc80; /* Light arrow color */
+    border: 2px solid #ffffff; /* White border */
+    border-bottom: none;
+    border-radius: 10px 10px 0 0; /* Rounded top corners */
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001; /* Above panel border */
+    box-shadow: 0 -2px 4px rgba(0,0,0,0.3);
+}
+
+#btn-toggle-chronographer:hover {
+    background: #5d4037;
+}
+
 .chrono-controls-row {
     display: flex;
     justify-content: space-between;
