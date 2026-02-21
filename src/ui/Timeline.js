@@ -3,6 +3,8 @@
  * Handles temporal controls, playback, and visualization (Gantt/Notches)
  */
 
+import { escapeHTML } from '../core/math.js';
+
 export default class Timeline {
     constructor(app) {
         this.app = app;
@@ -294,7 +296,7 @@ export default class Timeline {
 
             const groupHeader = document.createElement('div');
             groupHeader.className = 'timeline-group-header';
-            groupHeader.innerHTML = `<span class="group-arrow">▼</span> ${domainLabel}`;
+            groupHeader.innerHTML = `<span class="group-arrow">▼</span> ${escapeHTML(domainLabel)}`;
             groupHeader.onclick = () => {
                 const isOpen = groupDiv.classList.toggle('open');
                 const arrow = groupHeader.querySelector('.group-arrow');
@@ -653,8 +655,8 @@ export default class Timeline {
         this.linkInfo.innerHTML = `
             <div class="tooltip-title">Connection</div>
             <div class="tooltip-content">
-                <strong>From:</strong> ${fromEnt.name} (${this.app.formatYear(fromYear)})<br>
-                <strong>To:</strong> ${toEnt.name} (${this.app.formatYear(toYear)})
+                <strong>From:</strong> ${escapeHTML(fromEnt.name)} (${this.app.formatYear(fromYear)})<br>
+                <strong>To:</strong> ${escapeHTML(toEnt.name)} (${this.app.formatYear(toYear)})
             </div>
         `;
         this.linkInfo.style.display = 'block';
@@ -673,7 +675,7 @@ export default class Timeline {
             <div class="tooltip-title">Edit Connection</div>
             <div class="tooltip-content" style="display:flex; flex-direction:column; gap:8px;">
                 <div style="font-size:0.8rem;">
-                    <strong>${fromEnt.name}</strong> ↔ <strong>${toEnt.name}</strong>
+                    <strong>${escapeHTML(fromEnt.name)}</strong> ↔ <strong>${escapeHTML(toEnt.name)}</strong>
                 </div>
                 <div style="display:flex; align-items:center; gap:5px;">
                     <label>Year:</label>
