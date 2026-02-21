@@ -46,7 +46,6 @@ export default class WebGLRenderer {
         this.geometryBuffer = null;
         this.parchmentBuffer = null;
         this.lineBuffer = null;
-        this.transformMatrix = new Float32Array(9);
         
         // Animation
         this.startTime = Date.now();
@@ -177,18 +176,11 @@ export default class WebGLRenderer {
         const scaleX = 2.0 / w * z;
         const scaleY = 2.0 / h * z;
         
-        const m = this.transformMatrix;
-        m[0] = scaleX;
-        m[1] = 0;
-        m[2] = 0;
-        m[3] = 0;
-        m[4] = scaleY;
-        m[5] = 0;
-        m[6] = x * scaleX;
-        m[7] = y * scaleY;
-        m[8] = 1;
-
-        return m;
+        return new Float32Array([
+            scaleX, 0, 0,
+            0, scaleY, 0,
+            x * scaleX, y * scaleY, 1
+        ]);
     }
     
     clear() {
