@@ -33,6 +33,16 @@ export default class MedievalRenderer {
         window.addEventListener('resize', () => this.resize());
         this.createParchmentTexture();
         this.createWaterTexture();
+
+        // Measurement Units (1 League = Base Unit)
+        this.scaleUnit = 'leagues';
+        this.unitConversions = {
+            'leagues': 1.0,
+            'miles': 3.0,
+            'km': 4.8,
+            'stadia': 24.0,
+            'versts': 4.5
+        };
     }
 
     _isPointEntity(ent) {
@@ -297,6 +307,89 @@ export default class MedievalRenderer {
                 }
             }
         }
+
+        ctx.restore();
+
+        // Draw Scale
+        this.drawScale();
+    }
+
+    drawScale() {
+        const ctx = this.ctx;
+        const k = this.transform.k;
+
+        // Target screen width for the scale bar (approx 150px)
+        const targetWidth = 150;
+
+        // Calculate world units corresponding to target width
+        const worldUnits = targetWidth / k;
+
+        // Unit Conversion
+        const unit = this.scaleUnit || 'leagues';
+        const factor = this.unitConversions[unit] || 1.0;
+
+        // Convert world units (always 1.0 = 1 League internally) to display units
+        const displayWorldUnits = worldUnits * factor;
+
+        // Round to a nice number in display units
+        const magnitude = Math.pow(10, Math.floor(Math.log10(displayWorldUnits)));
+        const residual = displayWorldUnits / magnitude;
+
+        let displayValue;
+        if (residual >= 5) displayValue = 5 * magnitude;
+        else if (residual >= 2) displayValue = 2 * magnitude;
+        else displayValue = 1 * magnitude;
+
+        // Convert back to internal world units for drawing width
+        const internalValue = displayValue / factor;
+        const pixelWidth = internalValue * k;
+
+        // Position: Top Left (below header, safe from timeline)
+        // Header height is approx 80px.
+        const x = 30;
+        const y = 110;
+
+        ctx.save();
+        ctx.strokeStyle = '#2b2118';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.font = 'bold 14px "Cinzel"';
+        ctx.fillStyle = '#2b2118';
+        ctx.textAlign = 'center';
+
+        // Draw Main Line with slight perturbation for ink effect
+        ctx.beginPath();
+        const steps = 10;
+        for (let i = 0; i <= steps; i++) {
+            const px = x + (pixelWidth * i / steps);
+            const py = y;
+            // Perturb slightly (scale 0.05 for smooth wobble, mag 1.5)
+            const pp = perturbPoint(px, py, 0.05, 1.5);
+            if (i === 0) ctx.moveTo(pp.x, pp.y);
+            else ctx.lineTo(pp.x, pp.y);
+        }
+        ctx.stroke();
+
+        // Draw Ticks (Vertical)
+        // Left Tick
+        ctx.beginPath();
+        const t1_start = perturbPoint(x, y - 5, 0.05, 1);
+        const t1_end = perturbPoint(x, y + 5, 0.05, 1);
+        ctx.moveTo(t1_start.x, t1_start.y);
+        ctx.lineTo(t1_end.x, t1_end.y);
+        ctx.stroke();
+
+        // Right Tick
+        ctx.beginPath();
+        const t2_start = perturbPoint(x + pixelWidth, y - 5, 0.05, 1);
+        const t2_end = perturbPoint(x + pixelWidth, y + 5, 0.05, 1);
+        ctx.moveTo(t2_start.x, t2_start.y);
+        ctx.lineTo(t2_end.x, t2_end.y);
+        ctx.stroke();
+
+        // Label (capitalize first letter)
+        const unitLabel = unit.charAt(0).toUpperCase() + unit.slice(1);
+        ctx.fillText(`${displayValue} ${unitLabel}`, x + pixelWidth / 2, y - 10);
 
         ctx.restore();
     }
