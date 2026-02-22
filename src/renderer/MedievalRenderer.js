@@ -33,6 +33,16 @@ export default class MedievalRenderer {
         window.addEventListener('resize', () => this.resize());
         this.createParchmentTexture();
         this.createWaterTexture();
+
+        // Measurement Units (1 League = Base Unit)
+        this.scaleUnit = 'leagues';
+        this.unitConversions = {
+            'leagues': 1.0,
+            'miles': 3.0,
+            'km': 4.8,
+            'stadia': 24.0,
+            'versts': 4.5
+        };
     }
 
     _isPointEntity(ent) {
@@ -314,17 +324,25 @@ export default class MedievalRenderer {
         // Calculate world units corresponding to target width
         const worldUnits = targetWidth / k;
 
-        // Round to a nice number (1, 2, 5 * 10^n)
-        const magnitude = Math.pow(10, Math.floor(Math.log10(worldUnits)));
-        const residual = worldUnits / magnitude;
+        // Unit Conversion
+        const unit = this.scaleUnit || 'leagues';
+        const factor = this.unitConversions[unit] || 1.0;
 
-        let scaleValue;
-        if (residual >= 5) scaleValue = 5 * magnitude;
-        else if (residual >= 2) scaleValue = 2 * magnitude;
-        else scaleValue = 1 * magnitude;
+        // Convert world units (always 1.0 = 1 League internally) to display units
+        const displayWorldUnits = worldUnits * factor;
 
-        // Calculate actual pixel width
-        const pixelWidth = scaleValue * k;
+        // Round to a nice number in display units
+        const magnitude = Math.pow(10, Math.floor(Math.log10(displayWorldUnits)));
+        const residual = displayWorldUnits / magnitude;
+
+        let displayValue;
+        if (residual >= 5) displayValue = 5 * magnitude;
+        else if (residual >= 2) displayValue = 2 * magnitude;
+        else displayValue = 1 * magnitude;
+
+        // Convert back to internal world units for drawing width
+        const internalValue = displayValue / factor;
+        const pixelWidth = internalValue * k;
 
         // Position: Top Left (below header, safe from timeline)
         // Header height is approx 80px.
@@ -369,8 +387,9 @@ export default class MedievalRenderer {
         ctx.lineTo(t2_end.x, t2_end.y);
         ctx.stroke();
 
-        // Label
-        ctx.fillText(`${scaleValue} Leagues`, x + pixelWidth / 2, y - 10);
+        // Label (capitalize first letter)
+        const unitLabel = unit.charAt(0).toUpperCase() + unit.slice(1);
+        ctx.fillText(`${displayValue} ${unitLabel}`, x + pixelWidth / 2, y - 10);
 
         ctx.restore();
     }

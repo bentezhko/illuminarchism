@@ -11,6 +11,55 @@ export default class RegistryRenderer {
         if (!container) return;
         container.innerHTML = '';
 
+        // --- MEASUREMENT SETTINGS ---
+        const settingsDiv = document.createElement('div');
+        settingsDiv.className = 'registry-category';
+        settingsDiv.style.borderBottom = '1px solid var(--ink-faded)';
+        settingsDiv.style.marginBottom = '1rem';
+        settingsDiv.style.paddingBottom = '0.5rem';
+
+        const settingsTitle = document.createElement('div');
+        settingsTitle.className = 'registry-cat-title';
+        settingsTitle.textContent = 'Scale Measurement';
+        settingsTitle.style.fontWeight = 'bold';
+        settingsTitle.style.color = 'var(--rubric-red)';
+        settingsDiv.appendChild(settingsTitle);
+
+        const unitSelect = document.createElement('select');
+        unitSelect.style.width = '100%';
+        unitSelect.style.marginTop = '0.5rem';
+        unitSelect.style.padding = '4px';
+        unitSelect.style.fontFamily = 'Cinzel, serif';
+        unitSelect.style.background = 'var(--parchment-bg)';
+        unitSelect.style.border = '1px solid var(--ink-faded)';
+        unitSelect.style.color = 'var(--ink-primary)';
+
+        const units = [
+            { val: 'leagues', label: 'Leagues (Base)' },
+            { val: 'miles', label: 'Miles (3x)' },
+            { val: 'km', label: 'Kilometers (4.8x)' },
+            { val: 'stadia', label: 'Stadia (24x)' },
+            { val: 'versts', label: 'Versts (4.5x)' }
+        ];
+
+        units.forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.val;
+            opt.textContent = u.label;
+            if (this.app.renderer.scaleUnit === u.val) opt.selected = true;
+            unitSelect.appendChild(opt);
+        });
+
+        unitSelect.addEventListener('change', (e) => {
+            this.app.renderer.scaleUnit = e.target.value;
+            this.app.renderer.invalidateWorldLayer(); // Just to be safe, though scale is dynamic
+            this.app.render();
+        });
+
+        settingsDiv.appendChild(unitSelect);
+        container.appendChild(settingsDiv);
+        // -----------------------------
+
         // 1. Group existing entities by Domain -> Typology
         const entityMap = {};
         this.app.entities.forEach(ent => {
