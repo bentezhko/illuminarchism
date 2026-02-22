@@ -299,6 +299,80 @@ export default class MedievalRenderer {
         }
 
         ctx.restore();
+
+        // Draw Scale
+        this.drawScale();
+    }
+
+    drawScale() {
+        const ctx = this.ctx;
+        const k = this.transform.k;
+
+        // Target screen width for the scale bar (approx 150px)
+        const targetWidth = 150;
+
+        // Calculate world units corresponding to target width
+        const worldUnits = targetWidth / k;
+
+        // Round to a nice number (1, 2, 5 * 10^n)
+        const magnitude = Math.pow(10, Math.floor(Math.log10(worldUnits)));
+        const residual = worldUnits / magnitude;
+
+        let scaleValue;
+        if (residual >= 5) scaleValue = 5 * magnitude;
+        else if (residual >= 2) scaleValue = 2 * magnitude;
+        else scaleValue = 1 * magnitude;
+
+        // Calculate actual pixel width
+        const pixelWidth = scaleValue * k;
+
+        // Position: Top Left (below header, safe from timeline)
+        // Header height is approx 80px.
+        const x = 30;
+        const y = 110;
+
+        ctx.save();
+        ctx.strokeStyle = '#2b2118';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.font = 'bold 14px "Cinzel"';
+        ctx.fillStyle = '#2b2118';
+        ctx.textAlign = 'center';
+
+        // Draw Main Line with slight perturbation for ink effect
+        ctx.beginPath();
+        const steps = 10;
+        for (let i = 0; i <= steps; i++) {
+            const px = x + (pixelWidth * i / steps);
+            const py = y;
+            // Perturb slightly (scale 0.05 for smooth wobble, mag 1.5)
+            const pp = perturbPoint(px, py, 0.05, 1.5);
+            if (i === 0) ctx.moveTo(pp.x, pp.y);
+            else ctx.lineTo(pp.x, pp.y);
+        }
+        ctx.stroke();
+
+        // Draw Ticks (Vertical)
+        // Left Tick
+        ctx.beginPath();
+        const t1_start = perturbPoint(x, y - 5, 0.05, 1);
+        const t1_end = perturbPoint(x, y + 5, 0.05, 1);
+        ctx.moveTo(t1_start.x, t1_start.y);
+        ctx.lineTo(t1_end.x, t1_end.y);
+        ctx.stroke();
+
+        // Right Tick
+        ctx.beginPath();
+        const t2_start = perturbPoint(x + pixelWidth, y - 5, 0.05, 1);
+        const t2_end = perturbPoint(x + pixelWidth, y + 5, 0.05, 1);
+        ctx.moveTo(t2_start.x, t2_start.y);
+        ctx.lineTo(t2_end.x, t2_end.y);
+        ctx.stroke();
+
+        // Label
+        ctx.fillText(`${scaleValue} Leagues`, x + pixelWidth / 2, y - 10);
+
+        ctx.restore();
     }
 
     drawPointTransform(pt) {
