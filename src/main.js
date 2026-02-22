@@ -11,6 +11,7 @@ import Timeline from './ui/Timeline.js';
 import InfoPanel from './ui/InfoPanel.js';
 import Dial from './ui/Dial.js';
 import Toolbar from './ui/Toolbar.js';
+import LayerManager from './ui/LayerManager.js';
 import AtlasLoader from './io/AtlasLoader.js';
 import AtlasExporter from './io/AtlasExporter.js';
 
@@ -29,6 +30,7 @@ export default class IlluminarchismApp {
         this.infoPanel = new InfoPanel(this);
         this.dial = new Dial(this);
         this.toolbar = new Toolbar(this);
+        this.layerManager = new LayerManager(this);
         this.loader = new AtlasLoader(this);
         this.exporter = new AtlasExporter(this);
 
@@ -45,6 +47,9 @@ export default class IlluminarchismApp {
         this.draftCursor = null;
         this.activeTool = 'pan';
 
+        // Layer State
+        this.layers = [];
+        this.activeLayerId = null;
 
         // New ontology-aware drawing state
         this.drawDomain = 'political';  // Level 1: Domain
@@ -139,12 +144,23 @@ export default class IlluminarchismApp {
     }
 
     initData() {
+        // Initialize Default Layers
+        this.layers = [
+            { id: 'default', name: 'Default', visible: true, locked: false, order: -1 },
+            { id: 'layer_water', name: 'Water', visible: true, locked: true, order: 0 },
+            { id: 'layer_land', name: 'Land', visible: true, locked: false, order: 1 },
+            { id: 'layer_details', name: 'Details', visible: true, locked: false, order: 2 }
+        ];
+        this.activeLayerId = 'layer_land';
+        if (this.layerManager) this.layerManager.render();
+
         // Create entities using the new config-object format for constructor
         const seaNorth = new HistoricalEntity('sea_north', 'Mare Borealis', {
             domain: 'geographic',
             typology: 'aquatic',
             color: '#264e86',
             hatchStyle: 'waves',
+            layerId: 'layer_water',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         seaNorth.addKeyframe(-2000, [{ x: 0, y: -400 }, { x: 500, y: -400 }, { x: 500, y: 0 }, { x: 0, y: 0 }], true);
@@ -156,6 +172,7 @@ export default class IlluminarchismApp {
             typology: 'aquatic',
             color: '#264e86',
             hatchStyle: 'waves',
+            layerId: 'layer_water',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         seaSouth.addKeyframe(-2000, [{ x: 0, y: -100 }, { x: 500, y: -100 }, { x: 500, y: 300 }, { x: 0, y: 300 }], true);
@@ -167,6 +184,7 @@ export default class IlluminarchismApp {
             typology: 'nation-state',
             color: '#264e86',
             hatchStyle: 'diagonal-right',
+            layerId: 'layer_land',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         mainland.addKeyframe(-2000, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
@@ -200,6 +218,7 @@ export default class IlluminarchismApp {
             typology: 'archaic-state',
             subtype: 'sovereign',
             color: '#000000',
+            layerId: 'layer_details',
             validRange: { start: -1000, end: 2050 } // FIXED: Finite range for editing
         });
         city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
@@ -784,7 +803,8 @@ export default class IlluminarchismApp {
                 typology: this.drawTypology,
                 subtype: this.drawSubtype,
                 color: color,
-                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
+                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9,
+                layerId: this.activeLayerId || 'layer_land'
             });
             // New shape creation (no resampling)
             newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
@@ -964,6 +984,16 @@ export default class IlluminarchismApp {
                 candidates = this.entities.filter(e => e && e.visible);
             }
 
+            // Filter by Layer (Visible and Not Locked)
+            if (this.layers) {
+                candidates = candidates.filter(e => {
+                    const layer = this.layers.find(l => l.id === e.layerId);
+                    // If layer not found, assume visible/unlocked
+                    if (!layer) return true;
+                    return layer.visible && !layer.locked;
+                });
+            }
+
             // Sort candidates for Z-order
             const sorted = candidates.sort((a, b) => {
                 const typeScore = (ent) => {
@@ -1119,7 +1149,7 @@ export default class IlluminarchismApp {
             }
         }
 
-        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex, this.layers);
 
         // Draw draft with safety check
         if (this.activeTool === 'draw' && this.draftPoints.length > 0) {

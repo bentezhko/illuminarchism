@@ -219,7 +219,7 @@ export default class MedievalRenderer {
         this.labelRegions = []; // Reset label collision registry
     }
 
-    draw(entities, hoveredId, selectedId, activeTool, vertexHighlightIndex) {
+    draw(entities, hoveredId, selectedId, activeTool, vertexHighlightIndex, layers = null) {
         if (this.width === 0 || this.height === 0) return;
 
         // FIXED: Safety check for entities input
@@ -254,7 +254,7 @@ export default class MedievalRenderer {
         // --- LAYER CACHING LOGIC ---
         // If the cache is invalid (or first run), re-render the static world
         if (!this.worldLayerValid) {
-            this.renderWorldLayer(entities, t);
+            this.renderWorldLayer(entities, t, layers);
             this.worldLayerValid = true;
         }
 
@@ -271,6 +271,12 @@ export default class MedievalRenderer {
 
         entities.forEach(ent => {
             if (!ent || !ent.currentGeometry || !ent.visible) return;
+
+            if (layers) {
+                const layer = layers.find(l => l.id === ent.layerId);
+                if (layer && !layer.visible) return;
+            }
+
             const isHovered = ent.id === hoveredId;
             const isSelected = ent.id === selectedId;
 
@@ -792,7 +798,7 @@ export default class MedievalRenderer {
     }
 
 
-    renderWorldLayer(sortedEntities, t) {
+    renderWorldLayer(entities, t, layers = null) {
         // This renders the "Static" world: Land, Rivers, Water, Ripples.
         // Selection highlights are NOT part of this, they are dynamic.
         // So we render the "Base State" of entities.
@@ -815,9 +821,15 @@ export default class MedievalRenderer {
         const worldEntities = this._cachedWorldEntities;
         worldEntities.length = 0;
 
-        for (let i = 0; i < sortedEntities.length; i++) {
-            const e = sortedEntities[i];
+        for (let i = 0; i < entities.length; i++) {
+            const e = entities[i];
             if (!e || !e.visible) continue;
+
+            if (layers) {
+                const layer = layers.find(l => l.id === e.layerId);
+                if (layer && !layer.visible) continue;
+            }
+
             if (e.type === 'water') {
                 if (e.currentGeometry) {
                     waterEntities.push(e);
@@ -827,8 +839,30 @@ export default class MedievalRenderer {
             }
         }
 
-        // Sort
-        worldEntities.sort((a, b) => this._getEntityScore(a) - this._getEntityScore(b));
+        // Sort World Entities (Land/Details)
+        worldEntities.sort((a, b) => {
+             // Layer Order
+             if (layers) {
+                 const lA = layers.find(l => l.id === a.layerId);
+                 const lB = layers.find(l => l.id === b.layerId);
+                 const orderA = lA ? lA.order : -1;
+                 const orderB = lB ? lB.order : -1;
+                 if (orderA !== orderB) return orderA - orderB;
+             }
+             // Type Score
+             return this._getEntityScore(a) - this._getEntityScore(b);
+        });
+
+        // Sort Water Entities
+        if (layers) {
+            waterEntities.sort((a, b) => {
+                 const lA = layers.find(l => l.id === a.layerId);
+                 const lB = layers.find(l => l.id === b.layerId);
+                 const orderA = lA ? lA.order : -1;
+                 const orderB = lB ? lB.order : -1;
+                 return orderA - orderB;
+            });
+        }
 
         // 1. Draw Land & Rivers
         worldEntities.forEach(ent => {
