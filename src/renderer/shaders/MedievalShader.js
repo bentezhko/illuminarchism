@@ -9,7 +9,6 @@ precision highp float;
 // Attributes
 in vec2 a_position;      // Start position (Keyframe 1)
 in vec2 a_nextPosition;  // End position (Keyframe 2)
-in vec2 a_texCoord;
 in vec3 a_color;
 in float a_validStart;   // Entity valid start year (for visibility)
 in float a_yearStart;    // Keyframe 1 year
@@ -59,7 +58,7 @@ void main() {
     
     gl_Position = vec4(transformed.xy, 0.0, 1.0);
     
-    v_texCoord = a_texCoord;
+    v_texCoord = basePosition;
     v_color = a_color;
 }
 `;

@@ -327,10 +327,6 @@ export default class WebGLRenderer {
             }
         }
         
-        // Handle case where validStart/End are still default
-        if (validStart === -Infinity) validStart = currentYear; // No constraints?
-        if (validEnd === Infinity) validEnd = currentYear;
-
         // Ensure buffer range is reasonable
         // If we found NO entities, vertices is empty.
         
@@ -345,7 +341,7 @@ export default class WebGLRenderer {
         // Update cache state
         this.lastRenderState.validRange = { start: validStart, end: validEnd };
         this.lastRenderState.entities = entities; // Store reference
-        this.lastRenderState.vertexCount = vertices.length / 12; // 12 floats per vertex
+        this.lastRenderState.vertexCount = vertices.length / 10; // 10 floats per vertex
 
         return this.lastRenderState.vertexCount;
     }
@@ -361,7 +357,6 @@ export default class WebGLRenderer {
         vertices.push(
             pStart.x, pStart.y,     // a_position (Start)
             pEnd.x, pEnd.y,         // a_nextPosition (End)
-            pStart.x, pStart.y,     // a_texCoord
             color[0], color[1], color[2], // a_color
             validStart,             // a_validStart
             yearStart,              // a_yearStart
@@ -518,10 +513,9 @@ export default class WebGLRenderer {
             gl.uniform1f(paperLocation, this.settings.paperRoughness);
             
             // Set vertex attributes
-            const stride = 12 * 4; // 12 floats * 4 bytes
+            const stride = 10 * 4; // 10 floats * 4 bytes
             const positionLocation = gl.getAttribLocation(this.mainProgram, 'a_position');
             const nextPosLocation = gl.getAttribLocation(this.mainProgram, 'a_nextPosition');
-            const texCoordLocation = gl.getAttribLocation(this.mainProgram, 'a_texCoord');
             const colorLocation = gl.getAttribLocation(this.mainProgram, 'a_color');
             const validStartLocation = gl.getAttribLocation(this.mainProgram, 'a_validStart');
             const yearStartLocation = gl.getAttribLocation(this.mainProgram, 'a_yearStart');
@@ -534,21 +528,18 @@ export default class WebGLRenderer {
             
             gl.enableVertexAttribArray(nextPosLocation);
             gl.vertexAttribPointer(nextPosLocation, 2, gl.FLOAT, false, stride, 8);
-
-            gl.enableVertexAttribArray(texCoordLocation);
-            gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, stride, 16);
             
             gl.enableVertexAttribArray(colorLocation);
-            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, stride, 24);
+            gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, stride, 16);
 
             gl.enableVertexAttribArray(validStartLocation);
-            gl.vertexAttribPointer(validStartLocation, 1, gl.FLOAT, false, stride, 36);
+            gl.vertexAttribPointer(validStartLocation, 1, gl.FLOAT, false, stride, 28);
 
             gl.enableVertexAttribArray(yearStartLocation);
-            gl.vertexAttribPointer(yearStartLocation, 1, gl.FLOAT, false, stride, 40);
-            
+            gl.vertexAttribPointer(yearStartLocation, 1, gl.FLOAT, false, stride, 32);
+
             gl.enableVertexAttribArray(yearEndLocation);
-            gl.vertexAttribPointer(yearEndLocation, 1, gl.FLOAT, false, stride, 44);
+            gl.vertexAttribPointer(yearEndLocation, 1, gl.FLOAT, false, stride, 36);
             
             // Draw
             gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
