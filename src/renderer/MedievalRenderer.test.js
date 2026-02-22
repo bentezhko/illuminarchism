@@ -12,7 +12,7 @@ const mockCtx = {
     moveTo: mock(() => {}),
     lineTo: mock(() => {}),
     stroke: mock(() => {}),
-    fillText: mock(() => {}),
+    fillText: mock((text, x, y) => {}),
     measureText: mock(() => ({ width: 10 })),
     createPattern: mock(() => {}),
     createImageData: mock(() => ({ data: new Uint8Array(512 * 512 * 4) })),
@@ -79,19 +79,35 @@ describe('MedievalRenderer', () => {
     });
 
     it('should calculate different scale values for different zoom levels', () => {
-         const renderer = new MedievalRenderer('map-canvas');
+        const renderer = new MedievalRenderer('map-canvas');
 
-         // Case 1: k=1 -> target=150 -> units=150 -> scale=100
-         renderer.transform.k = 1;
-         renderer.drawScale();
-         // We expect fillText to be called with "100 Leagues"
+        // --- Reset Mock Before Each Call ---
+        // Since we want to assert the text of the *current* call, we should check it immediately.
 
-         // Case 2: k=0.5 -> target=150 -> units=300 -> scale=200
-         renderer.transform.k = 0.5;
-         renderer.drawScale();
+        // Case 1: k=1 -> target=150 -> units=150 -> scale=100 (Default: Leagues)
+        renderer.transform.k = 1;
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("100 Leagues", expect.any(Number), expect.any(Number));
 
-         // Case 3: k=2 -> target=150 -> units=75 -> scale=50
-         renderer.transform.k = 2;
-         renderer.drawScale();
+        // Case 2: k=0.5 -> target=150 -> units=300 -> scale=200
+        renderer.transform.k = 0.5;
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("200 Leagues", expect.any(Number), expect.any(Number));
+
+        // Case 3: k=2 -> target=150 -> units=75 -> scale=50
+        renderer.transform.k = 2;
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("50 Leagues", expect.any(Number), expect.any(Number));
+    });
+
+    it('should respect unit selection', () => {
+        const renderer = new MedievalRenderer('map-canvas');
+        renderer.transform.k = 1;
+
+        // Change unit to 'miles' (factor 3.0)
+        // target=150 -> worldUnits=150 -> displayUnits=450 -> scale=200
+        renderer.scaleUnit = 'miles';
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("200 Miles", expect.any(Number), expect.any(Number));
     });
 });

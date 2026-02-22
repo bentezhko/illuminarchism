@@ -359,7 +359,8 @@ export default class MedievalRenderer {
 
         // Draw Main Line with slight perturbation for ink effect
         ctx.beginPath();
-        const steps = 10;
+        // Dynamic steps based on width for consistent wobble density (1 step per 15px)
+        const steps = Math.max(2, Math.floor(pixelWidth / 15));
         for (let i = 0; i <= steps; i++) {
             const px = x + (pixelWidth * i / steps);
             const py = y;
