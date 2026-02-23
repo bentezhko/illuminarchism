@@ -32,7 +32,11 @@ global.document = {
         return el;
     },
     createElementNS: (ns, tag) => global.document.createElement(tag),
-    createTextNode: (text) => ({ nodeType: 3, textContent: text }),
+    createTextNode: (text) => ({
+        nodeType: 3,
+        textContent: text,
+        get innerText() { return this.textContent; }
+    }),
     body: {
         appendChild: (el) => {
             if (el.id) mockElements.set(el.id, el);
@@ -85,13 +89,41 @@ const createMockElement = (id) => {
         },
         getBoundingClientRect: () => ({ left:0, top:0, width:1000, height:50, right:1000, bottom:50 }),
         closest: () => null,
-        innerHTML: '',
-        textContent: '',
         children: [],
         appendChild: (child) => {
              el.children.push(child);
         }
     };
+
+    // Properties need defineProperty to allow getters/setters on object
+    // Mock innerHTML parsing for text extraction
+    // Ensure all properties are enumerable so spread/assign works if used
+    Object.defineProperty(el, 'innerHTML', {
+        get: () => el._innerHTML || '',
+        set: (val) => {
+            el._innerHTML = val;
+            // Simple text extraction logic for tests
+            const text = val.replace(/<[^>]*>/g, '');
+            // We set both the 'mock private' property and the standard property getter's source
+            el._textContent = text;
+            // Trigger side-effects if needed (e.g. updating innerText)
+        },
+        configurable: true
+    });
+
+    Object.defineProperty(el, 'textContent', {
+        get: () => el._textContent || '',
+        set: (val) => {
+            el._textContent = val;
+        },
+        configurable: true
+    });
+
+    Object.defineProperty(el, 'innerText', {
+        get: () => el._textContent || '',
+        configurable: true
+    });
+
     mockElements.set(id, el);
     return el;
 };
