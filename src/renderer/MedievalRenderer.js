@@ -417,14 +417,8 @@ export default class MedievalRenderer {
 
         if (ent.category !== 'cultural') {
             ctx.beginPath();
-            // Use rough path for "natural" look on Polities and Rivers, smooth for others?
-            // Actually, cultural borders often straight. But "ink" implied roughness.
-            // Let's roughness everything except maybe very specific things.
-            // For performance, maybe only roughness if k > X?
-            // But consistent look is better.
-            // But consistent look is better.
-            // FIX: Rough path causing invisibility. Reverting to simple path.
-            this.tracePathOnCtx(ctx, pts, true);
+            // Use rough path for "natural" ink look
+            this.traceRoughPath(pts, true, ctx);
 
             // Land Shadow / Glow
             if (ent.type === 'polity') {
@@ -447,12 +441,12 @@ export default class MedievalRenderer {
         if (pattern && ent.category !== 'cultural') {
             ctx.fillStyle = pattern;
             ctx.beginPath();
-            this.tracePathOnCtx(ctx, pts, true);
+            this.traceRoughPath(pts, true, ctx);
             ctx.fill();
         }
 
         ctx.beginPath();
-        this.tracePathOnCtx(ctx, pts, true);
+        this.traceRoughPath(pts, true, ctx);
         if (isSelected) {
             ctx.shadowColor = '#000'; ctx.shadowBlur = 10;
             ctx.lineWidth *= 1.5;
@@ -672,18 +666,28 @@ export default class MedievalRenderer {
         const useRough = this.transform.k > 0.2;
 
         const moveTo = (p) => {
+            if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return;
             if (useRough) {
                 const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
-                ctx.moveTo(pp.x, pp.y);
+                if (Number.isFinite(pp.x) && Number.isFinite(pp.y)) {
+                    ctx.moveTo(pp.x, pp.y);
+                } else {
+                    ctx.moveTo(p.x, p.y);
+                }
             } else {
                 ctx.moveTo(p.x, p.y);
             }
         };
 
         const lineTo = (p) => {
+            if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) return;
             if (useRough) {
                 const pp = perturbPoint(p.x, p.y, 0.5, 2 / this.transform.k);
-                ctx.lineTo(pp.x, pp.y);
+                if (Number.isFinite(pp.x) && Number.isFinite(pp.y)) {
+                    ctx.lineTo(pp.x, pp.y);
+                } else {
+                    ctx.lineTo(p.x, p.y);
+                }
             } else {
                 ctx.lineTo(p.x, p.y);
             }
