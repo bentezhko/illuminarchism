@@ -13,6 +13,7 @@ import Dial from './ui/Dial.js';
 import Toolbar from './ui/Toolbar.js';
 import AtlasLoader from './io/AtlasLoader.js';
 import AtlasExporter from './io/AtlasExporter.js';
+import { initialEntities } from './data/initialEntities.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -139,137 +140,16 @@ export default class IlluminarchismApp {
     }
 
     initData() {
-        // Create entities using the new config-object format for constructor
-        const seaNorth = new HistoricalEntity('sea_north', 'Mare Borealis', {
-            domain: 'geographic',
-            typology: 'aquatic',
-            color: '#264e86',
-            hatchStyle: 'waves',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
+        // Create entities from external data file
+        initialEntities.forEach(data => {
+            const entity = new HistoricalEntity(data.id, data.name, data.config);
+            if (data.keyframes) {
+                data.keyframes.forEach(kf => {
+                    entity.addKeyframe(kf.year, kf.geometry, kf.preventResampling);
+                });
+            }
+            this.entities.push(entity);
         });
-        seaNorth.addKeyframe(-2000, [{ x: 0, y: -400 }, { x: 500, y: -400 }, { x: 500, y: 0 }, { x: 0, y: 0 }], true);
-        seaNorth.addKeyframe(2025, [{ x: -10, y: -410 }, { x: 510, y: -410 }, { x: 510, y: 10 }, { x: -10, y: 10 }], true);
-        this.entities.push(seaNorth);
-
-        const seaSouth = new HistoricalEntity('sea_south', 'Mare Australis', {
-            domain: 'geographic',
-            typology: 'aquatic',
-            color: '#264e86',
-            hatchStyle: 'waves',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        seaSouth.addKeyframe(-2000, [{ x: 0, y: -100 }, { x: 500, y: -100 }, { x: 500, y: 300 }, { x: 0, y: 300 }], true);
-        seaSouth.addKeyframe(2025, [{ x: -10, y: -110 }, { x: 510, y: -110 }, { x: 510, y: 310 }, { x: -10, y: 310 }], true);
-        this.entities.push(seaSouth);
-
-        const mainland = new HistoricalEntity('mainland', 'Regnum Magna', {
-            domain: 'political',
-            typology: 'nation-state',
-            color: '#264e86',
-            hatchStyle: 'diagonal-right',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        mainland.addKeyframe(-2000, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
-        mainland.addKeyframe(2025, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
-        this.entities.push(mainland);
-
-        const island = new HistoricalEntity('island', 'Insula Minor', {
-            domain: 'political',
-            typology: 'nation-state',
-            color: '#264e86',
-            hatchStyle: 'diagonal-left',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        island.addKeyframe(-2000, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
-        island.addKeyframe(2025, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
-        this.entities.push(island);
-
-        const bridge = new HistoricalEntity('bridge', 'The Causeway', {
-            domain: 'political',
-            typology: 'nation-state',
-            color: '#8a3324',
-            hatchStyle: 'vertical',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        bridge.addKeyframe(-2000, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
-        bridge.addKeyframe(2025, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
-        this.entities.push(bridge);
-
-        const city = new HistoricalEntity('city_capital', 'Urbs Aeterna', {
-            domain: 'political',
-            typology: 'archaic-state',
-            subtype: 'sovereign',
-            color: '#000000',
-            validRange: { start: -1000, end: 2050 } // FIXED: Finite range for editing
-        });
-        city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
-        this.entities.push(city);
-
-        const oldTongue = new HistoricalEntity('lang_old', 'Lingua Antiqua', {
-            domain: 'linguistic',
-            typology: 'genealogical',
-            subtype: 'language',
-            color: '#5c3c92',
-            hatchStyle: 'cross',
-            validRange: { start: 800, end: 2050 } // FIXED: Finite range for editing
-        });
-        oldTongue.addKeyframe(800, [{ x: -280, y: -80 }, { x: -120, y: -80 }, { x: -120, y: 80 }, { x: -280, y: 80 }], true);
-        this.entities.push(oldTongue);
-
-        const thSound = new HistoricalEntity('sound_th', 'Theta Isogloss', {
-            domain: 'linguistic',
-            typology: 'typological',
-            subtype: 'feature',
-            color: '#800080',
-            hatchStyle: 'stipple',
-            validRange: { start: 1200, end: 2050 } // FIXED: Finite range for editing
-        });
-        thSound.addKeyframe(1200, [{ x: -250, y: -50 }, { x: -150, y: -50 }, { x: -150, y: 50 }, { x: -250, y: 50 }], true);
-        this.entities.push(thSound);
-
-        const sodaWord = new HistoricalEntity('word_soda', 'Soda/Pop Line', {
-            domain: 'linguistic',
-            typology: 'typological',
-            subtype: 'feature',
-            color: '#FF4500',
-            hatchStyle: 'stipple',
-            validRange: { start: 1900, end: 2050 } // FIXED: Finite range for editing
-        });
-        sodaWord.addKeyframe(1900, [{ x: -200, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 0 }, { x: -200, y: 0 }], true);
-        this.entities.push(sodaWord);
-
-        const festivalZone = new HistoricalEntity('cult_fest', 'Solar Calendar Zone', {
-            domain: 'political', // Mapped to Political/Band for "Shared Use" activity zone
-            typology: 'band',
-            color: '#c5a059',
-            hatchStyle: 'vertical',
-            validRange: { start: 900, end: 2050 } // FIXED: Finite range for editing
-        });
-        festivalZone.addKeyframe(900, [{ x: -290, y: -90 }, { x: 100, y: -90 }, { x: 100, y: 90 }, { x: -290, y: 90 }], true);
-        this.entities.push(festivalZone);
-
-        const paganEnclave = new HistoricalEntity('faith_pagan', 'Old Gods', {
-            domain: 'religious',
-            typology: 'ethnic',
-            color: '#228B22',
-            hatchStyle: 'stipple',
-            validRange: { start: -500, end: 2050 } // FIXED: Finite range for editing
-        });
-        paganEnclave.addKeyframe(-500, [{ x: 250, y: -50 }, { x: 350, y: -50 }, { x: 350, y: 50 }, { x: 250, y: 50 }], true);
-        this.entities.push(paganEnclave);
-
-        // --- NEW CULTURAL DOMAIN ENTITY ---
-        const biphasicSleep = new HistoricalEntity('cult_sleep', 'Biphasic Sleep Zone', {
-            domain: 'political', // Mapped to Political/Band
-            typology: 'band',
-            color: '#3a5f3a',
-            hatchStyle: 'horizontal',
-            validRange: { start: -10000, end: 1900 }
-        });
-        // Represents the pre-industrial world, fading out by the early 20th century
-        biphasicSleep.addKeyframe(-10000, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true);
-        biphasicSleep.addKeyframe(1900, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true); // Fade out, keep low poly
-        this.entities.push(biphasicSleep);
     }
 
     formatYear(year) {
