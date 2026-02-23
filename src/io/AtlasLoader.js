@@ -33,6 +33,16 @@ export default class AtlasLoader {
      * @param {Object} json 
      */
     parseAtlasData(json) {
+        // Handle input object or string
+        if (typeof json === 'string') {
+            try {
+                json = JSON.parse(json);
+            } catch (e) {
+                console.error("Invalid JSON string:", e);
+                return;
+            }
+        }
+
         if (!json.entities || !Array.isArray(json.entities)) {
             console.error("Invalid atlas format: 'entities' array missing");
             return;
@@ -49,6 +59,14 @@ export default class AtlasLoader {
             this.app.atlasMeta = json.meta;
             console.log("Loading Atlas Meta:", json.meta);
         }
+
+        // Restore Layers (Groups) if present
+        if (json.layers && Array.isArray(json.layers)) {
+            this.app.layers = json.layers;
+        }
+        // If no layers in JSON, we keep the defaults initialized in main.js,
+        // which might result in entities being orphaned if their layerIds don't match.
+        // However, defaults cover 'water', 'political', 'misc'.
 
         // Restore Entities
         let maxId = 0;
@@ -68,6 +86,10 @@ export default class AtlasLoader {
 
         // Initialize spatial index and renderer
         this.app.updateEntities();
+
+        // Update Layer Manager UI
+        if (this.app.layerManager) this.app.layerManager.render();
+
         this.app.render();
 
         // Update Registry UI

@@ -7,10 +7,12 @@ export const VERTEX_SHADER = `#version 300 es
 precision highp float;
 
 // Attributes
-in vec2 a_position;
-in vec2 a_texCoord;
+in vec2 a_position;      // Start position (Keyframe 1)
+in vec2 a_nextPosition;  // End position (Keyframe 2)
 in vec3 a_color;
-in float a_year;
+in float a_validStart;   // Entity valid start year (for visibility)
+in float a_yearStart;    // Keyframe 1 year
+in float a_yearEnd;      // Keyframe 2 year
 
 // Uniforms
 uniform mat3 u_matrix;        // Transform matrix (pan, zoom)
@@ -31,23 +33,32 @@ float noise(vec2 p) {
 
 void main() {
     // Calculate visibility based on temporal range
-    float yearDiff = abs(u_currentYear - a_year);
+    float yearDiff = abs(u_currentYear - a_validStart);
     v_visibility = smoothstep(100.0, 0.0, yearDiff);
     
+    // Interpolate position based on year
+    float t = 0.0;
+    float duration = a_yearEnd - a_yearStart;
+    if (duration > 0.001) {
+        t = clamp((u_currentYear - a_yearStart) / duration, 0.0, 1.0);
+    }
+
+    vec2 basePosition = mix(a_position, a_nextPosition, t);
+
     // Apply hand-drawn wobble effect
     vec2 wobble = vec2(
-        (noise(a_position + vec2(u_time * 0.001)) - 0.5) * u_wobble,
-        (noise(a_position + vec2(u_time * 0.002 + 100.0)) - 0.5) * u_wobble
+        (noise(basePosition + vec2(u_time * 0.001)) - 0.5) * u_wobble,
+        (noise(basePosition + vec2(u_time * 0.002 + 100.0)) - 0.5) * u_wobble
     );
     v_wobbleOffset = wobble;
     
     // Transform position
-    vec2 position = a_position + wobble * 0.001; // Apply subtle wobble
+    vec2 position = basePosition + wobble * 0.001; // Apply subtle wobble
     vec3 transformed = u_matrix * vec3(position, 1.0);
     
     gl_Position = vec4(transformed.xy, 0.0, 1.0);
     
-    v_texCoord = a_texCoord;
+    v_texCoord = basePosition;
     v_color = a_color;
 }
 `;

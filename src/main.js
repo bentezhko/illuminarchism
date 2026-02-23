@@ -11,6 +11,7 @@ import Timeline from './ui/Timeline.js';
 import InfoPanel from './ui/InfoPanel.js';
 import Dial from './ui/Dial.js';
 import Toolbar from './ui/Toolbar.js';
+import LayerManager from './ui/LayerManager.js';
 import AtlasLoader from './io/AtlasLoader.js';
 import AtlasExporter from './io/AtlasExporter.js';
 import { initialEntities } from './data/initialEntities.js';
@@ -30,6 +31,7 @@ export default class IlluminarchismApp {
         this.infoPanel = new InfoPanel(this);
         this.dial = new Dial(this);
         this.toolbar = new Toolbar(this);
+        this.layerManager = new LayerManager(this);
         this.loader = new AtlasLoader(this);
         this.exporter = new AtlasExporter(this);
 
@@ -46,6 +48,9 @@ export default class IlluminarchismApp {
         this.draftCursor = null;
         this.activeTool = 'pan';
 
+        // Layer State
+        this.layers = [];
+        this.activeLayerId = null;
 
         // New ontology-aware drawing state
         this.drawDomain = 'political';  // Level 1: Domain
@@ -140,6 +145,16 @@ export default class IlluminarchismApp {
     }
 
     initData() {
+        // Initialize Default Groups (formerly Layers)
+        this.layers = [
+            { id: 'layer_water', name: 'Water', visible: true, locked: true, order: 0, expanded: true },
+            { id: 'layer_political', name: 'Political', visible: true, locked: false, order: 1, expanded: true },
+            { id: 'layer_misc', name: 'Misc', visible: true, locked: false, order: 2, expanded: true },
+            { id: 'default', name: 'Default', visible: true, locked: false, order: 3, expanded: true }
+        ];
+        this.activeLayerId = 'layer_political';
+        if (this.layerManager) this.layerManager.render();
+
         // Create entities from external data file
         initialEntities.forEach(data => {
             const entity = new HistoricalEntity(data.id, data.name, data.config);
@@ -150,6 +165,9 @@ export default class IlluminarchismApp {
             }
             this.entities.push(entity);
         });
+
+        // Update Layer Manager to show entities
+        if (this.layerManager) this.layerManager.render();
     }
 
     formatYear(year) {
@@ -664,7 +682,8 @@ export default class IlluminarchismApp {
                 typology: this.drawTypology,
                 subtype: this.drawSubtype,
                 color: color,
-                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
+                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9,
+                layerId: this.activeLayerId || 'layer_land'
             });
             // New shape creation (no resampling)
             newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
@@ -726,9 +745,12 @@ export default class IlluminarchismApp {
                 this.updateDialDisplay();
             }
 
-            if (showPanel) {
-                const p = document.getElementById('info-panel');
-                p.style.display = 'block';
+            const p = document.getElementById('info-panel');
+            const isVisible = p && p.style.display === 'block';
+
+            // Update panel if explicitly requested OR if it is already open
+            if (showPanel || isVisible) {
+                if (showPanel) p.style.display = 'block';
                 document.getElementById('info-name-input').value = ent.name;
                 document.getElementById('info-type').textContent = ent.typology; // updated to match property name
                 document.getElementById('info-cat').textContent = ent.domain; // updated to match property name
@@ -842,6 +864,18 @@ export default class IlluminarchismApp {
             } else {
                 // Fallback if index not ready
                 candidates = this.entities.filter(e => e && e.visible);
+            }
+
+            // Filter by Layer (Visible and Not Locked)
+            if (this.layers) {
+                // Optimization: Create Map for O(1) lookup
+                const layerMap = new Map(this.layers.map(l => [l.id, l]));
+                candidates = candidates.filter(e => {
+                    const layer = layerMap.get(e.layerId);
+                    // If layer not found, assume visible/unlocked
+                    if (!layer) return true;
+                    return layer.visible && !layer.locked;
+                });
             }
 
             // Sort candidates for Z-order
@@ -999,7 +1033,7 @@ export default class IlluminarchismApp {
             }
         }
 
-        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex, this.layers);
 
         // Draw draft with safety check
         if (this.activeTool === 'draw' && this.draftPoints.length > 0) {

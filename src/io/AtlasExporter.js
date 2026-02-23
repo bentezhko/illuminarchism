@@ -19,6 +19,7 @@ export default class AtlasExporter {
 
         return {
             meta,
+            layers: this.app.layers || [],
             entities: this.app.entities.map(e => e.toJSON()),
             connections: this.app.connections || []
         };

@@ -31,6 +31,7 @@ export const initialEntities = [
             typology: 'aquatic',
             color: COMMON_COLORS.SEA_BLUE,
             hatchStyle: 'waves',
+            layerId: 'layer_water',
             validRange: COMMON_RANGES.DEFAULT
         },
         keyframes: [
@@ -46,6 +47,7 @@ export const initialEntities = [
             typology: 'aquatic',
             color: COMMON_COLORS.SEA_BLUE,
             hatchStyle: 'waves',
+            layerId: 'layer_water',
             validRange: COMMON_RANGES.DEFAULT
         },
         keyframes: [
@@ -61,6 +63,7 @@ export const initialEntities = [
             typology: 'nation-state',
             color: COMMON_COLORS.SEA_BLUE,
             hatchStyle: 'diagonal-right',
+            layerId: 'layer_political',
             validRange: COMMON_RANGES.DEFAULT
         },
         keyframes: [
@@ -76,6 +79,7 @@ export const initialEntities = [
             typology: 'nation-state',
             color: COMMON_COLORS.SEA_BLUE,
             hatchStyle: 'diagonal-left',
+            layerId: 'layer_political',
             validRange: COMMON_RANGES.DEFAULT
         },
         keyframes: [
@@ -91,6 +95,7 @@ export const initialEntities = [
             typology: 'nation-state',
             color: COMMON_COLORS.LAND_RED,
             hatchStyle: 'vertical',
+            layerId: 'layer_political',
             validRange: COMMON_RANGES.DEFAULT
         },
         keyframes: [
@@ -106,6 +111,7 @@ export const initialEntities = [
             typology: 'archaic-state',
             subtype: 'sovereign',
             color: COMMON_COLORS.CITY_BLACK,
+            layerId: 'layer_misc',
             validRange: COMMON_RANGES.CITY_ETERNAL
         },
         keyframes: [
@@ -121,6 +127,7 @@ export const initialEntities = [
             subtype: 'language',
             color: COMMON_COLORS.LANG_PURPLE,
             hatchStyle: 'cross',
+            layerId: 'layer_misc',
             validRange: COMMON_RANGES.LANG_OLD
         },
         keyframes: [
@@ -136,6 +143,7 @@ export const initialEntities = [
             subtype: 'feature',
             color: COMMON_COLORS.SOUND_MAGENTA,
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: COMMON_RANGES.SOUND_TH
         },
         keyframes: [
@@ -151,6 +159,7 @@ export const initialEntities = [
             subtype: 'feature',
             color: COMMON_COLORS.WORD_ORANGE,
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: COMMON_RANGES.WORD_SODA
         },
         keyframes: [
@@ -165,6 +174,7 @@ export const initialEntities = [
             typology: 'band',
             color: COMMON_COLORS.CULT_GOLD,
             hatchStyle: 'vertical',
+            layerId: 'layer_political',
             validRange: COMMON_RANGES.CULT_FEST
         },
         keyframes: [
@@ -179,6 +189,7 @@ export const initialEntities = [
             typology: 'ethnic',
             color: COMMON_COLORS.FAITH_GREEN,
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: COMMON_RANGES.FAITH_PAGAN
         },
         keyframes: [
@@ -193,6 +204,7 @@ export const initialEntities = [
             typology: 'band',
             color: COMMON_COLORS.SLEEP_GREEN,
             hatchStyle: 'horizontal',
+            layerId: 'layer_political',
             validRange: COMMON_RANGES.SLEEP_BIPHASIC
         },
         keyframes: [
