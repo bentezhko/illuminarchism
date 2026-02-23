@@ -876,9 +876,12 @@ export default class IlluminarchismApp {
                 this.updateDialDisplay();
             }
 
-            if (showPanel) {
-                const p = document.getElementById('info-panel');
-                p.style.display = 'block';
+            const p = document.getElementById('info-panel');
+            const isVisible = p && p.style.display === 'block';
+
+            // Update panel if explicitly requested OR if it is already open
+            if (showPanel || isVisible) {
+                if (showPanel) p.style.display = 'block';
                 document.getElementById('info-name-input').value = ent.name;
                 document.getElementById('info-type').textContent = ent.typology; // updated to match property name
                 document.getElementById('info-cat').textContent = ent.domain; // updated to match property name

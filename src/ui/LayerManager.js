@@ -256,6 +256,20 @@ export default class LayerManager {
         icon.textContent = this.getEntityIcon(ent);
         item.appendChild(icon);
 
+        // Visibility Toggle
+        const vis = document.createElement('span');
+        vis.className = 'icon-btn';
+        vis.textContent = ent.visible ? '👁' : '✕';
+        vis.title = ent.visible ? 'Hide' : 'Show';
+        vis.onclick = (e) => {
+            e.stopPropagation();
+            ent.visible = !ent.visible;
+            if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
+            this.app.render();
+            this.render(); // Re-render this item (or whole tree) to update icon
+        };
+        item.appendChild(vis);
+
         // Name
         const name = document.createElement('span');
         name.className = 'spacer';
@@ -272,7 +286,8 @@ export default class LayerManager {
         item.oncontextmenu = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.app.selectEntity(ent.id, true);
+            // Select without opening panel immediately, so "Properties" has a purpose
+            this.app.selectEntity(ent.id, false);
             this.showContextMenu(e.clientX, e.clientY, 'entity', ent);
         };
 
