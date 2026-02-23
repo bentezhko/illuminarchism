@@ -27,11 +27,11 @@ export default class AtlasExporter {
     /**
      * Static export method for standalone use
      */
-    static exportAtlas(entities, meta, connections = []) {
+    static exportAtlas(entities = [], meta = {}, connections = []) {
         return {
             meta,
-            entities: entities.map(e => e.toJSON()),
-            connections: connections
+            entities: (entities || []).map(e => e.toJSON()),
+            connections: connections || []
         };
     }
 
