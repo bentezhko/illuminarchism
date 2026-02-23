@@ -58,14 +58,9 @@ export default class Timeline {
         if (this.playButton) {
             this.playButton.addEventListener('click', () => {
                 this.togglePlayback();
+                this.playButton.blur(); // Prevent focus trapping
             });
         }
-
-        // Add keyframe navigation buttons if they exist
-        const prevBtn = document.getElementById('btn-prev-key');
-        const nextBtn = document.getElementById('btn-next-key');
-        if (prevBtn) prevBtn.addEventListener('click', () => this.jumpToKeyframe(-1));
-        if (nextBtn) nextBtn.addEventListener('click', () => this.jumpToKeyframe(1));
 
         // Link button in header
         const linkBtn = document.getElementById('btn-timeline-link');
@@ -85,13 +80,31 @@ export default class Timeline {
             // Ignore if input is focused
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
 
+            // Prevent global shortcut if interacting with a button via keyboard
+            if (e.target.tagName === 'BUTTON' && e.code === 'Space') return;
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+                this.togglePlayback();
+                return;
+            }
+
+            // Keyframe Navigation (Ctrl + Arrows)
+            if (e.ctrlKey) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    this.jumpToKeyframe(-1);
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    this.jumpToKeyframe(1);
+                }
+                return;
+            }
+
             if (e.key === 'ArrowLeft') {
                 this.setYear(this.app.currentYear - 1);
             } else if (e.key === 'ArrowRight') {
                 this.setYear(this.app.currentYear + 1);
-            } else if (e.code === 'Space') {
-                e.preventDefault();
-                this.togglePlayback();
             }
         });
 
@@ -470,17 +483,18 @@ export default class Timeline {
 
         let targetYear = null;
         const sortedTimeline = [...ent.timeline].sort((a, b) => a.year - b.year);
+        const EPSILON = 0.001; // Tolerance for float comparison
 
         if (direction === -1) { // Previous
             for (let i = sortedTimeline.length - 1; i >= 0; i--) {
-                if (sortedTimeline[i].year < this.app.currentYear) {
+                if (sortedTimeline[i].year < this.app.currentYear - EPSILON) {
                     targetYear = sortedTimeline[i].year;
                     break;
                 }
             }
         } else { // Next
             for (let i = 0; i < sortedTimeline.length; i++) {
-                if (sortedTimeline[i].year > this.app.currentYear) {
+                if (sortedTimeline[i].year > this.app.currentYear + EPSILON) {
                     targetYear = sortedTimeline[i].year;
                     break;
                 }
