@@ -269,11 +269,14 @@ export default class MedievalRenderer {
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
 
+        // Optimize Layer Lookup for Draw loop
+        const layerMap = layers ? new Map(layers.map(l => [l.id, l])) : new Map();
+
         entities.forEach(ent => {
             if (!ent || !ent.currentGeometry || !ent.visible) return;
 
             if (layers) {
-                const layer = layers.find(l => l.id === ent.layerId);
+                const layer = layerMap.get(ent.layerId);
                 if (layer && !layer.visible) return;
             }
 
@@ -837,6 +840,9 @@ export default class MedievalRenderer {
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.restore();
 
+        // 0. Optimize Layer Lookup
+        const layerMap = layers ? new Map(layers.map(l => [l.id, l])) : new Map();
+
         // 1. Group entities by Layer ID to respect Group Order
         const layerGroups = {};
         layerGroups['_default'] = [];
@@ -852,8 +858,8 @@ export default class MedievalRenderer {
         let sortedLayerIds = Object.keys(layerGroups);
         if (layers) {
             sortedLayerIds.sort((a, b) => {
-                const lA = layers.find(l => l.id === a);
-                const lB = layers.find(l => l.id === b);
+                const lA = layerMap.get(a);
+                const lB = layerMap.get(b);
                 const oA = lA ? lA.order : (a === '_default' ? -999 : 999);
                 const oB = lB ? lB.order : (b === '_default' ? -999 : 999);
                 return oA - oB;
@@ -871,7 +877,7 @@ export default class MedievalRenderer {
 
             // Check visibility from Layer Manager
             if (layers) {
-                 const l = layers.find(lay => lay.id === lid);
+                 const l = layerMap.get(lid);
                  if (l && !l.visible) return;
             }
 

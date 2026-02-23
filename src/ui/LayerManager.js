@@ -315,7 +315,7 @@ export default class LayerManager {
         const name = prompt("New Group Name:", "New Group");
         if (!name) return;
         const id = 'layer_' + Date.now();
-        const maxOrder = this.app.layers.reduce((max, l) => Math.max(max, l.order), 0);
+        const maxOrder = this.app.layers.length > 0 ? Math.max(...this.app.layers.map(l => l.order)) : -1;
         this.app.layers.push({
             id: id,
             name: name,

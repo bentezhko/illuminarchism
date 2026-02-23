@@ -1000,8 +1000,10 @@ export default class IlluminarchismApp {
 
             // Filter by Layer (Visible and Not Locked)
             if (this.layers) {
+                // Optimization: Create Map for O(1) lookup
+                const layerMap = new Map(this.layers.map(l => [l.id, l]));
                 candidates = candidates.filter(e => {
-                    const layer = this.layers.find(l => l.id === e.layerId);
+                    const layer = layerMap.get(e.layerId);
                     // If layer not found, assume visible/unlocked
                     if (!layer) return true;
                     return layer.visible && !layer.locked;
