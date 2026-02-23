@@ -128,14 +128,12 @@ describe('MedievalRenderer', () => {
 
     it('traceRoughPath should skip non-finite coordinates', () => {
         const pts = [{ x: Infinity, y: 10 }, { x: 20, y: NaN }, { x: 30, y: 10 }];
-        const mockCtx = {
-            moveTo: mock(),
-            lineTo: mock(),
-            closePath: mock()
-        };
 
-        // Need to reset renderer transform or use a new one?
-        // We can just use the renderer instance we have
+        // Use the mockCtx from beforeEach
+        mockCtx.moveTo.mockClear();
+        mockCtx.lineTo.mockClear();
+        mockCtx.closePath.mockClear();
+
         renderer.transform = { x: 0, y: 0, k: 1 };
 
         renderer.traceRoughPath(pts, true, mockCtx);

@@ -417,7 +417,6 @@ export default class MedievalRenderer {
 
         if (ent.category !== 'cultural') {
             ctx.beginPath();
-            // Use rough path for "natural" ink look
             this.traceRoughPath(pts, true, ctx);
 
             // Land Shadow / Glow
@@ -672,6 +671,7 @@ export default class MedievalRenderer {
                 if (Number.isFinite(pp.x) && Number.isFinite(pp.y)) {
                     ctx.moveTo(pp.x, pp.y);
                 } else {
+                    // Fallback to original point if perturbed point is not finite
                     ctx.moveTo(p.x, p.y);
                 }
             } else {
@@ -686,6 +686,7 @@ export default class MedievalRenderer {
                 if (Number.isFinite(pp.x) && Number.isFinite(pp.y)) {
                     ctx.lineTo(pp.x, pp.y);
                 } else {
+                    // Fallback to original point if perturbed point is not finite
                     ctx.lineTo(p.x, p.y);
                 }
             } else {
