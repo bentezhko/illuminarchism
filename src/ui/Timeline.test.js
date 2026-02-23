@@ -15,7 +15,10 @@ global.document = {
                 remove: () => {},
                 toggle: () => {}
             },
-            appendChild: () => {},
+            children: [],
+            appendChild: (child) => {
+                el.children.push(child);
+            },
             addEventListener: () => {},
             dataset: {},
             setAttribute: () => {},
@@ -29,6 +32,7 @@ global.document = {
         return el;
     },
     createElementNS: (ns, tag) => global.document.createElement(tag),
+    createTextNode: (text) => ({ nodeType: 3, textContent: text }),
     body: {
         appendChild: (el) => {
             if (el.id) mockElements.set(el.id, el);
@@ -83,7 +87,10 @@ const createMockElement = (id) => {
         closest: () => null,
         innerHTML: '',
         textContent: '',
-        appendChild: () => {}
+        children: [],
+        appendChild: (child) => {
+             el.children.push(child);
+        }
     };
     mockElements.set(id, el);
     return el;
@@ -158,6 +165,13 @@ describe("Timeline", () => {
         expect(timeline.epochStartYear).toBe(-697);
 
         const label = mockElements.get('label-start');
-        expect(label.innerHTML).toContain("-697 AD");
+        // Since we use textContent = '' in renderCustomTrack, we should clear mock children in textContent setter?
+        // But our mock doesn't do that. So the label accumulates children in the mock.
+        // The LAST text node added should be the current one.
+        expect(label.children && label.children.length > 0).toBe(true);
+        // Find all text nodes
+        const textNodes = label.children.filter(c => c.nodeType === 3);
+        const lastTextNode = textNodes[textNodes.length - 1];
+        expect(lastTextNode.textContent).toContain("-697 AD");
     });
 });

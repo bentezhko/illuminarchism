@@ -292,10 +292,33 @@ export default class Timeline {
 
         // Update Labels inside Handles
         if (this.labelStart) {
-            this.labelStart.innerHTML = `<span style="display:block; font-size:0.7em; opacity:0.7">START</span>${this.app.formatYear(this.epochStartYear).replace(/<[^>]*>/g, '')}`;
+            // Safe DOM update: Clear and append elements
+            this.labelStart.textContent = '';
+
+            const titleSpan = document.createElement('span');
+            titleSpan.style.display = 'block';
+            titleSpan.style.fontSize = '0.7em';
+            titleSpan.style.opacity = '0.7';
+            titleSpan.textContent = 'START';
+
+            const yearText = document.createTextNode(this.app.formatYear(this.epochStartYear).replace(/<[^>]*>/g, ''));
+
+            this.labelStart.appendChild(titleSpan);
+            this.labelStart.appendChild(yearText);
         }
         if (this.labelEnd) {
-             this.labelEnd.innerHTML = `<span style="display:block; font-size:0.7em; opacity:0.7">END</span>${this.app.formatYear(this.epochEndYear).replace(/<[^>]*>/g, '')}`;
+             this.labelEnd.textContent = '';
+
+             const titleSpan = document.createElement('span');
+             titleSpan.style.display = 'block';
+             titleSpan.style.fontSize = '0.7em';
+             titleSpan.style.opacity = '0.7';
+             titleSpan.textContent = 'END';
+
+             const yearText = document.createTextNode(this.app.formatYear(this.epochEndYear).replace(/<[^>]*>/g, ''));
+
+             this.labelEnd.appendChild(titleSpan);
+             this.labelEnd.appendChild(yearText);
         }
 
         // Update Playhead Position
