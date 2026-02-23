@@ -632,11 +632,141 @@ h1 span {
 
 #timeline-track-container {
     position: relative;
-    width: 100%; /* Ensure full width */
-    height: 50px; /* Taller track area */
-    display: flex;
-    align-items: center;
+    width: 100%;
+    height: 80px; /* Taller for chunky frames */
+    display: block;
     margin: 0;
+    padding: 0;
+    user-select: none;
+    background: rgba(0,0,0,0.05); /* Subtle track background */
+    border-top: 1px solid var(--ink-faded);
+    border-bottom: 1px solid var(--ink-faded);
+}
+
+/* --- CUSTOM TIMELINE TRACK --- */
+#timeline-ui-track {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+#timeline-ui-track:active {
+    cursor: grabbing;
+}
+
+#ui-track-rail {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--ink-faded);
+    transform: translateY(-50%);
+    opacity: 0.5;
+}
+
+#ui-ticks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.ui-tick {
+    position: absolute;
+    bottom: 0;
+    height: 100%;
+    width: 1px;
+    background: rgba(43, 33, 24, 0.1);
+}
+
+.ui-tick-label {
+    position: absolute;
+    bottom: 5px;
+    transform: translateX(4px); /* Offset to right of line */
+    font-size: 0.7rem;
+    color: var(--ink-faded);
+    font-weight: bold;
+    pointer-events: none;
+}
+
+/* --- HANDLES (BORDER FRAMES) --- */
+.timeline-handle-control {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 60px; /* Extra Chunky */
+    background: var(--rubric-red);
+    cursor: col-resize;
+    z-index: 50;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--parchment-bg);
+    border: 2px solid var(--ink-primary);
+}
+
+/* Inner styling for grip/texture */
+.timeline-handle-control::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    width: 4px;
+    border-left: 2px dotted rgba(255,255,255,0.3);
+    border-right: 2px dotted rgba(255,255,255,0.3);
+}
+
+.timeline-handle-control.start {
+    left: 0;
+    border-radius: 0 8px 8px 0; /* Inward facing curve? No, outward block */
+    border-left: none; /* Connects to "offscreen" */
+}
+
+.timeline-handle-control.end {
+    right: 0;
+    border-radius: 8px 0 0 8px;
+    border-right: none;
+}
+
+.handle-label {
+    font-family: 'Cinzel', serif;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-align: center;
+    line-height: 1.2;
+    z-index: 51;
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+/* --- PLAYHEAD --- */
+#ui-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--ink-primary);
+    cursor: pointer;
+    z-index: 40;
+    pointer-events: none; /* Let clicks pass to track unless on head? */
+}
+
+#ui-playhead::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px 6px 0;
+    border-style: solid;
+    border-color: var(--ink-primary) transparent transparent transparent;
 }
 
 .keyframe-notch {
