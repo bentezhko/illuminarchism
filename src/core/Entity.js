@@ -81,6 +81,7 @@ export default class HistoricalEntity {
         this.validTime = null;
         this.transactionTime = { created: Date.now(), modified: Date.now() };
         this.children = [];
+        this.layerId = 'default';
     }
 
     /**
@@ -133,6 +134,9 @@ export default class HistoricalEntity {
         // Metadata
         this.description = config.description || null;
         this.visible = config.visible !== undefined ? config.visible : true;
+
+        // Layer ID (defaults to 'default')
+        this.layerId = config.layerId || 'default';
     }
 
     /**
@@ -473,7 +477,8 @@ export default class HistoricalEntity {
 
             // Metadata
             description: this.description,
-            visible: this.visible
+            visible: this.visible,
+            layerId: this.layerId
         };
     }
 
@@ -500,7 +505,8 @@ export default class HistoricalEntity {
                 transactionTime: data.transactionTime,
                 externalRefs: data.externalRefs,
                 description: data.description,
-                visible: data.visible
+                visible: data.visible,
+                layerId: data.layerId
             });
 
             // Restore timeline and valid range
@@ -527,6 +533,7 @@ export default class HistoricalEntity {
                 data.hatchStyle
             );
             Object.assign(ent, data);
+            if (!ent.layerId) ent.layerId = 'default';
             return ent;
         }
     }

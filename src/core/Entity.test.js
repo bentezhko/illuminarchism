@@ -52,6 +52,17 @@ describe("HistoricalEntity", () => {
             expect(entity.validRange).toEqual(data.validRange);
         });
 
+        test("should preserve layerId from JSON", () => {
+            const data = {
+                id: "ent-layer",
+                name: "Layered Entity",
+                domain: "political",
+                layerId: "layer_custom"
+            };
+            const entity = HistoricalEntity.fromJSON(data);
+            expect(entity.layerId).toBe("layer_custom");
+        });
+
         test("should create an entity from legacy JSON format and migrate properties", () => {
             const data = {
                 id: "ent-legacy",
