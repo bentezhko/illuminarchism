@@ -798,11 +798,36 @@ export default class MedievalRenderer {
     }
 
 
-    renderWorldLayer(entities, t, layers = null) {
-        // This renders the "Static" world: Land, Rivers, Water, Ripples.
-        // Selection highlights are NOT part of this, they are dynamic.
-        // So we render the "Base State" of entities.
+    renderWaterBatch(waterEnts, t, targetCtx) {
+        if (!waterEnts || waterEnts.length === 0 || this.waterLayer.width === 0) return;
 
+        // Draw to Offscreen Water Buffer
+        this.waterCtx.clearRect(0, 0, this.width, this.height);
+        this.waterCtx.save();
+        this.waterCtx.translate(t.x, t.y);
+        this.waterCtx.scale(t.k, t.k);
+        this.waterCtx.fillStyle = '#000000';
+        this.waterCtx.beginPath();
+        waterEnts.forEach(ent => this.tracePathOnCtx(this.waterCtx, ent.currentGeometry, true));
+        this.waterCtx.fill();
+        this.waterCtx.restore();
+
+        // Apply Pattern
+        this.waterCtx.save();
+        this.waterCtx.globalCompositeOperation = 'source-in';
+        this.waterCtx.fillStyle = this.waterPattern;
+        this.waterCtx.fillRect(0, 0, this.width, this.height);
+        this.waterCtx.restore();
+
+        // Composite back to World Layer
+        targetCtx.save();
+        targetCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset for direct canvas copy
+        targetCtx.globalAlpha = 0.5;
+        targetCtx.drawImage(this.waterLayer, 0, 0);
+        targetCtx.restore();
+    }
+
+    renderWorldLayer(entities, t, layers = null) {
         const ctx = this.worldCtx;
         ctx.clearRect(0, 0, this.width, this.height);
 
@@ -812,100 +837,67 @@ export default class MedievalRenderer {
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.restore();
 
+        // 1. Group entities by Layer ID to respect Group Order
+        const layerGroups = {};
+        layerGroups['_default'] = [];
+
+        entities.forEach(e => {
+            if (!e.visible) return;
+            const lid = e.layerId || '_default';
+            if (!layerGroups[lid]) layerGroups[lid] = [];
+            layerGroups[lid].push(e);
+        });
+
+        // 2. Determine Layer Execution Order
+        let sortedLayerIds = Object.keys(layerGroups);
+        if (layers) {
+            sortedLayerIds.sort((a, b) => {
+                const lA = layers.find(l => l.id === a);
+                const lB = layers.find(l => l.id === b);
+                const oA = lA ? lA.order : (a === '_default' ? -999 : 999);
+                const oB = lB ? lB.order : (b === '_default' ? -999 : 999);
+                return oA - oB;
+            });
+        }
+
+        // 3. Render Loop (Painter's Algorithm by Layer)
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
 
-        const waterEntities = this._cachedWaterEntities;
-        waterEntities.length = 0;
-        const worldEntities = this._cachedWorldEntities;
-        worldEntities.length = 0;
+        sortedLayerIds.forEach(lid => {
+            const groupEntities = layerGroups[lid];
+            if (!groupEntities || groupEntities.length === 0) return;
 
-        for (let i = 0; i < entities.length; i++) {
-            const e = entities[i];
-            if (!e || !e.visible) continue;
-
+            // Check visibility from Layer Manager
             if (layers) {
-                const layer = layers.find(l => l.id === e.layerId);
-                if (layer && !layer.visible) continue;
+                 const l = layers.find(lay => lay.id === lid);
+                 if (l && !l.visible) return;
             }
 
-            if (e.type === 'water') {
-                if (e.currentGeometry) {
-                    waterEntities.push(e);
-                }
-            } else {
-                worldEntities.push(e);
+            // Split into Water (for batching) and Others
+            // We use batching to maintain the seamless water texture look
+            const waterEnts = groupEntities.filter(e => e.type === 'water' || e.typology === 'aquatic');
+            const otherEnts = groupEntities.filter(e => !(e.type === 'water' || e.typology === 'aquatic'));
+
+            // Render Water Batch for this layer
+            if (waterEnts.length > 0) {
+                 this.renderWaterBatch(waterEnts, t, ctx);
             }
-        }
 
-        // Sort World Entities (Land/Details)
-        worldEntities.sort((a, b) => {
-             // Layer Order
-             if (layers) {
-                 const lA = layers.find(l => l.id === a.layerId);
-                 const lB = layers.find(l => l.id === b.layerId);
-                 const orderA = lA ? lA.order : -1;
-                 const orderB = lB ? lB.order : -1;
-                 if (orderA !== orderB) return orderA - orderB;
-             }
-             // Type Score
-             return this._getEntityScore(a) - this._getEntityScore(b);
-        });
-
-        // Sort Water Entities
-        if (layers) {
-            waterEntities.sort((a, b) => {
-                 const lA = layers.find(l => l.id === a.layerId);
-                 const lB = layers.find(l => l.id === b.layerId);
-                 const orderA = lA ? lA.order : -1;
-                 const orderB = lB ? lB.order : -1;
-                 return orderA - orderB;
+            // Render Others (Land, Details, Rivers)
+            otherEnts.forEach(ent => {
+                 if (!ent.currentGeometry) return;
+                 if (this._isPointEntity(ent)) this.drawPointMarker(ent, false, false, ctx);
+                 else if (ent.type === 'river') this.drawRiver(ent, false, false, ctx);
+                 else this.drawPolygon(ent, false, false, ctx);
             });
-        }
 
-        // 1. Draw Land & Rivers
-        worldEntities.forEach(ent => {
-            if (!ent.currentGeometry) return;
-            if (this._isPointEntity(ent)) {
-                this.drawPointMarker(ent, false, false, ctx);
-            } else if (ent.type === 'river') {
-                this.drawRiver(ent, false, false, ctx);
-            } else {
-                this.drawPolygon(ent, false, false, ctx);
+            // Draw Coastline Ripples for this layer's land entities
+            if (otherEnts.length > 0) {
+                this.drawCoastlineRipples(otherEnts, ctx);
             }
         });
-
-        // 2. Draw Water (Uses its own offscreen buffering, but now we composite it onto worldLayer)
-        if (waterEntities.length > 0 && this.waterLayer.width > 0) {
-            this.waterCtx.clearRect(0, 0, this.width, this.height);
-            this.waterCtx.save();
-            this.waterCtx.translate(t.x, t.y);
-            this.waterCtx.scale(t.k, t.k);
-            this.waterCtx.fillStyle = '#000000';
-            this.waterCtx.beginPath();
-            waterEntities.forEach(ent => this.tracePathOnCtx(this.waterCtx, ent.currentGeometry, true));
-            this.waterCtx.fill();
-            this.waterCtx.restore();
-
-            this.waterCtx.save();
-            this.waterCtx.globalCompositeOperation = 'source-in';
-            this.waterCtx.fillStyle = this.waterPattern;
-            this.waterCtx.fillRect(0, 0, this.width, this.height);
-            this.waterCtx.restore();
-
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            // SHADOW REMOVED: Was causing floating artifact due to transparency
-            // TRANSPARENCY: Allow land to be seen through water if they overlap
-            ctx.globalAlpha = 0.5;
-            ctx.drawImage(this.waterLayer, 0, 0);
-            ctx.restore();
-        }
-
-        // 3. Draw Ripples (On top of water, onto worldLayer)
-        // worldCtx already has transform applied from lines 702-703
-        this.drawCoastlineRipples(worldEntities, ctx);
 
         ctx.restore();
     }

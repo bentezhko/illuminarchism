@@ -2,53 +2,51 @@ export default class LayerManager {
     constructor(app) {
         this.app = app;
         this.container = null;
-        this.listContainer = null;
+        this.treeView = null;
         this.isOpen = true;
         this.dragSource = null;
+        this.dragType = null; // 'group' | 'entity'
 
         this.init();
     }
 
     init() {
-        // Main Container
+        // Container
         this.container = document.createElement('div');
         this.container.id = 'layer-manager';
-        this.container.className = 'pointer-events-auto';
         document.body.appendChild(this.container);
 
-        // Toggle Button
-        const toggleBtn = document.createElement('button');
+        // Toggle Button (attached to container)
+        const toggleBtn = document.createElement('div');
         toggleBtn.id = 'btn-toggle-layers';
-        toggleBtn.title = 'Toggle Layer Manager';
         toggleBtn.textContent = '▶';
         toggleBtn.onclick = () => this.toggle();
         this.container.appendChild(toggleBtn);
 
         // Header
         const header = document.createElement('div');
-        header.className = 'layer-manager-header';
-        header.textContent = 'Layers';
+        header.className = 'layer-header';
+        header.innerHTML = '<span>Outliner</span> <span class="icon-btn" title="New Group" id="btn-add-group">+</span>';
         this.container.appendChild(header);
 
-        // List Container
-        this.listContainer = document.createElement('div');
-        this.listContainer.id = 'layer-list';
-        this.container.appendChild(this.listContainer);
+        document.getElementById('btn-add-group').onclick = (e) => {
+            e.stopPropagation();
+            this.addGroup();
+        };
 
-        // Tools
-        const tools = document.createElement('div');
-        tools.className = 'layer-tools';
+        // Tree View
+        this.treeView = document.createElement('div');
+        this.treeView.className = 'tree-view';
+        this.container.appendChild(this.treeView);
 
-        const addBtn = document.createElement('button');
-        addBtn.className = 'small-btn';
-        addBtn.textContent = '+ New Layer';
-        addBtn.style.width = '100%';
-        addBtn.onclick = () => this.addLayer();
-        tools.appendChild(addBtn);
+        // Context Menu
+        this.ctxMenu = document.createElement('div');
+        this.ctxMenu.id = 'layer-context-menu';
+        document.body.appendChild(this.ctxMenu);
 
-        this.container.appendChild(tools);
+        // Global Click to close context menu
+        document.addEventListener('click', () => this.hideContextMenu());
 
-        // Initial Render
         this.render();
     }
 
@@ -56,151 +54,399 @@ export default class LayerManager {
         this.isOpen = !this.isOpen;
         this.container.classList.toggle('closed', !this.isOpen);
         const btn = document.getElementById('btn-toggle-layers');
-        if (btn) {
-             btn.textContent = this.isOpen ? '▶' : '◀';
-        }
+        if (btn) btn.textContent = this.isOpen ? '▶' : '◀';
     }
 
     render() {
-        if (!this.listContainer) return;
-        this.listContainer.innerHTML = '';
+        if (!this.treeView || !this.app.layers) return;
+        this.treeView.innerHTML = '';
 
-        if (!this.app.layers) return;
+        // Sort Layers (Groups) by order (ascending for list?)
+        // Renderer uses order ascending (0 at bottom).
+        // In UI list, usually 0 is at bottom, Top is at top.
+        // So we render in REVERSE order of 'order' property?
+        // Renderer: Order 0 (Water) -> Order 1 (Land).
+        // UI: Top (Land), Bottom (Water).
+        // Actually, users usually expect Top of list = Top of stack (Painter's Algorithm).
+        // So highest order first.
+        const sortedLayers = [...this.app.layers].sort((a, b) => b.order - a.order);
 
-        // UI shows Top layer (highest order) at TOP. Descending sort.
-        const layers = [...this.app.layers].sort((a, b) => b.order - a.order);
-
-        layers.forEach(layer => {
-            const item = document.createElement('div');
-            item.className = 'layer-item';
-            item.draggable = true;
-            item.dataset.id = layer.id;
-
-            // Active Class
-            if (this.app.activeLayerId === layer.id) {
-                item.classList.add('active');
-            }
-
-            // Click to set active
-            item.onclick = () => this.setActiveLayer(layer.id);
-
-            // Drag Events
-            item.ondragstart = (e) => {
-                this.dragSource = layer;
-                e.dataTransfer.effectAllowed = 'move';
-                item.classList.add('dragging');
-            };
-            item.ondragend = () => {
-                this.dragSource = null;
-                item.classList.remove('dragging');
-                document.querySelectorAll('.layer-item').forEach(el => el.classList.remove('over'));
-            };
-            item.ondragover = (e) => {
-                e.preventDefault(); // Necessary to allow dropping
-                item.classList.add('over');
-            };
-            item.ondragleave = () => {
-                item.classList.remove('over');
-            };
-            item.ondrop = (e) => {
-                e.preventDefault();
-                item.classList.remove('over');
-                if (this.dragSource && this.dragSource.id !== layer.id) {
-                    this.reorderLayer(this.dragSource.id, layer.id);
-                }
-            };
-
-            // 1. Visibility Toggle
-            const visBtn = document.createElement('span');
-            visBtn.className = 'layer-icon visible-icon';
-            visBtn.innerHTML = layer.visible ? '👁' : '✕';
-            visBtn.title = layer.visible ? 'Hide Layer' : 'Show Layer';
-            if (!layer.visible) visBtn.style.opacity = '0.5';
-            visBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.toggleVisibility(layer.id);
-            };
-            item.appendChild(visBtn);
-
-            // 2. Name
-            const nameSpan = document.createElement('span');
-            nameSpan.className = 'layer-name';
-            nameSpan.textContent = layer.name;
-            if (layer.locked) nameSpan.style.color = 'var(--ink-faded)';
-            item.appendChild(nameSpan);
-
-            // 3. Lock Toggle
-            const lockBtn = document.createElement('span');
-            lockBtn.className = 'layer-icon lock-icon';
-            lockBtn.innerHTML = layer.locked ? '🔒' : '🔓';
-            lockBtn.title = layer.locked ? 'Unlock Layer' : 'Lock Layer';
-            lockBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.toggleLock(layer.id);
-            };
-            item.appendChild(lockBtn);
-
-            this.listContainer.appendChild(item);
+        sortedLayers.forEach(layer => {
+            const groupEl = this.createGroupElement(layer);
+            this.treeView.appendChild(groupEl);
         });
+
+        // Background context menu
+        this.treeView.oncontextmenu = (e) => {
+            if (e.target === this.treeView) {
+                e.preventDefault();
+                this.showContextMenu(e.clientX, e.clientY, 'background');
+            }
+        };
     }
 
-    addLayer() {
-        const name = prompt("Layer Name:", "New Layer");
+    createGroupElement(layer) {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'tree-group';
+        groupEl.draggable = true;
+        groupEl.dataset.id = layer.id;
+
+        // --- Drag Events (Group) ---
+        groupEl.ondragstart = (e) => {
+            e.stopPropagation();
+            this.dragSource = layer;
+            this.dragType = 'group';
+            e.dataTransfer.effectAllowed = 'move';
+            groupEl.style.opacity = '0.5';
+        };
+        groupEl.ondragend = (e) => {
+            groupEl.style.opacity = '1';
+            this.dragSource = null;
+            this.dragType = null;
+            this.clearDropIndicators();
+        };
+        groupEl.ondragover = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.dragType === 'group') {
+                groupEl.classList.add('drop-target');
+            } else if (this.dragType === 'entity') {
+                // Dragging entity into group
+                groupEl.querySelector('.group-children').classList.add('drop-target-child');
+            }
+        };
+        groupEl.ondragleave = (e) => {
+            groupEl.classList.remove('drop-target');
+            groupEl.querySelector('.group-children').classList.remove('drop-target-child');
+        };
+        groupEl.ondrop = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.dragType === 'group' && this.dragSource.id !== layer.id) {
+                this.reorderGroup(this.dragSource.id, layer.id);
+            } else if (this.dragType === 'entity') {
+                // Move entity to this group
+                this.moveEntityToGroup(this.dragSource.id, layer.id);
+            }
+        };
+
+        // Header
+        const header = document.createElement('div');
+        header.className = `group-header ${this.app.activeLayerId === layer.id ? 'active-layer' : ''}`;
+
+        // Toggle Icon
+        const toggle = document.createElement('span');
+        toggle.className = 'icon-btn';
+        toggle.textContent = layer.expanded ? '▼' : '▶';
+        toggle.onclick = (e) => {
+            e.stopPropagation();
+            layer.expanded = !layer.expanded;
+            this.render();
+        };
+        header.appendChild(toggle);
+
+        // Name (Click to activate layer for new drawing)
+        const name = document.createElement('span');
+        name.className = 'spacer';
+        name.textContent = layer.name;
+        name.onclick = () => {
+            this.app.activeLayerId = layer.id;
+            this.render();
+        };
+        header.appendChild(name);
+
+        // Vis
+        const vis = document.createElement('span');
+        vis.className = 'icon-btn';
+        vis.textContent = layer.visible ? '👁' : '✕';
+        vis.onclick = (e) => {
+            e.stopPropagation();
+            layer.visible = !layer.visible;
+            if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
+            this.app.render();
+            this.render();
+        };
+        header.appendChild(vis);
+
+        // Lock
+        const lock = document.createElement('span');
+        lock.className = 'icon-btn';
+        lock.textContent = layer.locked ? '🔒' : '🔓';
+        lock.onclick = (e) => {
+            e.stopPropagation();
+            layer.locked = !layer.locked;
+            this.render();
+        };
+        header.appendChild(lock);
+
+        // Context Menu
+        header.oncontextmenu = (e) => {
+            e.preventDefault();
+            this.showContextMenu(e.clientX, e.clientY, 'group', layer);
+        };
+
+        groupEl.appendChild(header);
+
+        // Children Container
+        const childrenContainer = document.createElement('div');
+        childrenContainer.className = `group-children ${layer.expanded ? 'open' : ''}`;
+
+        // Render Entities
+        const entities = this.app.entities.filter(e => e.layerId === layer.id);
+        // Sort entities? Currently just creation order (array order).
+        // If we want manual sort, we need an index.
+        // For now, render in array order.
+
+        entities.forEach(ent => {
+            const item = this.createEntityElement(ent, layer);
+            childrenContainer.appendChild(item);
+        });
+
+        groupEl.appendChild(childrenContainer);
+
+        return groupEl;
+    }
+
+    createEntityElement(ent, layer) {
+        const item = document.createElement('div');
+        item.className = `tree-item ${this.app.selectedEntityId === ent.id ? 'selected' : ''}`;
+        item.draggable = true;
+        item.dataset.id = ent.id;
+
+        // --- Drag Events (Entity) ---
+        item.ondragstart = (e) => {
+            e.stopPropagation();
+            this.dragSource = ent;
+            this.dragType = 'entity';
+            e.dataTransfer.effectAllowed = 'move';
+            item.style.opacity = '0.5';
+        };
+        item.ondragend = (e) => {
+            item.style.opacity = '1';
+            this.dragSource = null;
+            this.dragType = null;
+            this.clearDropIndicators();
+        };
+        // Reordering entities
+        item.ondragover = (e) => {
+             e.preventDefault();
+             e.stopPropagation();
+             if (this.dragType === 'entity' && this.dragSource.id !== ent.id) {
+                 item.style.borderTop = '2px solid var(--ink-red)';
+             }
+        };
+        item.ondragleave = () => {
+             item.style.borderTop = 'none';
+        };
+        item.ondrop = (e) => {
+             e.preventDefault();
+             e.stopPropagation();
+             item.style.borderTop = 'none';
+             if (this.dragType === 'entity' && this.dragSource.id !== ent.id) {
+                 this.reorderEntity(this.dragSource.id, ent.id);
+             } else if (this.dragType === 'group') {
+                 // Ignore group drop on entity? Or move group?
+             }
+        };
+
+
+        // Icon
+        const icon = document.createElement('span');
+        icon.className = 'drag-handle';
+        icon.textContent = this.getEntityIcon(ent);
+        item.appendChild(icon);
+
+        // Name
+        const name = document.createElement('span');
+        name.className = 'spacer';
+        name.textContent = ent.name || 'Unnamed';
+        item.appendChild(name);
+
+        // Click to Select
+        item.onclick = (e) => {
+            this.app.selectEntity(ent.id, true);
+            this.render(); // Update selection highlight
+        };
+
+        // Context Menu
+        item.oncontextmenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.app.selectEntity(ent.id, true);
+            this.showContextMenu(e.clientX, e.clientY, 'entity', ent);
+        };
+
+        return item;
+    }
+
+    getEntityIcon(ent) {
+        if (ent.type === 'water') return '🌊';
+        if (ent.type === 'river') return '〰️';
+        if (ent.type === 'polity') return '🏰'; // Or specific icon based on typology
+        if (ent.domain === 'linguistic') return '🗣';
+        if (ent.domain === 'religious') return '⛩';
+        return '📍';
+    }
+
+    clearDropIndicators() {
+        document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        document.querySelectorAll('.drop-target-child').forEach(el => el.classList.remove('drop-target-child'));
+        document.querySelectorAll('.tree-item').forEach(el => el.style.borderTop = 'none');
+    }
+
+    // --- Logic ---
+
+    addGroup() {
+        const name = prompt("New Group Name:", "New Group");
         if (!name) return;
         const id = 'layer_' + Date.now();
         const maxOrder = this.app.layers.reduce((max, l) => Math.max(max, l.order), 0);
-
         this.app.layers.push({
             id: id,
             name: name,
             visible: true,
             locked: false,
-            order: maxOrder + 1
+            order: maxOrder + 1,
+            expanded: true
         });
         this.render();
-        // Assume empty layer doesn't need re-render of map immediately, but good practice
     }
 
-    toggleVisibility(layerId) {
-        const layer = this.app.layers.find(l => l.id === layerId);
-        if (layer) {
-            layer.visible = !layer.visible;
-            this.render();
-            if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
-            this.app.render();
-        }
-    }
+    reorderGroup(srcId, targetId) {
+        const srcIndex = this.app.layers.findIndex(l => l.id === srcId);
+        const tgtIndex = this.app.layers.findIndex(l => l.id === targetId);
 
-    toggleLock(layerId) {
-        const layer = this.app.layers.find(l => l.id === layerId);
-        if (layer) {
-            layer.locked = !layer.locked;
-            this.render();
-        }
-    }
+        if (srcIndex === -1 || tgtIndex === -1) return;
 
-    setActiveLayer(layerId) {
-        this.app.activeLayerId = layerId;
+        // Swap orders? No, move to position.
+        // We need to re-assign orders to ALL layers based on the new sequence.
+        // Currently layers are sorted by order descending in UI.
+
+        // Let's just swap 'order' values for simple swap, OR insert.
+        // For standard Drag/Drop list behavior:
+        const srcLayer = this.app.layers[srcIndex];
+        const tgtLayer = this.app.layers[tgtIndex];
+
+        // If I drag A onto B, A should go above B (or below).
+        // Let's implement simple swap for now as it's robust.
+        const temp = srcLayer.order;
+        srcLayer.order = tgtLayer.order;
+        tgtLayer.order = temp;
+
         this.render();
+        if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
+        this.app.render();
     }
 
-    reorderLayer(srcId, targetId) {
-        // Swap logic
-        const srcLayer = this.app.layers.find(l => l.id === srcId);
-        const tgtLayer = this.app.layers.find(l => l.id === targetId);
-
-        if (srcLayer && tgtLayer) {
-            const temp = srcLayer.order;
-            srcLayer.order = tgtLayer.order;
-            tgtLayer.order = temp;
-
-            // Re-normalize just in case
-            this.app.layers.sort((a, b) => a.order - b.order);
-            this.app.layers.forEach((l, i) => l.order = i);
-
+    moveEntityToGroup(entId, groupId) {
+        const ent = this.app.entities.find(e => e.id === entId);
+        if (ent && ent.layerId !== groupId) {
+            ent.layerId = groupId;
             this.render();
             if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
             this.app.render();
         }
+    }
+
+    reorderEntity(srcId, targetId) {
+        // This effectively changes the array order in app.entities
+        const srcIndex = this.app.entities.findIndex(e => e.id === srcId);
+        const tgtIndex = this.app.entities.findIndex(e => e.id === targetId);
+
+        if (srcIndex === -1 || tgtIndex === -1) return;
+
+        const [movedEnt] = this.app.entities.splice(srcIndex, 1);
+        // If moving down, index might shift
+        // Re-find target index
+        const newTgtIndex = this.app.entities.findIndex(e => e.id === targetId);
+        this.app.entities.splice(newTgtIndex, 0, movedEnt);
+
+        // Also ensure layer match if we dragged across groups (though this handler is usually within list)
+        // If target is in a different group, update source layerId
+        const tgtEnt = this.app.entities.find(e => e.id === targetId);
+        if (tgtEnt && movedEnt.layerId !== tgtEnt.layerId) {
+            movedEnt.layerId = tgtEnt.layerId;
+        }
+
+        this.render();
+        if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
+        this.app.render();
+    }
+
+    // --- Context Menu ---
+
+    showContextMenu(x, y, type, target) {
+        this.ctxMenu.innerHTML = '';
+
+        if (type === 'background') {
+            this.addCtxItem('New Group', () => this.addGroup());
+        } else if (type === 'group') {
+            this.addCtxItem('Rename', () => {
+                const n = prompt('Rename Group:', target.name);
+                if (n) { target.name = n; this.render(); }
+            });
+            this.addCtxItem('Delete Group', () => {
+                if (confirm(`Delete group "${target.name}"? Entities inside will be moved to Default.`)) {
+                    this.deleteGroup(target.id);
+                }
+            });
+        } else if (type === 'entity') {
+            this.addCtxItem('Rename', () => {
+                const n = prompt('Rename Entity:', target.name);
+                if (n) {
+                    target.name = n;
+                    this.render();
+                    if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
+                    this.app.render();
+                }
+            });
+            this.addCtxItem('Delete', () => {
+                if (confirm(`Delete entity "${target.name}"?`)) {
+                    this.app.deleteEntity(target.id);
+                    this.render();
+                }
+            });
+            this.addCtxItem('Properties', () => {
+                this.app.selectEntity(target.id, true);
+            });
+        }
+
+        this.ctxMenu.style.left = `${x}px`;
+        this.ctxMenu.style.top = `${y}px`;
+        this.ctxMenu.style.display = 'block';
+    }
+
+    addCtxItem(text, onClick) {
+        const item = document.createElement('div');
+        item.className = 'ctx-item';
+        item.textContent = text;
+        item.onclick = () => {
+            onClick();
+            this.hideContextMenu();
+        };
+        this.ctxMenu.appendChild(item);
+    }
+
+    hideContextMenu() {
+        this.ctxMenu.style.display = 'none';
+    }
+
+    deleteGroup(groupId) {
+        // Move entities to default or first available layer
+        const defaultLayer = this.app.layers.find(l => l.id !== groupId) || { id: 'default' };
+
+        this.app.entities.forEach(e => {
+            if (e.layerId === groupId) e.layerId = defaultLayer.id;
+        });
+
+        this.app.layers = this.app.layers.filter(l => l.id !== groupId);
+
+        if (this.app.activeLayerId === groupId) {
+            this.app.activeLayerId = defaultLayer.id;
+        }
+
+        this.render();
+        if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
+        this.app.render();
     }
 }

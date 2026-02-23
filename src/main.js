@@ -144,14 +144,13 @@ export default class IlluminarchismApp {
     }
 
     initData() {
-        // Initialize Default Layers
+        // Initialize Default Groups (formerly Layers)
         this.layers = [
-            { id: 'default', name: 'Default', visible: true, locked: false, order: -1 },
-            { id: 'layer_water', name: 'Water', visible: true, locked: true, order: 0 },
-            { id: 'layer_land', name: 'Land', visible: true, locked: false, order: 1 },
-            { id: 'layer_details', name: 'Details', visible: true, locked: false, order: 2 }
+            { id: 'layer_water', name: 'Water', visible: true, locked: true, order: 0, expanded: true },
+            { id: 'layer_political', name: 'Political', visible: true, locked: false, order: 1, expanded: true },
+            { id: 'layer_misc', name: 'Misc', visible: true, locked: false, order: 2, expanded: true }
         ];
-        this.activeLayerId = 'layer_land';
+        this.activeLayerId = 'layer_political';
         if (this.layerManager) this.layerManager.render();
 
         // Create entities using the new config-object format for constructor
@@ -184,7 +183,7 @@ export default class IlluminarchismApp {
             typology: 'nation-state',
             color: '#264e86',
             hatchStyle: 'diagonal-right',
-            layerId: 'layer_land',
+            layerId: 'layer_political',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         mainland.addKeyframe(-2000, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
@@ -196,6 +195,7 @@ export default class IlluminarchismApp {
             typology: 'nation-state',
             color: '#264e86',
             hatchStyle: 'diagonal-left',
+            layerId: 'layer_political',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         island.addKeyframe(-2000, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
@@ -207,6 +207,7 @@ export default class IlluminarchismApp {
             typology: 'nation-state',
             color: '#8a3324',
             hatchStyle: 'vertical',
+            layerId: 'layer_political',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         bridge.addKeyframe(-2000, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
@@ -218,7 +219,7 @@ export default class IlluminarchismApp {
             typology: 'archaic-state',
             subtype: 'sovereign',
             color: '#000000',
-            layerId: 'layer_details',
+            layerId: 'layer_misc',
             validRange: { start: -1000, end: 2050 } // FIXED: Finite range for editing
         });
         city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
@@ -230,6 +231,7 @@ export default class IlluminarchismApp {
             subtype: 'language',
             color: '#5c3c92',
             hatchStyle: 'cross',
+            layerId: 'layer_misc',
             validRange: { start: 800, end: 2050 } // FIXED: Finite range for editing
         });
         oldTongue.addKeyframe(800, [{ x: -280, y: -80 }, { x: -120, y: -80 }, { x: -120, y: 80 }, { x: -280, y: 80 }], true);
@@ -241,6 +243,7 @@ export default class IlluminarchismApp {
             subtype: 'feature',
             color: '#800080',
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: { start: 1200, end: 2050 } // FIXED: Finite range for editing
         });
         thSound.addKeyframe(1200, [{ x: -250, y: -50 }, { x: -150, y: -50 }, { x: -150, y: 50 }, { x: -250, y: 50 }], true);
@@ -252,6 +255,7 @@ export default class IlluminarchismApp {
             subtype: 'feature',
             color: '#FF4500',
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: { start: 1900, end: 2050 } // FIXED: Finite range for editing
         });
         sodaWord.addKeyframe(1900, [{ x: -200, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 0 }, { x: -200, y: 0 }], true);
@@ -262,6 +266,7 @@ export default class IlluminarchismApp {
             typology: 'band',
             color: '#c5a059',
             hatchStyle: 'vertical',
+            layerId: 'layer_political',
             validRange: { start: 900, end: 2050 } // FIXED: Finite range for editing
         });
         festivalZone.addKeyframe(900, [{ x: -290, y: -90 }, { x: 100, y: -90 }, { x: 100, y: 90 }, { x: -290, y: 90 }], true);
@@ -272,6 +277,7 @@ export default class IlluminarchismApp {
             typology: 'ethnic',
             color: '#228B22',
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: { start: -500, end: 2050 } // FIXED: Finite range for editing
         });
         paganEnclave.addKeyframe(-500, [{ x: 250, y: -50 }, { x: 350, y: -50 }, { x: 350, y: 50 }, { x: 250, y: 50 }], true);
@@ -283,12 +289,16 @@ export default class IlluminarchismApp {
             typology: 'band',
             color: '#3a5f3a',
             hatchStyle: 'horizontal',
+            layerId: 'layer_political',
             validRange: { start: -10000, end: 1900 }
         });
         // Represents the pre-industrial world, fading out by the early 20th century
         biphasicSleep.addKeyframe(-10000, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true);
         biphasicSleep.addKeyframe(1900, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true); // Fade out, keep low poly
         this.entities.push(biphasicSleep);
+
+        // Update Layer Manager to show entities
+        if (this.layerManager) this.layerManager.render();
     }
 
     formatYear(year) {
