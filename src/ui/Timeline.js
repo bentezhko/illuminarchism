@@ -5,6 +5,8 @@
 
 import { escapeHTML } from '../core/math.js';
 
+const MIN_EPOCH_RANGE = 10;
+
 export default class Timeline {
     constructor(app) {
         this.app = app;
@@ -38,11 +40,16 @@ export default class Timeline {
         this.dragStartX = 0;
         this.dragStartYear = 0;
         this.dragStartEpoch = { start: 0, end: 0 };
+        this.dragTrackRect = null; // Cached dimensions
+        this.dragStartScale = 0;   // Cached scale
 
         // Edge Scroll State
         this.edgeScrollSpeed = 0;
         this.edgeScrollInterval = null;
         this.lastMouseX = 0;
+
+        // Throttle State
+        this.isUpdatePending = false;
 
         this.init();
     }
@@ -109,6 +116,12 @@ export default class Timeline {
             this.dragStartYear = this.app.currentYear; // For playhead
             this.dragStartEpoch = { start: this.epochStartYear, end: this.epochEndYear };
 
+            // Cache dimensions and scale
+            this.dragTrackRect = this.trackContainer.getBoundingClientRect();
+            const width = this.dragTrackRect.width;
+            const range = this.dragStartEpoch.end - this.dragStartEpoch.start;
+            this.dragStartScale = width > 0 ? range / width : 0;
+
             // Initial mouse X for edge scroll detection
             this.lastMouseX = e.clientX;
 
@@ -122,7 +135,8 @@ export default class Timeline {
             if (!this.isDragging) return;
             this.lastMouseX = e.clientX;
 
-            const rect = this.trackContainer.getBoundingClientRect();
+            // Use cached rect
+            const rect = this.dragTrackRect;
             const width = rect.width;
             const dx = e.clientX - this.dragStartX;
 
@@ -142,37 +156,33 @@ export default class Timeline {
                 // If edge scrolling is active, suppress normal drag to avoid fighting
                 if (this.edgeScrollSpeed !== 0) return;
 
-                const initialRange = this.dragStartEpoch.end - this.dragStartEpoch.start;
-                const initialScale = initialRange / width;
-                const deltaYears = Math.round(dx * initialScale);
+                // Use cached scale
+                const deltaYears = Math.round(dx * this.dragStartScale);
 
                 let newStart = this.dragStartEpoch.start + deltaYears;
-                if (newStart >= this.epochEndYear - 10) newStart = this.epochEndYear - 10;
+                if (newStart >= this.epochEndYear - MIN_EPOCH_RANGE) newStart = this.epochEndYear - MIN_EPOCH_RANGE;
 
                 this.epochStartYear = newStart;
-                this.renderCustomTrack();
-                this.updateAppBounds();
+                this.requestAppBoundsUpdate();
 
             } else if (this.dragTarget === 'end') {
                 if (this.edgeScrollSpeed !== 0) return;
 
-                const initialRange = this.dragStartEpoch.end - this.dragStartEpoch.start;
-                const initialScale = initialRange / width;
-                const deltaYears = Math.round(dx * initialScale);
+                const deltaYears = Math.round(dx * this.dragStartScale);
 
                 let newEnd = this.dragStartEpoch.end + deltaYears;
-                if (newEnd <= this.epochStartYear + 10) newEnd = this.epochStartYear + 10;
+                if (newEnd <= this.epochStartYear + MIN_EPOCH_RANGE) newEnd = this.epochStartYear + MIN_EPOCH_RANGE;
 
                 this.epochEndYear = newEnd;
-                this.renderCustomTrack();
-                this.updateAppBounds();
+                this.requestAppBoundsUpdate();
             }
         };
 
         const onMouseUp = () => {
+            this.stopEdgeScroll();
             this.isDragging = false;
             this.dragTarget = null;
-            this.stopEdgeScroll();
+            this.dragTrackRect = null;
             document.body.style.cursor = 'default';
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
@@ -246,14 +256,13 @@ export default class Timeline {
 
             if (this.dragTarget === 'start') {
                 this.epochStartYear += delta;
-                if (this.epochStartYear >= this.epochEndYear - 10) this.epochStartYear = this.epochEndYear - 10;
+                if (this.epochStartYear >= this.epochEndYear - MIN_EPOCH_RANGE) this.epochStartYear = this.epochEndYear - MIN_EPOCH_RANGE;
             } else if (this.dragTarget === 'end') {
                 this.epochEndYear += delta;
-                if (this.epochEndYear <= this.epochStartYear + 10) this.epochEndYear = this.epochStartYear + 10;
+                if (this.epochEndYear <= this.epochStartYear + MIN_EPOCH_RANGE) this.epochEndYear = this.epochStartYear + MIN_EPOCH_RANGE;
             }
 
-            this.renderCustomTrack();
-            this.updateAppBounds();
+            this.requestAppBoundsUpdate();
 
             this.edgeScrollInterval = requestAnimationFrame(scroll);
         };
@@ -268,19 +277,30 @@ export default class Timeline {
         }
         this.edgeScrollSpeed = 0;
 
-        if (this.isDragging && this.trackContainer) {
-            const rect = this.trackContainer.getBoundingClientRect();
+        if (this.isDragging && this.dragTrackRect) {
+            const rect = this.dragTrackRect;
             const width = rect.width;
             const dx = this.lastMouseX - this.dragStartX;
 
-            const initialRange = this.dragStartEpoch.end - this.dragStartEpoch.start;
-            const initialScale = initialRange / width;
+            // We use the *initial* scale in onMouseMove.
+            const initialScale = this.dragStartScale;
 
             if (this.dragTarget === 'start') {
                  this.dragStartEpoch.start = this.epochStartYear - Math.round(dx * initialScale);
             } else if (this.dragTarget === 'end') {
                  this.dragStartEpoch.end = this.epochEndYear - Math.round(dx * initialScale);
             }
+        }
+    }
+
+    requestAppBoundsUpdate() {
+        if (!this.isUpdatePending) {
+            this.isUpdatePending = true;
+            requestAnimationFrame(() => {
+                this.renderCustomTrack(); // Fast
+                this.updateAppBounds();   // Slow
+                this.isUpdatePending = false;
+            });
         }
     }
 
@@ -469,6 +489,17 @@ export default class Timeline {
 
         if (targetYear !== null) {
             this.setYear(targetYear);
+
+            // Auto-adjust epoch if out of bounds (zooming out to include)
+            if (targetYear < this.epochStartYear) {
+                this.epochStartYear = targetYear - MIN_EPOCH_RANGE;
+                this.renderCustomTrack();
+                this.updateAppBounds();
+            } else if (targetYear > this.epochEndYear) {
+                this.epochEndYear = targetYear + MIN_EPOCH_RANGE;
+                this.renderCustomTrack();
+                this.updateAppBounds();
+            }
         }
     }
 
@@ -747,7 +778,7 @@ export default class Timeline {
     }
 
     renderConnections(svg) {
-         if (!this.app.connections || this.app.connections.length === 0) return;
+        if (!this.app.connections || this.app.connections.length === 0) return;
 
         const containerRect = this.viewContainer.getBoundingClientRect();
         const barElements = new Map();

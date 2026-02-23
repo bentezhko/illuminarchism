@@ -61,9 +61,10 @@ global.document = {
 
 global.window = {
     requestAnimationFrame: (cb) => {
-        return setTimeout(cb, 16);
+        cb(); // Synchronous execution for tests
+        return 1;
     },
-    cancelAnimationFrame: (id) => clearTimeout(id)
+    cancelAnimationFrame: (id) => {}
 };
 global.requestAnimationFrame = global.window.requestAnimationFrame;
 global.cancelAnimationFrame = global.window.cancelAnimationFrame;
