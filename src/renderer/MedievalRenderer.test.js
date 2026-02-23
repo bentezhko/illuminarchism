@@ -1,67 +1,84 @@
 
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
-import MedievalRenderer from './MedievalRenderer';
+import { describe, it, expect, mock, beforeEach, beforeAll } from 'bun:test';
+import MedievalRenderer from './MedievalRenderer.js';
 
-// Mock browser globals
-global.document = {
-    getElementById: () => ({ getContext: () => ({}) }),
-    createElement: () => ({ getContext: () => ({}), width: 0, height: 0 }),
+// Mock DOM
+const mockCtx = {
+    save: mock(() => {}),
+    restore: mock(() => {}),
+    translate: mock(() => {}),
+    scale: mock(() => {}),
+    beginPath: mock(() => {}),
+    moveTo: mock(() => {}),
+    lineTo: mock(() => {}),
+    closePath: mock(() => {}),
+    stroke: mock(() => {}),
+    fillText: mock((text, x, y) => {}),
+    measureText: mock(() => ({ width: 10 })),
+    createPattern: mock(() => {}),
+    createImageData: mock(() => ({ data: new Uint8Array(512 * 512 * 4) })),
+    putImageData: mock(() => {}),
+    fillRect: mock(() => {}),
+    clearRect: mock(() => {}),
+    drawImage: mock(() => {}),
+    setTransform: mock(() => {}),
+    setLineDash: mock(() => {}),
+    arc: mock(() => {}),
+    fill: mock(() => {}),
+    strokeRect: mock(() => {}),
+    quadraticCurveTo: mock(() => {}),
+    bezierCurveTo: mock(() => {}),
 };
+
+const mockCanvas = {
+    getContext: mock(() => mockCtx),
+    width: 800,
+    height: 600,
+};
+
+// Global mocks
+global.document = {
+    getElementById: mock((id) => mockCanvas),
+    createElement: mock((tag) => {
+        if (tag === 'canvas') return { getContext: () => mockCtx, width: 0, height: 0 };
+        return {};
+    }),
+};
+
 global.window = {
     innerWidth: 800,
     innerHeight: 600,
-    addEventListener: () => {},
+    addEventListener: mock(() => {}),
     illuminarchismApp: { render: () => {} }
 };
 
+global.HTMLCanvasElement = class {};
+
 describe('MedievalRenderer', () => {
     let renderer;
-    let mockCtx;
 
     beforeEach(() => {
-        mockCtx = {
-            moveTo: mock(),
-            lineTo: mock(),
-            quadraticCurveTo: mock(),
-            arc: mock(),
-            closePath: mock(),
-            beginPath: mock(),
-            save: mock(),
-            restore: mock(),
-            translate: mock(),
-            scale: mock(),
-            stroke: mock(),
-            fill: mock(),
-            strokeRect: mock(),
-            fillRect: mock(),
-            clearRect: mock(),
-            setTransform: mock(),
-            drawImage: mock(),
-            createPattern: mock(),
-            createImageData: mock(() => ({ data: new Uint8ClampedArray(4 * 512 * 512) })),
-            putImageData: mock(),
-            measureText: mock(() => ({ width: 10 })),
-            fillText: mock(),
-        };
-
-        global.document.getElementById = () => ({ getContext: () => mockCtx, width: 800, height: 600 });
-        global.document.createElement = () => ({ getContext: () => mockCtx, width: 800, height: 600 });
-
-        // Setup renderer
-        renderer = new MedievalRenderer('canvas-id');
+        renderer = new MedievalRenderer('map-canvas');
         // Override patterns to avoid actual canvas calls or null checks
         renderer.noisePattern = {};
         renderer.waterPattern = {};
+
+        // Reset mocks AFTER instantiation because constructor creates textures which call ctx methods
+        mockCtx.moveTo.mockClear();
+        mockCtx.lineTo.mockClear();
+        mockCtx.closePath.mockClear();
+        mockCtx.save.mockClear();
+        mockCtx.restore.mockClear();
+        mockCtx.fillText.mockClear();
+        mockCtx.beginPath.mockClear();
+        mockCtx.stroke.mockClear();
     });
+
+    // --- TraceRoughPath Tests ---
 
     it('traceRoughPath should generate path commands with finite numbers', () => {
         const pts = [{ x: 10, y: 10 }, { x: 20, y: 20 }, { x: 30, y: 10 }];
         renderer.transform = { x: 0, y: 0, k: 1 };
-
-        // Reset mocks before call
-        mockCtx.moveTo.mockClear();
-        mockCtx.lineTo.mockClear();
-        mockCtx.closePath.mockClear();
 
         // Test with k=1 (roughness enabled)
         renderer.traceRoughPath(pts, true, mockCtx);
@@ -87,9 +104,6 @@ describe('MedievalRenderer', () => {
         const pts = [{ x: 10, y: 10 }, { x: 20, y: 20 }, { x: 30, y: 10 }];
         renderer.transform = { x: 0, y: 0, k: 0.1 }; // Roughness disabled
 
-        mockCtx.moveTo.mockClear();
-        mockCtx.lineTo.mockClear();
-
         renderer.traceRoughPath(pts, true, mockCtx);
 
         // Should call moveTo/lineTo with exact coords
@@ -101,8 +115,6 @@ describe('MedievalRenderer', () => {
     it('traceRoughPath should work with large scale k', () => {
         const pts = [{ x: 10, y: 10 }, { x: 20, y: 20 }, { x: 30, y: 10 }];
         renderer.transform = { x: 0, y: 0, k: 10 }; // Roughness enabled
-
-        mockCtx.moveTo.mockClear();
 
         renderer.traceRoughPath(pts, true, mockCtx);
 
@@ -117,8 +129,6 @@ describe('MedievalRenderer', () => {
         const pts = [{ x: 1000000, y: 1000000 }, { x: 1000010, y: 1000010 }];
         renderer.transform = { x: 0, y: 0, k: 1 };
 
-        mockCtx.moveTo.mockClear();
-
         renderer.traceRoughPath(pts, true, mockCtx);
 
         const moveArg = mockCtx.moveTo.mock.calls[0];
@@ -129,11 +139,7 @@ describe('MedievalRenderer', () => {
     it('traceRoughPath should skip non-finite coordinates', () => {
         const pts = [{ x: Infinity, y: 10 }, { x: 20, y: NaN }, { x: 30, y: 10 }];
 
-        // Use the mockCtx from beforeEach
-        mockCtx.moveTo.mockClear();
-        mockCtx.lineTo.mockClear();
-        mockCtx.closePath.mockClear();
-
+        // Use the shared mockCtx
         renderer.transform = { x: 0, y: 0, k: 1 };
 
         renderer.traceRoughPath(pts, true, mockCtx);
