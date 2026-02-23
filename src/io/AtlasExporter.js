@@ -108,44 +108,6 @@ export default class AtlasExporter {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-
-    /**
-     * Download atlas as JSON file (Static version)
-     */
-    static downloadAtlas(atlas, filename) {
-        const json = JSON.stringify(atlas, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || `${atlas.meta?.id || 'atlas'}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
-    
-    /**
-     * Export current drawing session
-     */
-    static exportSession(entities, currentYear, layerName = 'custom') {
-        const metadata = {
-            id: `${layerName}-${currentYear}`,
-            year: currentYear,
-            layer: layerName,
-            description: `Manual drawing for ${layerName} layer at year ${currentYear}`,
-            author: 'illuminarchism-user',
-            created: new Date().toISOString()
-        };
-        
-        const atlas = this.exportAtlas(entities, metadata);
-        const filename = `atlas_${layerName}_${currentYear}.json`;
-        
-        this.downloadAtlas(atlas, filename);
-        
-        return atlas;
-    }
     
     /**
      * Generate unique atlas ID (Static version)
