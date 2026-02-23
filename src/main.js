@@ -259,10 +259,6 @@ export default class IlluminarchismApp {
         this.safeAddListener('btn-view-map', 'click', () => this.switchView('map'));
         this.safeAddListener('btn-view-timeline', 'click', () => this.switchView('timeline'));
 
-        // Add keyframe navigation buttons safely
-        this.safeAddListener('btn-prev-key', 'click', () => this.jumpToKeyframe(-1));
-        this.safeAddListener('btn-next-key', 'click', () => this.jumpToKeyframe(1));
-
         // Epoch listeners moved to Timeline.js, but keeping DOM Refs logic here is fine if not conflicting.
         // Timeline.js handles 'change' on epoch-start/end to update bounds.
         // We can remove the logic here to avoid double binding.
