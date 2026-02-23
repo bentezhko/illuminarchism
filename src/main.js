@@ -148,7 +148,8 @@ export default class IlluminarchismApp {
         this.layers = [
             { id: 'layer_water', name: 'Water', visible: true, locked: true, order: 0, expanded: true },
             { id: 'layer_political', name: 'Political', visible: true, locked: false, order: 1, expanded: true },
-            { id: 'layer_misc', name: 'Misc', visible: true, locked: false, order: 2, expanded: true }
+            { id: 'layer_misc', name: 'Misc', visible: true, locked: false, order: 2, expanded: true },
+            { id: 'default', name: 'Default', visible: true, locked: false, order: 3, expanded: true }
         ];
         this.activeLayerId = 'layer_political';
         if (this.layerManager) this.layerManager.render();
