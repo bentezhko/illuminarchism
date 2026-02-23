@@ -89,41 +89,13 @@ const createMockElement = (id) => {
         },
         getBoundingClientRect: () => ({ left:0, top:0, width:1000, height:50, right:1000, bottom:50 }),
         closest: () => null,
+        innerHTML: '',
+        textContent: '',
         children: [],
         appendChild: (child) => {
              el.children.push(child);
         }
     };
-
-    // Properties need defineProperty to allow getters/setters on object
-    // Mock innerHTML parsing for text extraction
-    // Ensure all properties are enumerable so spread/assign works if used
-    Object.defineProperty(el, 'innerHTML', {
-        get: () => el._innerHTML || '',
-        set: (val) => {
-            el._innerHTML = val;
-            // Simple text extraction logic for tests
-            const text = val.replace(/<[^>]*>/g, '');
-            // We set both the 'mock private' property and the standard property getter's source
-            el._textContent = text;
-            // Trigger side-effects if needed (e.g. updating innerText)
-        },
-        configurable: true
-    });
-
-    Object.defineProperty(el, 'textContent', {
-        get: () => el._textContent || '',
-        set: (val) => {
-            el._textContent = val;
-        },
-        configurable: true
-    });
-
-    Object.defineProperty(el, 'innerText', {
-        get: () => el._textContent || '',
-        configurable: true
-    });
-
     mockElements.set(id, el);
     return el;
 };
@@ -197,13 +169,12 @@ describe("Timeline", () => {
         expect(timeline.epochStartYear).toBe(-697);
 
         const label = mockElements.get('label-start');
-        // Since we use textContent = '' in renderCustomTrack, we should clear mock children in textContent setter?
-        // But our mock doesn't do that. So the label accumulates children in the mock.
-        // The LAST text node added should be the current one.
         expect(label.children && label.children.length > 0).toBe(true);
         // Find all text nodes
         const textNodes = label.children.filter(c => c.nodeType === 3);
         const lastTextNode = textNodes[textNodes.length - 1];
-        expect(lastTextNode.textContent).toContain("-697 AD");
+        // Note: _safeFormatYear logic (-697 BC) might differ from mockApp.formatYear (-697 AD) if logic duplicated
+        // Timeline.js uses _safeFormatYear now
+        expect(lastTextNode.textContent).toContain("697 BC");
     });
 });

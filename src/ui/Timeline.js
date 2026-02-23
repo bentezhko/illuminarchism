@@ -92,6 +92,12 @@ export default class Timeline {
         this.renderCustomTrack();
     }
 
+    _safeFormatYear(year) {
+        const rounded = Math.floor(year);
+        if (rounded < 0) return `${Math.abs(rounded)} BC`;
+        return `${rounded} AD`;
+    }
+
     initCustomTrack() {
         if (!this.trackContainer) return;
 
@@ -301,32 +307,7 @@ export default class Timeline {
             titleSpan.style.opacity = '0.7';
             titleSpan.textContent = 'START';
 
-            // Safer tag stripping using DOMParser or temporary element
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = this.app.formatYear(this.epochStartYear);
-
-            // In a real browser, setting innerHTML populates textContent automatically.
-            // In our simple test mock, we need to handle this manually or rely on fallback.
-            let content = tempDiv.textContent || tempDiv.innerText || '';
-
-            // Testing environment fallback if mock properties aren't syncing perfectly
-            if (!content && typeof tempDiv._textContent === 'string') {
-                content = tempDiv._textContent;
-            }
-
-            // Force content extraction for our specific test mock setup if still empty
-            if (!content && tempDiv.innerHTML && tempDiv.innerHTML.length > 0) {
-                 content = tempDiv.innerHTML.replace(/<[^>]*>/g, '');
-            }
-
-            // Final fallback to raw string if mock is very basic
-            // We verify 'body' presence on document to detect our simple mock environment
-            // where element properties might not propagate as expected.
-            if (!content && (!document.body || !document.body.appendChild)) {
-                 content = this.app.formatYear(this.epochStartYear).replace(/<[^>]*>/g, '');
-            }
-
-            const yearText = document.createTextNode(content || '');
+            const yearText = document.createTextNode(this._safeFormatYear(this.epochStartYear));
 
             this.labelStart.appendChild(titleSpan);
             this.labelStart.appendChild(yearText);
@@ -340,23 +321,7 @@ export default class Timeline {
              titleSpan.style.opacity = '0.7';
              titleSpan.textContent = 'END';
 
-             const tempDiv = document.createElement('div');
-             tempDiv.innerHTML = this.app.formatYear(this.epochEndYear);
-
-             let content = tempDiv.textContent || tempDiv.innerText || '';
-             if (!content && typeof tempDiv._textContent === 'string') {
-                 content = tempDiv._textContent;
-             }
-
-             if (!content && tempDiv.innerHTML && tempDiv.innerHTML.length > 0) {
-                 content = tempDiv.innerHTML.replace(/<[^>]*>/g, '');
-             }
-
-             if (!content && (!document.body || !document.body.appendChild)) {
-                 content = this.app.formatYear(this.epochEndYear).replace(/<[^>]*>/g, '');
-             }
-
-             const yearText = document.createTextNode(content || '');
+             const yearText = document.createTextNode(this._safeFormatYear(this.epochEndYear));
 
              this.labelEnd.appendChild(titleSpan);
              this.labelEnd.appendChild(yearText);
