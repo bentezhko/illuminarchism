@@ -1,6 +1,6 @@
 import { test, expect, describe, mock, beforeEach } from "bun:test";
 
-// Mock the dependencies
+// Mock only the dependencies imported by Entity.js
 const mockResampleGeometry = mock((points, count, isClosed) => {
     return points.map(p => ({ ...p, resampled: true, closed: isClosed }));
 });
@@ -12,14 +12,6 @@ mock.module("./math.js", () => {
         alignPolylineOpen: mock(() => {}),
         getCentroid: mock(() => ({x: 0, y: 0})),
         lerp: mock((a, b, t) => a),
-        distance: mock(() => 0),
-        distSq: mock(() => 0),
-        isPointInPolygon: mock(() => false),
-        distanceToSegment: mock(() => 0),
-        getSignedArea: mock(() => 0),
-        getBoundingBox: mock(() => ({x:0, y:0, w:0, h:0})),
-        enforceClockwise: mock((pts) => pts),
-        escapeHTML: mock((str) => str),
     };
 });
 
@@ -46,9 +38,10 @@ describe("HistoricalEntity.addKeyframe", () => {
         expect(mockResampleGeometry).toHaveBeenCalled();
         expect(mockResampleGeometry).toHaveBeenCalledWith(expect.any(Array), expect.any(Number), true); // true for closed
 
-        // Check if the geometry in timeline is the mocked result
-        expect(entity.timeline[0].geometry[0]).toHaveProperty("resampled", true);
-        expect(entity.timeline[0].geometry[0]).toHaveProperty("closed", true);
+        // Verify the entire geometry array matches the mock output
+        expect(entity.timeline[0].geometry).toEqual(
+            inputGeo.map(p => ({ ...p, resampled: true, closed: true }))
+        );
     });
 
     test("should add a line keyframe and resample it (open)", () => {
@@ -57,15 +50,15 @@ describe("HistoricalEntity.addKeyframe", () => {
             typology: "river" // Explicitly river
         });
 
-        // Ensure type is derived correctly for the test logic
-        // Based on Entity.js logic: isLineType = this.type === 'river' || this.typology === 'river' || this.typology === 'coast'
-        // 'river' typology maps to 'river' type in migrateFromLegacy/deriveTypeFromTypology
-
         const inputGeo = [{x:0, y:0}, {x:10, y:10}];
         entity.addKeyframe(1900, inputGeo);
 
         expect(mockResampleGeometry).toHaveBeenCalledWith(expect.any(Array), expect.any(Number), false); // false for open
-        expect(entity.timeline[0].geometry[0]).toHaveProperty("closed", false);
+
+        // Verify the entire geometry array matches the mock output (open = false)
+        expect(entity.timeline[0].geometry).toEqual(
+            inputGeo.map(p => ({ ...p, resampled: true, closed: false }))
+        );
     });
 
     test("should NOT resample point geometries", () => {
@@ -73,9 +66,6 @@ describe("HistoricalEntity.addKeyframe", () => {
             domain: "political",
             typology: "city" // Should be treated as point type
         });
-
-        // getTypology('political', 'city') should return object with geometryType: 'Point'
-        // Wait, Ontology.js defines CITY under POLITICAL_TYPOLOGY with geometryType: 'Point'
 
         const inputGeo = [{x:5, y:5}];
         entity.addKeyframe(1900, inputGeo);
@@ -115,7 +105,11 @@ describe("HistoricalEntity.addKeyframe", () => {
         expect(entity.timeline).toHaveLength(2);
         expect(entity.timeline[0].year).toBe(1900);
         expect(entity.timeline[1].year).toBe(2000);
-        expect(entity.timeline[1].geometry[0]).toHaveProperty("resampled", true);
+
+        // Verify full geometry with resampled properties
+        expect(entity.timeline[1].geometry).toEqual(
+            poly.map(p => ({ ...p, resampled: true, closed: true }))
+        );
     });
 
     test("should expand validRange if finite", () => {
