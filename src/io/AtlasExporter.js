@@ -17,10 +17,21 @@ export default class AtlasExporter {
         meta.modified = new Date().toISOString();
         meta.version = '2.0';
 
+        return AtlasExporter.exportAtlas(
+            this.app.entities,
+            meta,
+            this.app.connections
+        );
+    }
+
+    /**
+     * Static export method for standalone use
+     */
+    static exportAtlas(entities = [], meta = {}, connections = []) {
         return {
             meta,
-            entities: this.app.entities.map(e => e.toJSON()),
-            connections: this.app.connections || []
+            entities: (entities || []).map(e => e.toJSON()),
+            connections: connections || []
         };
     }
 
