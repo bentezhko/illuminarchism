@@ -316,10 +316,7 @@ export default class InputController {
         window.addEventListener('keydown', (e) => {
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
 
-            if (e.code === 'Space') {
-                e.preventDefault();
-                this.app.togglePlay();
-            }
+            // Spacebar handling moved to Timeline.js to avoid double-toggling
 
             // FOCUS KEYBIND
             if (e.code === 'KeyF') {

@@ -11,8 +11,10 @@ import Timeline from './ui/Timeline.js';
 import InfoPanel from './ui/InfoPanel.js';
 import Dial from './ui/Dial.js';
 import Toolbar from './ui/Toolbar.js';
+import LayerManager from './ui/LayerManager.js';
 import AtlasLoader from './io/AtlasLoader.js';
 import AtlasExporter from './io/AtlasExporter.js';
+import { initialEntities } from './data/initialEntities.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -29,6 +31,7 @@ export default class IlluminarchismApp {
         this.infoPanel = new InfoPanel(this);
         this.dial = new Dial(this);
         this.toolbar = new Toolbar(this);
+        this.layerManager = new LayerManager(this);
         this.loader = new AtlasLoader(this);
         this.exporter = new AtlasExporter(this);
 
@@ -45,6 +48,9 @@ export default class IlluminarchismApp {
         this.draftCursor = null;
         this.activeTool = 'pan';
 
+        // Layer State
+        this.layers = [];
+        this.activeLayerId = null;
 
         // New ontology-aware drawing state
         this.drawDomain = 'political';  // Level 1: Domain
@@ -139,12 +145,23 @@ export default class IlluminarchismApp {
     }
 
     initData() {
+        // Initialize Default Groups (formerly Layers)
+        this.layers = [
+            { id: 'layer_water', name: 'Water', visible: true, locked: true, order: 0, expanded: true },
+            { id: 'layer_political', name: 'Political', visible: true, locked: false, order: 1, expanded: true },
+            { id: 'layer_misc', name: 'Misc', visible: true, locked: false, order: 2, expanded: true },
+            { id: 'default', name: 'Default', visible: true, locked: false, order: 3, expanded: true }
+        ];
+        this.activeLayerId = 'layer_political';
+        if (this.layerManager) this.layerManager.render();
+
         // Create entities using the new config-object format for constructor
         const seaNorth = new HistoricalEntity('sea_north', 'Mare Borealis', {
             domain: 'geographic',
             typology: 'aquatic',
             color: '#264e86',
             hatchStyle: 'waves',
+            layerId: 'layer_water',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         seaNorth.addKeyframe(-2000, [{ x: 0, y: -400 }, { x: 500, y: -400 }, { x: 500, y: 0 }, { x: 0, y: 0 }], true);
@@ -156,6 +173,7 @@ export default class IlluminarchismApp {
             typology: 'aquatic',
             color: '#264e86',
             hatchStyle: 'waves',
+            layerId: 'layer_water',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         seaSouth.addKeyframe(-2000, [{ x: 0, y: -100 }, { x: 500, y: -100 }, { x: 500, y: 300 }, { x: 0, y: 300 }], true);
@@ -167,6 +185,7 @@ export default class IlluminarchismApp {
             typology: 'nation-state',
             color: '#264e86',
             hatchStyle: 'diagonal-right',
+            layerId: 'layer_political',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         mainland.addKeyframe(-2000, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
@@ -178,6 +197,7 @@ export default class IlluminarchismApp {
             typology: 'nation-state',
             color: '#264e86',
             hatchStyle: 'diagonal-left',
+            layerId: 'layer_political',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         island.addKeyframe(-2000, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
@@ -189,6 +209,7 @@ export default class IlluminarchismApp {
             typology: 'nation-state',
             color: '#8a3324',
             hatchStyle: 'vertical',
+            layerId: 'layer_political',
             validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
         });
         bridge.addKeyframe(-2000, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
@@ -200,6 +221,7 @@ export default class IlluminarchismApp {
             typology: 'archaic-state',
             subtype: 'sovereign',
             color: '#000000',
+            layerId: 'layer_misc',
             validRange: { start: -1000, end: 2050 } // FIXED: Finite range for editing
         });
         city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
@@ -211,6 +233,7 @@ export default class IlluminarchismApp {
             subtype: 'language',
             color: '#5c3c92',
             hatchStyle: 'cross',
+            layerId: 'layer_misc',
             validRange: { start: 800, end: 2050 } // FIXED: Finite range for editing
         });
         oldTongue.addKeyframe(800, [{ x: -280, y: -80 }, { x: -120, y: -80 }, { x: -120, y: 80 }, { x: -280, y: 80 }], true);
@@ -222,6 +245,7 @@ export default class IlluminarchismApp {
             subtype: 'feature',
             color: '#800080',
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: { start: 1200, end: 2050 } // FIXED: Finite range for editing
         });
         thSound.addKeyframe(1200, [{ x: -250, y: -50 }, { x: -150, y: -50 }, { x: -150, y: 50 }, { x: -250, y: 50 }], true);
@@ -233,6 +257,7 @@ export default class IlluminarchismApp {
             subtype: 'feature',
             color: '#FF4500',
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: { start: 1900, end: 2050 } // FIXED: Finite range for editing
         });
         sodaWord.addKeyframe(1900, [{ x: -200, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 0 }, { x: -200, y: 0 }], true);
@@ -243,6 +268,7 @@ export default class IlluminarchismApp {
             typology: 'band',
             color: '#c5a059',
             hatchStyle: 'vertical',
+            layerId: 'layer_political',
             validRange: { start: 900, end: 2050 } // FIXED: Finite range for editing
         });
         festivalZone.addKeyframe(900, [{ x: -290, y: -90 }, { x: 100, y: -90 }, { x: 100, y: 90 }, { x: -290, y: 90 }], true);
@@ -253,6 +279,7 @@ export default class IlluminarchismApp {
             typology: 'ethnic',
             color: '#228B22',
             hatchStyle: 'stipple',
+            layerId: 'layer_misc',
             validRange: { start: -500, end: 2050 } // FIXED: Finite range for editing
         });
         paganEnclave.addKeyframe(-500, [{ x: 250, y: -50 }, { x: 350, y: -50 }, { x: 350, y: 50 }, { x: 250, y: 50 }], true);
@@ -264,12 +291,16 @@ export default class IlluminarchismApp {
             typology: 'band',
             color: '#3a5f3a',
             hatchStyle: 'horizontal',
+            layerId: 'layer_political',
             validRange: { start: -10000, end: 1900 }
         });
         // Represents the pre-industrial world, fading out by the early 20th century
         biphasicSleep.addKeyframe(-10000, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true);
         biphasicSleep.addKeyframe(1900, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true); // Fade out, keep low poly
         this.entities.push(biphasicSleep);
+
+        // Update Layer Manager to show entities
+        if (this.layerManager) this.layerManager.render();
     }
 
     formatYear(year) {
@@ -360,10 +391,6 @@ export default class IlluminarchismApp {
         // Add listeners for view switching
         this.safeAddListener('btn-view-map', 'click', () => this.switchView('map'));
         this.safeAddListener('btn-view-timeline', 'click', () => this.switchView('timeline'));
-
-        // Add keyframe navigation buttons safely
-        this.safeAddListener('btn-prev-key', 'click', () => this.jumpToKeyframe(-1));
-        this.safeAddListener('btn-next-key', 'click', () => this.jumpToKeyframe(1));
 
         // Epoch listeners moved to Timeline.js, but keeping DOM Refs logic here is fine if not conflicting.
         // Timeline.js handles 'change' on epoch-start/end to update bounds.
@@ -784,7 +811,8 @@ export default class IlluminarchismApp {
                 typology: this.drawTypology,
                 subtype: this.drawSubtype,
                 color: color,
-                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9
+                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9,
+                layerId: this.activeLayerId || 'layer_land'
             });
             // New shape creation (no resampling)
             newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
@@ -846,9 +874,12 @@ export default class IlluminarchismApp {
                 this.updateDialDisplay();
             }
 
-            if (showPanel) {
-                const p = document.getElementById('info-panel');
-                p.style.display = 'block';
+            const p = document.getElementById('info-panel');
+            const isVisible = p && p.style.display === 'block';
+
+            // Update panel if explicitly requested OR if it is already open
+            if (showPanel || isVisible) {
+                if (showPanel) p.style.display = 'block';
                 document.getElementById('info-name-input').value = ent.name;
                 document.getElementById('info-type').textContent = ent.typology; // updated to match property name
                 document.getElementById('info-cat').textContent = ent.domain; // updated to match property name
@@ -962,6 +993,18 @@ export default class IlluminarchismApp {
             } else {
                 // Fallback if index not ready
                 candidates = this.entities.filter(e => e && e.visible);
+            }
+
+            // Filter by Layer (Visible and Not Locked)
+            if (this.layers) {
+                // Optimization: Create Map for O(1) lookup
+                const layerMap = new Map(this.layers.map(l => [l.id, l]));
+                candidates = candidates.filter(e => {
+                    const layer = layerMap.get(e.layerId);
+                    // If layer not found, assume visible/unlocked
+                    if (!layer) return true;
+                    return layer.visible && !layer.locked;
+                });
             }
 
             // Sort candidates for Z-order
@@ -1119,7 +1162,7 @@ export default class IlluminarchismApp {
             }
         }
 
-        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex);
+        this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex, this.layers);
 
         // Draw draft with safety check
         if (this.activeTool === 'draw' && this.draftPoints.length > 0) {

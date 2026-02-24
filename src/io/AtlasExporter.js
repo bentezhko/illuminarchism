@@ -17,21 +17,11 @@ export default class AtlasExporter {
         meta.modified = new Date().toISOString();
         meta.version = '2.0';
 
-        return AtlasExporter.exportAtlas(
-            this.app.entities,
-            meta,
-            this.app.connections
-        );
-    }
-
-    /**
-     * Static export method for standalone use
-     */
-    static exportAtlas(entities = [], meta = {}, connections = []) {
         return {
             meta,
-            entities: (entities || []).map(e => e.toJSON()),
-            connections: connections || []
+            layers: this.app.layers || [],
+            entities: this.app.entities.map(e => e.toJSON()),
+            connections: this.app.connections || []
         };
     }
 
@@ -135,7 +125,7 @@ export default class AtlasExporter {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-    
+
     /**
      * Export current drawing session
      */
@@ -148,12 +138,12 @@ export default class AtlasExporter {
             author: 'illuminarchism-user',
             created: new Date().toISOString()
         };
-        
+
         const atlas = this.exportAtlas(entities, metadata);
         const filename = `atlas_${layerName}_${currentYear}.json`;
-        
+
         this.downloadAtlas(atlas, filename);
-        
+
         return atlas;
     }
     

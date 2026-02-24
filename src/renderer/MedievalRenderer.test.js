@@ -1,4 +1,3 @@
-
 import { describe, it, expect, mock, beforeEach, beforeAll } from 'bun:test';
 import MedievalRenderer from './MedievalRenderer.js';
 
@@ -72,6 +71,52 @@ describe('MedievalRenderer', () => {
         mockCtx.fillText.mockClear();
         mockCtx.beginPath.mockClear();
         mockCtx.stroke.mockClear();
+    });
+
+    it('should draw scale correctly', () => {
+        // Mock transform
+        renderer.transform = { x: 0, y: 0, k: 1 };
+        renderer.width = 800;
+        renderer.height = 600;
+
+        // Call drawScale
+        renderer.drawScale();
+
+        // Check if ctx methods were called
+        expect(mockCtx.save).toHaveBeenCalled();
+        expect(mockCtx.beginPath).toHaveBeenCalled();
+        expect(mockCtx.moveTo).toHaveBeenCalled(); // Main line
+        expect(mockCtx.lineTo).toHaveBeenCalled(); // Main line segments
+        expect(mockCtx.stroke).toHaveBeenCalled();
+        expect(mockCtx.fillText).toHaveBeenCalled(); // Label
+        expect(mockCtx.restore).toHaveBeenCalled();
+    });
+
+    it('should calculate different scale values for different zoom levels', () => {
+        // Case 1: k=1 -> target=150 -> units=150 -> scale=100 (Default: Leagues)
+        renderer.transform.k = 1;
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("100 Leagues", expect.any(Number), expect.any(Number));
+
+        // Case 2: k=0.5 -> target=150 -> units=300 -> scale=200
+        renderer.transform.k = 0.5;
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("200 Leagues", expect.any(Number), expect.any(Number));
+
+        // Case 3: k=2 -> target=150 -> units=75 -> scale=50
+        renderer.transform.k = 2;
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("50 Leagues", expect.any(Number), expect.any(Number));
+    });
+
+    it('should respect unit selection', () => {
+        renderer.transform.k = 1;
+
+        // Change unit to 'miles' (factor 3.0)
+        // target=150 -> worldUnits=150 -> displayUnits=450 -> scale=200
+        renderer.scaleUnit = 'miles';
+        renderer.drawScale();
+        expect(mockCtx.fillText).toHaveBeenLastCalledWith("200 Miles", expect.any(Number), expect.any(Number));
     });
 
     // --- TraceRoughPath Tests ---
