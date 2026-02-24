@@ -36,6 +36,14 @@ void main() {
     float yearDiff = abs(u_currentYear - a_validStart);
     v_visibility = smoothstep(100.0, 0.0, yearDiff);
     
+    // Check if segment is active (optimized: discard inactive segments)
+    // Use [start, end) interval for all segments except the very last one
+    // But since end is usually > start, we can just use strict inequality for end
+    if (u_currentYear < a_yearStart || u_currentYear >= a_yearEnd) {
+        gl_Position = vec4(0.0, 0.0, 2.0, 1.0); // Move outside clip space
+        return;
+    }
+
     // Interpolate position based on year
     float t = 0.0;
     float duration = a_yearEnd - a_yearStart;
