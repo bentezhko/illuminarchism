@@ -229,6 +229,9 @@ export default class WebGLRenderer {
      * The vertex shader filters segments based on u_currentYear.
      */
     buildStaticBuffer(entities) {
+        const YEAR_MIN = -1e9;
+        const YEAR_MAX = 1e9;
+
         const gl = this.gl;
         const vertices = [];
         
@@ -243,9 +246,9 @@ export default class WebGLRenderer {
             const validStart = entity.validRange.start;
 
             // 1. Before first keyframe: Static geometry of T0
-            // Range: [-1e9, T0.year]
+            // Range: [YEAR_MIN, T0.year]
             const t0 = entity.timeline[0];
-            this.addSegment(vertices, t0.geometry, t0.geometry, color, validStart, -1e9, t0.year, isClosed);
+            this.addSegment(vertices, t0.geometry, t0.geometry, color, validStart, YEAR_MIN, t0.year, isClosed);
 
             // 2. Between keyframes: Interpolated geometry
             for (let i = 0; i < entity.timeline.length - 1; i++) {
@@ -255,9 +258,9 @@ export default class WebGLRenderer {
             }
 
             // 3. After last keyframe: Static geometry of Tn
-            // Range: [Tn.year, 1e9]
+            // Range: [Tn.year, YEAR_MAX]
             const tn = entity.timeline[entity.timeline.length - 1];
-            this.addSegment(vertices, tn.geometry, tn.geometry, color, validStart, tn.year, 1e9, isClosed);
+            this.addSegment(vertices, tn.geometry, tn.geometry, color, validStart, tn.year, YEAR_MAX, isClosed);
         }
         
         // Upload to GPU
