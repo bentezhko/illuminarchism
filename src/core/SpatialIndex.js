@@ -17,6 +17,11 @@ export class Quadtree {
         this.objects = [];
         this.nodes = [];
         this.divided = false;
+
+        // Root node maintains a list of outliers (objects outside bounds)
+        if (this.depth === 0) {
+            this.outliers = [];
+        }
     }
 
     /**
@@ -24,6 +29,7 @@ export class Quadtree {
      */
     clear() {
         this.objects = [];
+        if (this.outliers) this.outliers = [];
         for (let i = 0; i < this.nodes.length; i++) {
             if (this.nodes[i]) this.nodes[i].clear();
         }
@@ -59,10 +65,14 @@ export class Quadtree {
      * Insert object { x, y, w, h, id, ... }
      */
     insert(obj) {
-        if (!this.contains(this.bounds, obj) && this.depth > 0) {
-            // Object is outside this node bounds (shouldn't happen if root is big enough or if we handle outliers)
-            // But we'll ignore for safety if strictly outside, or maybe add to closest? 
-            // For now, strict containment:
+        if (!this.contains(this.bounds, obj)) {
+            // Object is outside this node bounds.
+            // If we are root, add to outliers list to handle gracefully.
+            if (this.depth === 0) {
+                this.outliers.push(obj);
+                return true;
+            }
+            // If not root, reject strictly.
             return false;
         }
 
@@ -88,6 +98,16 @@ export class Quadtree {
      */
     retrieve(range) {
         let found = [];
+
+        // If root, check outliers
+        if (this.depth === 0 && this.outliers) {
+            for (const obj of this.outliers) {
+                if (this.intersects(obj, range)) {
+                    found.push(obj);
+                }
+            }
+        }
+
         if (!this.intersects(this.bounds, range)) return found;
 
         if (this.divided) {
