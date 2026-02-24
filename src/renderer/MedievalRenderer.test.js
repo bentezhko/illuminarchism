@@ -1,5 +1,4 @@
-
-import { describe, it, expect, mock, beforeAll } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, beforeAll } from 'bun:test';
 import MedievalRenderer from './MedievalRenderer.js';
 
 // Mock DOM
@@ -11,6 +10,7 @@ const mockCtx = {
     beginPath: mock(() => {}),
     moveTo: mock(() => {}),
     lineTo: mock(() => {}),
+    closePath: mock(() => {}),
     stroke: mock(() => {}),
     fillText: mock((text, x, y) => {}),
     measureText: mock(() => ({ width: 10 })),
@@ -48,14 +48,32 @@ global.window = {
     innerWidth: 800,
     innerHeight: 600,
     addEventListener: mock(() => {}),
+    illuminarchismApp: { render: () => {} }
 };
 
 global.HTMLCanvasElement = class {};
 
 describe('MedievalRenderer', () => {
-    it('should draw scale correctly', () => {
-        const renderer = new MedievalRenderer('map-canvas');
+    let renderer;
 
+    beforeEach(() => {
+        renderer = new MedievalRenderer('map-canvas');
+        // Override patterns to avoid actual canvas calls or null checks
+        renderer.noisePattern = {};
+        renderer.waterPattern = {};
+
+        // Reset mocks AFTER instantiation because constructor creates textures which call ctx methods
+        mockCtx.moveTo.mockClear();
+        mockCtx.lineTo.mockClear();
+        mockCtx.closePath.mockClear();
+        mockCtx.save.mockClear();
+        mockCtx.restore.mockClear();
+        mockCtx.fillText.mockClear();
+        mockCtx.beginPath.mockClear();
+        mockCtx.stroke.mockClear();
+    });
+
+    it('should draw scale correctly', () => {
         // Mock transform
         renderer.transform = { x: 0, y: 0, k: 1 };
         renderer.width = 800;
@@ -72,18 +90,9 @@ describe('MedievalRenderer', () => {
         expect(mockCtx.stroke).toHaveBeenCalled();
         expect(mockCtx.fillText).toHaveBeenCalled(); // Label
         expect(mockCtx.restore).toHaveBeenCalled();
-
-        // Check label text (should be "100 Leagues" or similar)
-        // We can't easily inspect arguments with simple mocks unless we capture them,
-        // but checking call count implies it reached that point.
     });
 
     it('should calculate different scale values for different zoom levels', () => {
-        const renderer = new MedievalRenderer('map-canvas');
-
-        // --- Reset Mock Before Each Call ---
-        // Since we want to assert the text of the *current* call, we should check it immediately.
-
         // Case 1: k=1 -> target=150 -> units=150 -> scale=100 (Default: Leagues)
         renderer.transform.k = 1;
         renderer.drawScale();
@@ -101,7 +110,6 @@ describe('MedievalRenderer', () => {
     });
 
     it('should respect unit selection', () => {
-        const renderer = new MedievalRenderer('map-canvas');
         renderer.transform.k = 1;
 
         // Change unit to 'miles' (factor 3.0)
@@ -109,5 +117,84 @@ describe('MedievalRenderer', () => {
         renderer.scaleUnit = 'miles';
         renderer.drawScale();
         expect(mockCtx.fillText).toHaveBeenLastCalledWith("200 Miles", expect.any(Number), expect.any(Number));
+    });
+
+    // --- TraceRoughPath Tests ---
+
+    it('traceRoughPath should generate path commands with finite numbers', () => {
+        const pts = [{ x: 10, y: 10 }, { x: 20, y: 20 }, { x: 30, y: 10 }];
+        renderer.transform = { x: 0, y: 0, k: 1 };
+
+        // Test with k=1 (roughness enabled)
+        renderer.traceRoughPath(pts, true, mockCtx);
+
+        expect(mockCtx.moveTo).toHaveBeenCalledTimes(1);
+        // length 3 array: moveTo(0), lineTo(1), lineTo(2) -> 2 lineTo calls
+        expect(mockCtx.lineTo).toHaveBeenCalledTimes(2);
+        expect(mockCtx.closePath).toHaveBeenCalledTimes(1);
+
+        const moveCall = mockCtx.moveTo.mock.calls[0];
+        const lineCall1 = mockCtx.lineTo.mock.calls[0];
+        const lineCall2 = mockCtx.lineTo.mock.calls[1];
+
+        expect(Number.isFinite(moveCall[0])).toBe(true);
+        expect(Number.isFinite(moveCall[1])).toBe(true);
+        expect(Number.isFinite(lineCall1[0])).toBe(true);
+        expect(Number.isFinite(lineCall1[1])).toBe(true);
+        expect(Number.isFinite(lineCall2[0])).toBe(true);
+        expect(Number.isFinite(lineCall2[1])).toBe(true);
+    });
+
+    it('traceRoughPath should work with small scale k', () => {
+        const pts = [{ x: 10, y: 10 }, { x: 20, y: 20 }, { x: 30, y: 10 }];
+        renderer.transform = { x: 0, y: 0, k: 0.1 }; // Roughness disabled
+
+        renderer.traceRoughPath(pts, true, mockCtx);
+
+        // Should call moveTo/lineTo with exact coords
+        expect(mockCtx.moveTo).toHaveBeenCalledWith(10, 10);
+        expect(mockCtx.lineTo).toHaveBeenCalledWith(20, 20);
+        expect(mockCtx.lineTo).toHaveBeenCalledWith(30, 10);
+    });
+
+    it('traceRoughPath should work with large scale k', () => {
+        const pts = [{ x: 10, y: 10 }, { x: 20, y: 20 }, { x: 30, y: 10 }];
+        renderer.transform = { x: 0, y: 0, k: 10 }; // Roughness enabled
+
+        renderer.traceRoughPath(pts, true, mockCtx);
+
+        expect(mockCtx.moveTo).toHaveBeenCalled();
+        const moveArg = mockCtx.moveTo.mock.calls[0];
+        // Perturbation should be small (magnitude 2/10 = 0.2)
+        expect(Math.abs(moveArg[0] - 10)).toBeLessThan(1);
+        expect(Math.abs(moveArg[1] - 10)).toBeLessThan(1);
+    });
+
+    it('traceRoughPath should handle large coordinates gracefully', () => {
+        const pts = [{ x: 1000000, y: 1000000 }, { x: 1000010, y: 1000010 }];
+        renderer.transform = { x: 0, y: 0, k: 1 };
+
+        renderer.traceRoughPath(pts, true, mockCtx);
+
+        const moveArg = mockCtx.moveTo.mock.calls[0];
+        expect(Number.isFinite(moveArg[0])).toBe(true);
+        expect(Number.isFinite(moveArg[1])).toBe(true);
+    });
+
+    it('traceRoughPath should skip non-finite coordinates', () => {
+        const pts = [{ x: Infinity, y: 10 }, { x: 20, y: NaN }, { x: 30, y: 10 }];
+
+        // Use the shared mockCtx
+        renderer.transform = { x: 0, y: 0, k: 1 };
+
+        renderer.traceRoughPath(pts, true, mockCtx);
+
+        expect(mockCtx.moveTo).not.toHaveBeenCalled();
+        expect(mockCtx.lineTo).toHaveBeenCalledTimes(1);
+
+        // Verify the one valid call
+        const args = mockCtx.lineTo.mock.calls[0];
+        expect(Number.isFinite(args[0])).toBe(true);
+        expect(Number.isFinite(args[1])).toBe(true);
     });
 });
