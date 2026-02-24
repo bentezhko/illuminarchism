@@ -1,5 +1,69 @@
 import { expect, test, describe } from "bun:test";
-import { escapeHTML, resampleGeometry } from "./math.js";
+import { escapeHTML, resampleGeometry, alignPolygonClosed } from "./math.js";
+
+describe("alignPolygonClosed", () => {
+    test("returns second polygon as-is if lengths differ", () => {
+        const p1 = [{ x: 0, y: 0 }];
+        const p2 = [{ x: 0, y: 0 }, { x: 1, y: 1 }];
+        expect(alignPolygonClosed(p1, p2)).toEqual(p2);
+    });
+
+    test("aligns identical polygons correctly", () => {
+        const poly = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 5, y: 5 }];
+        expect(alignPolygonClosed(poly, poly)).toEqual(poly);
+    });
+
+    test("aligns rotated triangle to match first polygon", () => {
+        // poly1: Triangle ABC
+        const poly1 = [
+            { x: 0, y: 0 },   // A
+            { x: 10, y: 0 },  // B
+            { x: 5, y: 5 }    // C
+        ];
+        // poly2: Triangle BCA (rotated)
+        const poly2 = [
+            { x: 10, y: 0 },  // B
+            { x: 5, y: 5 },   // C
+            { x: 0, y: 0 }    // A
+        ];
+
+        // Should align poly2 to match poly1 order: A, B, C
+        const aligned = alignPolygonClosed(poly1, poly2);
+
+        expect(aligned[0]).toEqual(poly1[0]);
+        expect(aligned[1]).toEqual(poly1[1]);
+        expect(aligned[2]).toEqual(poly1[2]);
+    });
+
+    test("aligns square regardless of starting point", () => {
+        const poly1 = [
+            { x: 0, y: 0 },
+            { x: 10, y: 0 },
+            { x: 10, y: 10 },
+            { x: 0, y: 10 }
+        ];
+        // poly2 is poly1 rotated by 2 steps
+        const poly2 = [
+            { x: 10, y: 10 },
+            { x: 0, y: 10 },
+            { x: 0, y: 0 },
+            { x: 10, y: 0 }
+        ];
+
+        const aligned = alignPolygonClosed(poly1, poly2);
+        expect(aligned).toEqual(poly1);
+    });
+
+    test("handles empty polygons", () => {
+        expect(alignPolygonClosed([], [])).toEqual([]);
+    });
+
+    test("handles single point polygons", () => {
+        const p1 = [{ x: 1, y: 1 }];
+        const p2 = [{ x: 1, y: 1 }];
+        expect(alignPolygonClosed(p1, p2)).toEqual(p1);
+    });
+});
 
 describe("resampleGeometry", () => {
     test("resamples a simple line segment (open)", () => {
