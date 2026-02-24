@@ -125,7 +125,7 @@ export default class AtlasExporter {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
-    
+
     /**
      * Export current drawing session
      */
@@ -138,12 +138,12 @@ export default class AtlasExporter {
             author: 'illuminarchism-user',
             created: new Date().toISOString()
         };
-        
+
         const atlas = this.exportAtlas(entities, metadata);
         const filename = `atlas_${layerName}_${currentYear}.json`;
-        
+
         this.downloadAtlas(atlas, filename);
-        
+
         return atlas;
     }
     

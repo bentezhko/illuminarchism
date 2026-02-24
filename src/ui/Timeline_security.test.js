@@ -9,7 +9,10 @@ global.document = {
         classList: { add: () => {}, remove: () => {}, contains: () => false },
         value: "2000",
         min: "0",
-        max: "3000"
+        max: "3000",
+        appendChild: () => {}, // Added for labels
+        replaceChildren: () => {}, // Added for labels
+        innerHTML: ""
     }),
     createElement: (tag) => {
         if (tag === 'div') {
@@ -36,6 +39,10 @@ global.document = {
         style: {},
         appendChild: () => {},
         addEventListener: () => {}
+    }),
+    createTextNode: (text) => ({
+        textContent: text,
+        style: {}
     }),
     body: {
         appendChild: () => {}
@@ -80,9 +87,7 @@ test("Timeline.showLinkEditor vulnerability check", () => {
     expect(capturedHTML).not.toContain("<img src=x onerror=alert(1)>");
     expect(capturedHTML).toContain("&lt;img src=x onerror=alert(1)&gt;");
 
-    // Check for Year XSS
-    // value="${escapeHTML(currentYear)}" -> value="2000&quot; onclick=&quot;alert(1)&quot;"
-    // This ensures it is contained within the attribute value and not executed as an attribute
-    expect(capturedHTML).not.toContain('value="2000" onclick="alert(1)"');
-    expect(capturedHTML).toContain('value="2000&quot; onclick=&quot;alert(1)"');
+    // Check for Year XSS (Input removed in current version, but verifying year display safety if added back)
+    // For now, we just ensure no unescaped year payload is present in any attribute context
+    expect(capturedHTML).not.toContain('onclick="alert(1)"');
 });

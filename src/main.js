@@ -14,6 +14,7 @@ import Toolbar from './ui/Toolbar.js';
 import LayerManager from './ui/LayerManager.js';
 import AtlasLoader from './io/AtlasLoader.js';
 import AtlasExporter from './io/AtlasExporter.js';
+import { initialEntities } from './data/initialEntities.js';
 
 export default class IlluminarchismApp {
     constructor() {
