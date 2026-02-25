@@ -51,6 +51,16 @@ export default class Timeline {
         // Throttle State
         this.isUpdatePending = false;
 
+        // Entity Drag State
+        this.isEntityDragging = false;
+        this.dragEntityId = null;
+        this.dragMode = null; // 'move', 'start', 'end'
+        this.entityDragStartX = 0;
+        this.entityDragStartRange = { start: 0, end: 0 };
+        this.entityDragTrackWidth = 0;
+        this.onEntityDragBound = this.onEntityDrag.bind(this);
+        this.onEntityDragEndBound = this.onEntityDragEnd.bind(this);
+
         this.init();
     }
 
@@ -517,6 +527,78 @@ export default class Timeline {
         }
     }
 
+    // --- ENTITY DRAGGING ---
+
+    onEntityDragStart(e, entityId, mode) {
+        if (this.isDragging) return; // Don't conflict with timeline drag
+
+        e.stopPropagation();
+        e.preventDefault();
+
+        const ent = this.app.entitiesById.get(entityId);
+        if (!ent) return;
+
+        const trackEl = e.target.closest('.timeline-bar-track');
+        if (!trackEl) return;
+
+        this.isEntityDragging = true;
+        this.dragEntityId = entityId;
+        this.dragMode = mode;
+        this.entityDragStartX = e.clientX;
+        this.entityDragStartRange = { ...ent.validRange };
+        this.entityDragTrackWidth = trackEl.getBoundingClientRect().width;
+
+        document.body.style.cursor = mode === 'move' ? 'move' : 'col-resize';
+
+        document.addEventListener('mousemove', this.onEntityDragBound);
+        document.addEventListener('mouseup', this.onEntityDragEndBound);
+    }
+
+    onEntityDrag(e) {
+        if (!this.isEntityDragging) return;
+
+        const dx = e.clientX - this.entityDragStartX;
+        const totalYears = this.epochEndYear - this.epochStartYear;
+
+        if (this.entityDragTrackWidth <= 0) return;
+
+        const dYears = Math.round((dx / this.entityDragTrackWidth) * totalYears);
+        const ent = this.app.entitiesById.get(this.dragEntityId);
+        if (!ent) return;
+
+        if (this.dragMode === 'move') {
+            ent.validRange.start = this.entityDragStartRange.start + dYears;
+            ent.validRange.end = this.entityDragStartRange.end + dYears;
+        } else if (this.dragMode === 'start') {
+            let newStart = this.entityDragStartRange.start + dYears;
+            if (newStart >= ent.validRange.end) newStart = ent.validRange.end - 1;
+            ent.validRange.start = newStart;
+        } else if (this.dragMode === 'end') {
+            let newEnd = this.entityDragStartRange.end + dYears;
+            if (newEnd <= ent.validRange.start) newEnd = ent.validRange.start + 1;
+            ent.validRange.end = newEnd;
+        }
+
+        this.renderView();
+    }
+
+    onEntityDragEnd(e) {
+        this.isEntityDragging = false;
+        this.dragEntityId = null;
+        this.dragMode = null;
+        this.entityDragTrackWidth = 0;
+        this.entityDragStartX = 0;
+        this.entityDragStartRange = { start: 0, end: 0 };
+
+        document.body.style.cursor = 'default';
+        document.removeEventListener('mousemove', this.onEntityDragBound);
+        document.removeEventListener('mouseup', this.onEntityDragEndBound);
+
+        // Finalize
+        this.app.updateEntities();
+        this.app.render();
+    }
+
     renderView() {
         const container = this.viewContainer;
         if (!container || this.app.currentView !== 'timeline') return;
@@ -661,6 +743,8 @@ export default class Timeline {
                                 e.stopPropagation();
                                 e.preventDefault();
                                 this.handleTimelineClick(ent.id, ent.validRange.start);
+                            } else {
+                                this.onEntityDragStart(e, ent.id, 'start');
                             }
                         });
                         bar.appendChild(handleL);
@@ -673,6 +757,8 @@ export default class Timeline {
                                 e.stopPropagation();
                                 e.preventDefault();
                                 this.handleTimelineClick(ent.id, ent.validRange.end);
+                            } else {
+                                this.onEntityDragStart(e, ent.id, 'end');
                             }
                         });
                         bar.appendChild(handleR);
@@ -688,6 +774,7 @@ export default class Timeline {
                             this.handleTimelineClick(ent.id, year);
                         } else {
                             this.app.selectEntity(ent.id);
+                            this.onEntityDragStart(e, ent.id, 'move');
                         }
                     });
 
