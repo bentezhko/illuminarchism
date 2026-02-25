@@ -205,7 +205,10 @@
 
     <!-- Context Menu -->
     <div id="context-menu" class="context-menu" style="display: none;">
-        <div class="menu-header" id="ctx-header">Entity Details</div>
+        <div class="menu-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span id="ctx-header" style="flex-grow: 1; margin-right: 10px;">Entity Details</span>
+            <button id="btn-ctx-focus" title="Center View" class="btn-ctx-focus">⌖</button>
+        </div>
         <div class="menu-content">
             <div class="menu-row">
                 <label>Name:</label>

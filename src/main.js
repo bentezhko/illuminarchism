@@ -500,6 +500,8 @@ export default class IlluminarchismApp {
         this.ctxHatchInput = document.getElementById('ctx-hatch-input');
 
         // Context Menu Listeners
+        this.safeAddListener('btn-ctx-focus', 'click', () => this.focusSelectedEntity());
+
         this.safeAddListener('ctx-name-input', 'input', (e) => {
             this._withSelectedEntity(ent => {
                 ent.name = e.target.value;
