@@ -30,9 +30,7 @@ describe("alignPolygonClosed", () => {
         // Should align poly2 to match poly1 order: A, B, C
         const aligned = alignPolygonClosed(poly1, poly2);
 
-        expect(aligned[0]).toEqual(poly1[0]);
-        expect(aligned[1]).toEqual(poly1[1]);
-        expect(aligned[2]).toEqual(poly1[2]);
+        expect(aligned).toEqual(poly1);
     });
 
     test("aligns square regardless of starting point", () => {
@@ -60,8 +58,8 @@ describe("alignPolygonClosed", () => {
 
     test("handles single point polygons", () => {
         const p1 = [{ x: 1, y: 1 }];
-        const p2 = [{ x: 1, y: 1 }];
-        expect(alignPolygonClosed(p1, p2)).toEqual(p1);
+        const p2 = [{ x: 2, y: 2 }];
+        expect(alignPolygonClosed(p1, p2)).toEqual(p2);
     });
 });
 
