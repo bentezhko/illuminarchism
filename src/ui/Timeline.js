@@ -587,6 +587,8 @@ export default class Timeline {
         this.dragEntityId = null;
         this.dragMode = null;
         this.entityDragTrackWidth = 0;
+        this.entityDragStartX = 0;
+        this.entityDragStartRange = { start: 0, end: 0 };
 
         document.body.style.cursor = 'default';
         document.removeEventListener('mousemove', this.onEntityDragBound);
