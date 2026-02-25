@@ -164,35 +164,19 @@ describe("Timeline Entity Dragging", () => {
         // Track width mock is 1000px. So 2 years per pixel.
     });
 
+    const findBar = (el) => {
+        if (el.dataset && el.dataset.id === 'ent1') return el;
+        for (const child of el.children) {
+            const found = findBar(child);
+            if (found) return found;
+        }
+        return null;
+    };
+
     test("Dragging an entity bar updates its validRange", () => {
         timeline.renderView();
-
-        // Find the bar element
-        // In our mock, createElement returns an object. We need to find the one with dataset.id = 'ent1'
-        // Since renderView appends to view-timeline, we can inspect mockElements or traverse.
-        // But our mock createElement doesn't auto-register to mockElements unless ID is present.
-        // We'll have to rely on traversing viewContainer's children.
-
         const viewContainer = mockElements.get('view-timeline');
-
-        // Traverse to find the bar
-        let bar = null;
-        // view -> header, groups...
-        // group -> header, content
-        // content -> row
-        // row -> label, track
-        // track -> bar
-
-        const findBar = (el) => {
-            if (el.dataset && el.dataset.id === 'ent1') return el;
-            for (const child of el.children) {
-                const found = findBar(child);
-                if (found) return found;
-            }
-            return null;
-        };
-
-        bar = findBar(viewContainer);
+        const bar = findBar(viewContainer);
         expect(bar).toBeTruthy();
 
         // Initial state
@@ -200,8 +184,6 @@ describe("Timeline Entity Dragging", () => {
         const initialEnd = mockEntity.validRange.end; // 1100
 
         // Simulate mousedown on bar
-        // clientX = 0 doesn't matter much as we look at delta.
-        // But let's say we click at x=500 (middle of track).
         bar.dispatchEvent({ type: 'mousedown', clientX: 500, preventDefault: () => {}, stopPropagation: () => {} });
 
         // Simulate mousemove by 50px to the right
@@ -218,16 +200,6 @@ describe("Timeline Entity Dragging", () => {
     test("Dragging left handle updates start year only", () => {
         timeline.renderView();
         const viewContainer = mockElements.get('view-timeline');
-
-        const findBar = (el) => {
-            if (el.dataset && el.dataset.id === 'ent1') return el;
-            for (const child of el.children) {
-                const found = findBar(child);
-                if (found) return found;
-            }
-            return null;
-        };
-
         const bar = findBar(viewContainer);
         expect(bar).toBeTruthy();
 
@@ -247,5 +219,29 @@ describe("Timeline Entity Dragging", () => {
         // 1000 -> 1050
         expect(mockEntity.validRange.start).toBe(initialStart + 50);
         expect(mockEntity.validRange.end).toBe(initialEnd);
+    });
+
+    test("Dragging right handle updates end year only", () => {
+        timeline.renderView();
+        const viewContainer = mockElements.get('view-timeline');
+
+        const bar = findBar(viewContainer);
+        expect(bar).toBeTruthy();
+
+        // Find right handle
+        const handleR = bar.children.find(c => c.classList.contains('handle-r'));
+        expect(handleR).toBeTruthy();
+
+        const initialStart = mockEntity.validRange.start; // 1000
+        const initialEnd = mockEntity.validRange.end; // 1100
+
+        // Drag right handle 25px left (-50 years)
+        handleR.dispatchEvent({ type: 'mousedown', clientX: 500, preventDefault: () => {}, stopPropagation: () => {} });
+        document.dispatchEvent({ type: 'mousemove', clientX: 475 });
+        document.dispatchEvent({ type: 'mouseup' });
+
+        // Expect end to move -50, start to stay same
+        expect(mockEntity.validRange.start).toBe(initialStart);
+        expect(mockEntity.validRange.end).toBe(initialEnd - 50);
     });
 });
