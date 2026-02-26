@@ -218,28 +218,21 @@
         </div>
         <div class="menu-content">
             <div class="menu-row">
-                <label>Name:</label>
-                <input type="text" id="ctx-name-input" class="ctx-input">
+                <input type="text" id="ctx-name-input" class="ctx-input" placeholder="Entity Name" style="width: 100%;">
             </div>
-            <div class="menu-row">
-                <label>Type:</label>
+            <div class="menu-row" style="justify-content: center; font-style: italic; color: #5c4d3c; margin-bottom: 4px;">
                 <span id="ctx-type"></span>
             </div>
-            <div class="menu-row">
-                <label>Span:</label>
+            <div class="menu-row" style="justify-content: center;">
                 <div style="display:flex; gap: 4px; align-items:center;">
                     <input type="number" id="ctx-start-year" class="ctx-input-year" title="Start Year">
                     <span style="font-size: 0.8rem;">to</span>
                     <input type="number" id="ctx-end-year" class="ctx-input-year" title="End Year">
                 </div>
             </div>
-            <div class="menu-row">
-                <label>Color:</label>
-                <input type="color" id="ctx-color-input">
-            </div>
-            <div class="menu-row">
-                <label>Texture:</label>
-                <select id="ctx-hatch-input" class="ctx-input">
+            <div class="menu-row" style="justify-content: center; gap: 10px;">
+                <input type="color" id="ctx-color-input" title="Entity Color">
+                <select id="ctx-hatch-input" class="ctx-input" title="Texture Style" style="width: auto;">
                     <option value="solid">Solid</option>
                     <option value="diagonal-right">Diagonal (Right)</option>
                     <option value="diagonal-left">Diagonal (Left)</option>
