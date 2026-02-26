@@ -16,6 +16,11 @@ export default class InputController {
         this.transformStart = null; // Mouse start position
         this.originalGeometry = null; // Snapshot for transform calculation
 
+        // State for Click vs Drag detection
+        this.interactionStartX = 0;
+        this.interactionStartY = 0;
+        this.wasHoveringOnDown = false;
+
         this.init();
     }
 
@@ -162,12 +167,10 @@ export default class InputController {
                     return;
                 }
 
-                // Priority 4: Default Navigation (Pan) & Deselection
-                // If not in a specific modal tool, Left Click creates Pan interaction
-                const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
-                if (deselectOnClickEmptyTools.includes(this.app.activeTool) && !this.app.hoveredEntityId) {
-                    this.app.deselect();
-                }
+                // Priority 4: Default Navigation (Pan)
+                this.interactionStartX = e.clientX;
+                this.interactionStartY = e.clientY;
+                this.wasHoveringOnDown = !!this.app.hoveredEntityId;
 
                 this.isDragging = true;
                 this.lastX = e.clientX;
@@ -222,15 +225,6 @@ export default class InputController {
             }
         });
 
-        // Hide context menu on click elsewhere
-        window.addEventListener('click', (e) => {
-            // If click is inside context menu, don't hide? 
-            // Actually, usually interacting with menu hides it or keeps it.
-            // For now, any click outside menu hides it.
-            if (!e.target.closest('#context-menu')) {
-                this.app.hideContextMenu();
-            }
-        });
 
         // FIXED: Mousemove with better bounds checking and drag prevention
         c.addEventListener('mousemove', (e) => {
@@ -296,7 +290,17 @@ export default class InputController {
             }
         });
 
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('mouseup', (e) => {
+            // Check for Click-to-Deselect (if not dragged significantly)
+            const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
+
+            if (this.isDragging && deselectOnClickEmptyTools.includes(this.app.activeTool) && !this.wasHoveringOnDown) {
+                const dist = distance({ x: e.clientX, y: e.clientY }, { x: this.interactionStartX, y: this.interactionStartY });
+                if (dist < 5) {
+                    this.app.deselect();
+                }
+            }
+
             if (this.isDragging && (this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'transform')) {
                 // Finish Edit - Commit Keyframe
                 this.app.finishVertexEdit();

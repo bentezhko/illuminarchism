@@ -1347,6 +1347,11 @@ body:not(.panel-collapsed) #view-timeline {
 
 #context-menu {
     min-width: 300px;
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 0.5rem;
+    z-index: 2000;
 }
 
 /* --- Notifications & Custom Modals --- */

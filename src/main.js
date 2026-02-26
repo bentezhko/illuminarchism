@@ -481,6 +481,11 @@ export default class IlluminarchismApp {
 
         // Context Menu elements
         this.ctxMenu = document.getElementById('context-menu');
+        // Attach to toolbar for persistent positioning
+        const toolbar = document.getElementById('toolbar');
+        if (toolbar && this.ctxMenu) {
+            toolbar.appendChild(this.ctxMenu);
+        }
         this.ctxHeader = document.getElementById('ctx-header');
         this.ctxNameInput = document.getElementById('ctx-name-input');
         this.ctxType = document.getElementById('ctx-type');
@@ -685,17 +690,6 @@ export default class IlluminarchismApp {
 
         // Position and Show
         this.ctxMenu.style.display = 'block';
-
-        // Adjust position if out of bounds
-        const rect = this.ctxMenu.getBoundingClientRect();
-        let posX = x;
-        let posY = y;
-
-        if (posX + rect.width > window.innerWidth) posX = x - rect.width;
-        if (posY + rect.height > window.innerHeight) posY = y - rect.height;
-
-        this.ctxMenu.style.left = `${posX}px`;
-        this.ctxMenu.style.top = `${posY}px`;
     }
 
     hideContextMenu() {
@@ -944,6 +938,7 @@ export default class IlluminarchismApp {
     deselect() {
         this.selectedEntityId = null;
         document.getElementById('info-panel').style.display = 'none';
+        this.hideContextMenu(); // Ensure context menu is hidden
         this.renderTimelineNotches(); // Clear notches
         if (this.activeTool === 'draw') this.setActiveTool('draw');
         this.render();
