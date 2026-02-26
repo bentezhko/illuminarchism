@@ -602,7 +602,8 @@ export default class IlluminarchismApp {
         const onMouseMove = (e) => {
             if (!isDragging) return;
             const dx = e.clientX - startX; // Drag right is positive
-            const SENSITIVITY = 10; // Pixels per step
+            // Reduced sensitivity for finer control on larger dial
+            const SENSITIVITY = 15; // Pixels per step (was 10)
             const steps = Math.round(dx / SENSITIVITY);
 
             let newIndex = startIndex + steps;

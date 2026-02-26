@@ -785,60 +785,120 @@ h1 span {
     /* Outline for visibility */
 }
 
-/* --- SPEED DIAL --- */
+/* --- SPEED DIAL (ASTROLABE MECHANISM) --- */
 .speed-control-clock {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
     cursor: ew-resize; /* Drag left/right */
-    width: 60px;
+    width: 120px; /* Wider footprint */
     position: relative;
 }
 
-.speed-dial-face {
-    width: 40px;
-    height: 40px;
+/* Main Mechanism Container */
+.speed-dial-mechanism {
+    width: 80px;
+    height: 80px;
+    position: relative;
     border-radius: 50%;
-    border: 2px solid var(--gold-leaf);
-    background: var(--ink-primary);
-    position: relative;
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+    /* No bg here, layers handle it */
 }
 
-/* Optional: Add tick marks via conic gradient or before/after */
-.speed-dial-face::before {
+/* Outer Brass Ring with Gear Teeth Illusion */
+.speed-dial-ring-outer {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, transparent 60%, var(--parchment-dark) 61%, var(--ink-primary) 65%, var(--gold-leaf) 70%, #8a6a24 100%);
+    border: 2px solid var(--ink-primary);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.4);
+}
+
+/* Inner Ecliptic Ring */
+.speed-dial-ring-inner {
+    position: absolute;
+    top: 10px; left: 10px; right: 10px; bottom: 10px;
+    border-radius: 50%;
+    background: var(--ink-primary);
+    border: 1px solid var(--gold-leaf);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+}
+
+/* Decorative Marks (Zodiac-ish) */
+.speed-dial-marks {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 50%;
+    border: 1px dashed rgba(255,255,255,0.15);
+    transform: scale(0.85);
+}
+
+.speed-dial-marks::before {
     content: '';
     position: absolute;
-    top: 2px; left: 2px; right: 2px; bottom: 2px;
-    border-radius: 50%;
-    border: 1px dashed rgba(255,255,255,0.2);
-    pointer-events: none;
+    top: 50%; left: 0; right: 0; height: 1px;
+    background: rgba(255,255,255,0.1);
+}
+.speed-dial-marks::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 50%; width: 1px;
+    background: rgba(255,255,255,0.1);
 }
 
+/* The Rete (Pointer) - Ornate Hand */
 .speed-dial-hand {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 2px;
-    height: 14px; /* Length of hand */
-    background: var(--rubric-red);
+    width: 6px; /* Wider base */
+    height: 35px; /* Longer reach */
+    background: transparent;
     transform-origin: bottom center;
-    transform: translate(-50%, -100%) rotate(0deg); /* Start pointing up */
+    /* Fancy shape via CSS clip-path or simple borders */
+    display: flex;
+    justify-content: center;
+    transform: translate(-50%, -100%) rotate(0deg);
     transition: transform 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
     pointer-events: none;
+    z-index: 5;
+}
+
+.speed-dial-hand::before {
+    /* The metal pointer */
+    content: '';
+    width: 2px;
+    height: 100%;
+    background: var(--rubric-red);
+    box-shadow: 0 0 2px black;
+}
+
+.speed-dial-hand::after {
+    /* Ornate tip or moon */
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gold-leaf);
+    border: 1px solid var(--rubric-red);
+    transform: translateY(-50%);
 }
 
 .speed-dial-hub {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 6px;
-    height: 6px;
-    background: var(--gold-leaf);
+    width: 12px;
+    height: 12px;
+    background: radial-gradient(circle, var(--gold-leaf) 30%, #5c4d3c 100%);
+    border: 1px solid var(--ink-primary);
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    z-index: 10;
     pointer-events: none;
 }
 
