@@ -1205,6 +1205,14 @@ body:not(.panel-collapsed) #view-timeline {
     font-size: 0.9em;
     text-transform: uppercase;
     letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#ctx-header {
+    flex-grow: 1;
+    margin-right: 10px;
 }
 
 .btn-ctx-focus {
