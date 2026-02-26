@@ -412,20 +412,10 @@ export default class IlluminarchismApp {
             }
         });
 
-        // Speed Slider Logic
+        // Speed Dial Logic
         this.speedOptions = [-16, -8, -4, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 8, 16];
-        const speedSlider = document.getElementById('speed-slider');
-        const speedDisplay = document.getElementById('speed-display');
-
         this.playbackSpeed = 1; // Default
-        if (speedSlider) {
-            speedSlider.value = this.speedOptions.indexOf(1); // Set initial slider position
-            speedSlider.addEventListener('input', (e) => {
-                const index = parseInt(e.target.value);
-                this.playbackSpeed = this.speedOptions[index];
-                if (speedDisplay) speedDisplay.textContent = `${this.playbackSpeed}x`;
-            });
-        }
+        this.initSpeedDial();
         // Play button listener moved to Timeline.js but we can keep it here if ref undefined or do nothing.
         // Timeline.js captures it by ID 'btn-play'.
 
@@ -561,6 +551,99 @@ export default class IlluminarchismApp {
 
         // Initial render of notches
         if (this.timeline) this.timeline.renderNotches();
+    }
+
+    initSpeedDial() {
+        const dial = document.getElementById('speed-control-clock');
+        const hand = document.getElementById('speed-dial-hand');
+        const display = document.getElementById('speed-display');
+
+        if (!dial || !hand || !display) return;
+
+        // Current index tracking
+        let currentIndex = this.speedOptions.indexOf(this.playbackSpeed);
+        if (currentIndex === -1) currentIndex = 8; // Default to 1x (index 8)
+
+        const updateVisuals = () => {
+            // Map index 0..12 to -150..150 degrees
+            // Center (Speed 0, Index 6) -> 0 degrees
+            // Index 0 -> -150 deg
+            // Index 12 -> 150 deg
+            const angle = (currentIndex - 6) * 25;
+            hand.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+
+            const val = this.speedOptions[currentIndex];
+            display.textContent = `${val}x`;
+            this.playbackSpeed = val;
+        };
+
+        // Initial update
+        updateVisuals();
+
+        // Interaction State
+        let isDragging = false;
+        let startY = 0;
+        let startIndex = 0;
+
+        // Mouse Down (Start Drag)
+        dial.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startY = e.clientY;
+            startIndex = currentIndex;
+            document.body.style.cursor = 'ns-resize';
+            e.preventDefault(); // Prevent text selection
+
+            // Add global listeners
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // Mouse Move (Drag)
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            const dy = startY - e.clientY; // Drag up is positive
+            const sensitivity = 10; // Pixels per step
+            const steps = Math.round(dy / sensitivity);
+
+            let newIndex = startIndex + steps;
+
+            // Clamp
+            if (newIndex < 0) newIndex = 0;
+            if (newIndex >= this.speedOptions.length) newIndex = this.speedOptions.length - 1;
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                updateVisuals();
+            }
+        };
+
+        // Mouse Up (End Drag)
+        const onMouseUp = () => {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.cursor = 'default';
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+        };
+
+        // Wheel Interaction
+        dial.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (e.deltaY < 0) {
+                // Scroll up -> Increase speed
+                if (currentIndex < this.speedOptions.length - 1) {
+                    currentIndex++;
+                    updateVisuals();
+                }
+            } else {
+                // Scroll down -> Decrease speed
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    updateVisuals();
+                }
+            }
+        });
     }
 
     showContextMenu(ent, x, y) {

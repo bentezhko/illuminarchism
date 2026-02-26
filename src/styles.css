@@ -785,61 +785,70 @@ h1 span {
     /* Outline for visibility */
 }
 
-input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    background: transparent;
-    position: relative;
-    z-index: 15;
-}
-
-input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    height: 24px;
-    width: 24px;
-    border-radius: 50%;
-    background: var(--ink-primary);
-    border: 2px solid var(--parchment-bg);
-    cursor: pointer;
-    margin-top: -10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-    position: relative;
-    z-index: 30;
-    /* Highest Z */
-}
-
-input[type=range]::-webkit-slider-runnable-track {
-    width: 100%;
-    height: 4px;
-    cursor: pointer;
-    background: var(--ink-faded);
-    border-radius: 2px;
-}
-
-.speed-control {
+/* --- SPEED DIAL --- */
+.speed-control-clock {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
+    gap: 2px;
+    cursor: ns-resize; /* Drag up/down */
+    width: 60px;
+    position: relative;
+}
+
+.speed-dial-face {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--gold-leaf);
+    background: var(--ink-primary);
+    position: relative;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+}
+
+/* Optional: Add tick marks via conic gradient or before/after */
+.speed-dial-face::before {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px; right: 2px; bottom: 2px;
+    border-radius: 50%;
+    border: 1px dashed rgba(255,255,255,0.2);
+    pointer-events: none;
+}
+
+.speed-dial-hand {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 14px; /* Length of hand */
+    background: var(--rubric-red);
+    transform-origin: bottom center;
+    transform: translate(-50%, -100%) rotate(0deg); /* Start pointing up */
+    transition: transform 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
+    pointer-events: none;
+}
+
+.speed-dial-hub {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    background: var(--gold-leaf);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+
+.speed-display-text {
     font-family: 'Cinzel', serif;
-    color: var(--ink-faded);
-    padding: 0.2rem 0.5rem;
-}
-
-#speed-slider {
-    width: 80px;
-    accent-color: var(--rubric-red);
-    cursor: pointer;
-    height: 4px;
-}
-
-#speed-display {
-    width: 30px;
-    text-align: right;
     font-weight: bold;
-    color: var(--ink-primary);
+    font-size: 0.8rem;
+    color: var(--rubric-red);
+    text-align: center;
+    margin-top: 2px;
 }
 
 #map-canvas {
