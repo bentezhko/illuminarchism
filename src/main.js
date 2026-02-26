@@ -412,20 +412,10 @@ export default class IlluminarchismApp {
             }
         });
 
-        // Speed Slider Logic
+        // Speed Dial Logic
         this.speedOptions = [-16, -8, -4, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 8, 16];
-        const speedSlider = document.getElementById('speed-slider');
-        const speedDisplay = document.getElementById('speed-display');
-
         this.playbackSpeed = 1; // Default
-        if (speedSlider) {
-            speedSlider.value = this.speedOptions.indexOf(1); // Set initial slider position
-            speedSlider.addEventListener('input', (e) => {
-                const index = parseInt(e.target.value);
-                this.playbackSpeed = this.speedOptions[index];
-                if (speedDisplay) speedDisplay.textContent = `${this.playbackSpeed}x`;
-            });
-        }
+        this.initSpeedDial();
         // Play button listener moved to Timeline.js but we can keep it here if ref undefined or do nothing.
         // Timeline.js captures it by ID 'btn-play'.
 
@@ -561,6 +551,113 @@ export default class IlluminarchismApp {
 
         // Initial render of notches
         if (this.timeline) this.timeline.renderNotches();
+    }
+
+    initSpeedDial() {
+        const dial = document.getElementById('speed-control-clock');
+        const hand = document.getElementById('speed-dial-hand');
+        const display = document.getElementById('speed-display');
+
+        if (!dial || !hand || !display) return;
+
+        // Current index tracking
+        let currentIndex = this.speedOptions.indexOf(this.playbackSpeed);
+        if (currentIndex === -1) currentIndex = 8; // Default to 1x (index 8)
+
+        const updateVisuals = () => {
+            // Map index 0..12 to percentage width (5% to 95%)
+            const pct = 5 + (currentIndex / (this.speedOptions.length - 1)) * 90;
+
+            // Move Hand
+            hand.style.left = `${pct}%`;
+
+            // Move Hub (Cap) to match
+            const hub = document.querySelector('.speed-dial-hub');
+            if (hub) hub.style.left = `${pct}%`;
+
+            // Reset transform used by old dial
+            hand.style.transform = 'translateX(-50%)';
+
+            const val = this.speedOptions[currentIndex];
+            display.textContent = `${val}x`;
+            this.playbackSpeed = val;
+        };
+
+        // Initial update
+        updateVisuals();
+
+        // Interaction State
+        let isDragging = false;
+        let startX = 0;
+        let startIndex = 0;
+
+        // Mouse Down (Start Drag OR Click Jump)
+        dial.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startIndex = currentIndex;
+            document.body.style.cursor = 'ew-resize';
+            e.preventDefault();
+
+            // Calculate jump to position immediately
+            const rect = dial.getBoundingClientRect();
+            const relX = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, relX / rect.width));
+
+            // Map 0..1 to index range
+            const newIndex = Math.round(pct * (this.speedOptions.length - 1));
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                startIndex = newIndex; // Reset drag start relative to new pos
+                updateVisuals();
+            }
+
+            // Add global listeners
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+
+        // Mouse Move (Drag)
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX; // Drag right is positive
+            // Reduced sensitivity for finer control on larger dial
+            const SENSITIVITY = 15; // Pixels per step (was 10)
+            const steps = Math.round(dx / SENSITIVITY);
+
+            let newIndex = startIndex + steps;
+
+            // Clamp using Math.min/max
+            newIndex = Math.max(0, Math.min(newIndex, this.speedOptions.length - 1));
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                updateVisuals();
+            }
+        };
+
+        // Mouse Up (End Drag)
+        const onMouseUp = () => {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.cursor = 'default';
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+        };
+
+        // Wheel Interaction (Refactored)
+        dial.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const direction = e.deltaY < 0 ? 1 : -1;
+            const newIndex = Math.max(0, Math.min(currentIndex + direction, this.speedOptions.length - 1));
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                updateVisuals();
+            }
+        });
     }
 
     showContextMenu(ent, x, y) {
