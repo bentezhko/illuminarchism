@@ -1205,6 +1205,30 @@ body:not(.panel-collapsed) #view-timeline {
     font-size: 0.9em;
     text-transform: uppercase;
     letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#ctx-header {
+    flex-grow: 1;
+    margin-right: 10px;
+}
+
+.btn-ctx-focus {
+    background: transparent;
+    border: none;
+    color: rgba(243, 233, 210, 0.5);
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.2s, transform 0.2s;
+}
+
+.btn-ctx-focus:hover {
+    color: #fff;
+    transform: scale(1.1);
 }
 
 .menu-content {

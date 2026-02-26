@@ -215,7 +215,6 @@ export default class InputController {
                 const ent = this.app.entitiesById.get(this.app.hoveredEntityId);
                 if (ent) {
                     this.app.selectEntity(ent.id, true);
-                    this.app.focusSelectedEntity();
                     this.app.showContextMenu(ent, e.clientX, e.clientY);
                 }
             } else {
