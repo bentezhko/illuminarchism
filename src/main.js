@@ -565,12 +565,18 @@ export default class IlluminarchismApp {
         if (currentIndex === -1) currentIndex = 8; // Default to 1x (index 8)
 
         const updateVisuals = () => {
-            // Map index 0..12 to -150..150 degrees
-            // Center (Speed 0, Index 6) -> 0 degrees
-            // Index 0 -> -150 deg
-            // Index 12 -> 150 deg
-            const angle = (currentIndex - 6) * 25;
-            hand.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+            // Map index 0..12 to percentage width (5% to 95%)
+            const pct = 5 + (currentIndex / (this.speedOptions.length - 1)) * 90;
+
+            // Move Hand
+            hand.style.left = `${pct}%`;
+
+            // Move Hub (Cap) to match
+            const hub = document.querySelector('.speed-dial-hub');
+            if (hub) hub.style.left = `${pct}%`;
+
+            // Reset transform used by old dial
+            hand.style.transform = 'translateX(-50%)';
 
             const val = this.speedOptions[currentIndex];
             display.textContent = `${val}x`;
@@ -585,13 +591,27 @@ export default class IlluminarchismApp {
         let startX = 0;
         let startIndex = 0;
 
-        // Mouse Down (Start Drag)
+        // Mouse Down (Start Drag OR Click Jump)
         dial.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX;
             startIndex = currentIndex;
             document.body.style.cursor = 'ew-resize';
-            e.preventDefault(); // Prevent text selection
+            e.preventDefault();
+
+            // Calculate jump to position immediately
+            const rect = dial.getBoundingClientRect();
+            const relX = e.clientX - rect.left;
+            const pct = Math.max(0, Math.min(1, relX / rect.width));
+
+            // Map 0..1 to index range
+            const newIndex = Math.round(pct * (this.speedOptions.length - 1));
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                startIndex = newIndex; // Reset drag start relative to new pos
+                updateVisuals();
+            }
 
             // Add global listeners
             document.addEventListener('mousemove', onMouseMove);
