@@ -582,15 +582,15 @@ export default class IlluminarchismApp {
 
         // Interaction State
         let isDragging = false;
-        let startY = 0;
+        let startX = 0;
         let startIndex = 0;
 
         // Mouse Down (Start Drag)
         dial.addEventListener('mousedown', (e) => {
             isDragging = true;
-            startY = e.clientY;
+            startX = e.clientX;
             startIndex = currentIndex;
-            document.body.style.cursor = 'ns-resize';
+            document.body.style.cursor = 'ew-resize';
             e.preventDefault(); // Prevent text selection
 
             // Add global listeners
@@ -601,15 +601,14 @@ export default class IlluminarchismApp {
         // Mouse Move (Drag)
         const onMouseMove = (e) => {
             if (!isDragging) return;
-            const dy = startY - e.clientY; // Drag up is positive
-            const sensitivity = 10; // Pixels per step
-            const steps = Math.round(dy / sensitivity);
+            const dx = e.clientX - startX; // Drag right is positive
+            const SENSITIVITY = 10; // Pixels per step
+            const steps = Math.round(dx / SENSITIVITY);
 
             let newIndex = startIndex + steps;
 
-            // Clamp
-            if (newIndex < 0) newIndex = 0;
-            if (newIndex >= this.speedOptions.length) newIndex = this.speedOptions.length - 1;
+            // Clamp using Math.min/max
+            newIndex = Math.max(0, Math.min(newIndex, this.speedOptions.length - 1));
 
             if (newIndex !== currentIndex) {
                 currentIndex = newIndex;
@@ -627,21 +626,15 @@ export default class IlluminarchismApp {
             }
         };
 
-        // Wheel Interaction
+        // Wheel Interaction (Refactored)
         dial.addEventListener('wheel', (e) => {
             e.preventDefault();
-            if (e.deltaY < 0) {
-                // Scroll up -> Increase speed
-                if (currentIndex < this.speedOptions.length - 1) {
-                    currentIndex++;
-                    updateVisuals();
-                }
-            } else {
-                // Scroll down -> Decrease speed
-                if (currentIndex > 0) {
-                    currentIndex--;
-                    updateVisuals();
-                }
+            const direction = e.deltaY < 0 ? 1 : -1;
+            const newIndex = Math.max(0, Math.min(currentIndex + direction, this.speedOptions.length - 1));
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                updateVisuals();
             }
         });
     }

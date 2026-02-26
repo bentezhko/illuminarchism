@@ -791,7 +791,7 @@ h1 span {
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    cursor: ns-resize; /* Drag up/down */
+    cursor: ew-resize; /* Drag left/right */
     width: 60px;
     position: relative;
 }
