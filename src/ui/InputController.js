@@ -296,7 +296,7 @@ export default class InputController {
 
             if (this.isDragging && deselectOnClickEmptyTools.includes(this.app.activeTool) && !this.wasHoveringOnDown) {
                 const dist = distance({ x: e.clientX, y: e.clientY }, { x: this.interactionStartX, y: this.interactionStartY });
-                if (dist < 5) {
+                if (dist < CONFIG.CLICK_DRAG_THRESHOLD) {
                     this.app.deselect();
                 }
             }
