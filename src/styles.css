@@ -192,7 +192,7 @@ h1 span {
 /* Toolbar */
 #toolbar {
     position: absolute;
-    left: 1rem;
+    left: 0;
     top: 50%;
     transform: translateY(-50%);
     display: flex;
@@ -201,9 +201,11 @@ h1 span {
     background: rgba(243, 233, 210, 0.95);
     padding: 0.5rem;
     border: var(--border-width) solid var(--ink-primary);
-    border-radius: 4px;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
     box-shadow: var(--ui-shadow);
     align-items: center;
+    z-index: 100;
 }
 
 .tool-btn {
@@ -430,17 +432,20 @@ h1 span {
 /* Info Panel - Simplified */
 #info-panel {
     position: absolute;
-    right: 320px;
-    top: 80px;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0;
     width: 250px;
-    /* Moved to avoid sidebar */
+    /* Docked directly to the right side of the toolbar */
     background: rgba(243, 233, 210, 0.95);
     border: var(--border-width) solid var(--ink-primary);
+    border-left: none;
+    border-radius: 0 4px 4px 0;
     padding: 1rem;
     box-shadow: var(--ui-shadow);
     display: none;
-    transition: right 0.3s;
-    z-index: 100; /* Ensure above map */
+    z-index: 99; /* Just beneath toolbar so borders merge well */
 }
 
 .info-input {
