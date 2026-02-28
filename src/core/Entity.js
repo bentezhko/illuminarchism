@@ -140,6 +140,15 @@ export default class HistoricalEntity {
     }
 
     /**
+     * Updates legacy properties based on the current domain and typology.
+     * Should be called when an entity's domain or typology is modified post-creation.
+     */
+    updateDerivedProperties() {
+        this.category = this._deriveCategoryFromDomain(this.domain);
+        this.type = this._deriveTypeFromTypology(this.typology);
+    }
+
+    /**
      * Derive legacy category from domain
      */
     _deriveCategoryFromDomain(domain) {

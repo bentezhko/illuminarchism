@@ -168,29 +168,8 @@ export default class Dial {
         }
 
         if (changed) {
-            // Update entity properties based on ontology
-            // Re-derive legacy category and type for compatibility
-            const mapping = {
-                'political': 'political',
-                'linguistic': 'linguistic',
-                'religious': 'faith',
-                'geographic': 'geographical'
-            };
-            ent.category = mapping[ent.domain] || 'political';
-
-            const typeMapping = {
-                'band': 'polity', 'tribe': 'polity', 'chiefdom': 'polity', 'archaic-state': 'polity',
-                'empire': 'polity', 'nation-state': 'polity', 'supranational': 'polity',
-                'city': 'city', 'vassal': 'vassal', 'disputed': 'polity',
-                'macro-phylum': 'language', 'family': 'language', 'branch': 'language', 'language': 'language',
-                'dialect': 'language', 'sprachbund': 'language', 'isogloss': 'language', 'word-isogloss': 'word', 'sound-isogloss': 'sound',
-                'universalizing': 'religion', 'ethnic': 'religion', 'syncretic': 'religion', 'new-religious': 'religion',
-                'philosophical': 'religion', 'tradition': 'religion', 'denomination': 'sect', 'sect': 'sect',
-                'diaspora': 'diaspora', 'sacred-site': 'city',
-                'cultivated': 'polity', 'natural': 'polity', 'aquatic': 'water', 'artificial': 'polity',
-                'bare': 'polity', 'river': 'river', 'mountain': 'polity', 'coast': 'river', 'island': 'polity'
-            };
-            ent.type = typeMapping[ent.typology] || 'polity';
+            // Update legacy derived properties via the entity class
+            ent.updateDerivedProperties();
 
             // Re-infer boundary type
             ent.boundaryType = ent._inferBoundaryType();
