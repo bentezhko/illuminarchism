@@ -208,8 +208,8 @@ h1 span {
 
 .tool-btn {
     min-width: 44px;
-    width: auto;
-    padding: 0 0.5rem;
+    width: 44px;
+    padding: 0;
     height: 44px;
     background: var(--parchment-dark);
     border: 1px solid var(--ink-faded);
@@ -219,7 +219,7 @@ h1 span {
     justify-content: center;
     font-family: 'Cinzel', serif;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 1.2rem;
     color: var(--ink-primary);
     transition: all 0.2s ease;
     position: relative;
@@ -438,6 +438,7 @@ h1 span {
     box-shadow: var(--ui-shadow);
     display: none;
     transition: right 0.3s;
+    z-index: 100; /* Ensure above map */
 }
 
 .info-input {

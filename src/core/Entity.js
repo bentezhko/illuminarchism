@@ -337,9 +337,7 @@ export default class HistoricalEntity {
         this.timeline = this.timeline.filter(k => k.year !== year);
         let finalGeo;
 
-        const typologyInfo = getTypology(this.domain, this.typology);
-        const isPointType = (typologyInfo && typologyInfo.geometryType === 'Point') ||
-            (Array.isArray(geometry) && geometry.length === 1);
+        const isPointType = (Array.isArray(geometry) && geometry.length === 1);
 
         if (isPointType) {
             // Deep copy to prevent reference issues, but keep as a single point

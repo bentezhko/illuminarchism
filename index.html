@@ -54,29 +54,12 @@
         </header>
 
         <div id="toolbar" class="pointer-events-auto">
-            <button class="tool-btn active" data-tool="pan" title="Navigate (Left: Pan | Right: Seek)">Navigate</button>
+            <button class="tool-btn active" data-tool="pan" title="Navigate (Left: Pan | Right: Seek)">⌖</button>
             <div style="border-top: 1px solid var(--ink-faded); width: 100%; margin: 0.2rem 0;"></div>
-
-            <!-- NEW: The Entity Dial (Triple Wheel) -->
-            <div id="entity-dial" title="Ontology: Domain - Form - Rank">
-                <div class="dial-tumbler" id="dial-domain">
-                    <span class="dial-label">Dom</span>
-                    <span class="dial-value" id="val-domain">POL</span>
-                </div>
-                <div class="dial-tumbler" id="dial-form">
-                    <span class="dial-label">Frm</span>
-                    <span class="dial-value" id="val-form">RLM</span>
-                </div>
-                <div class="dial-tumbler" id="dial-rank">
-                    <span class="dial-label">Rnk</span>
-                    <span class="dial-value" id="val-rank">KGD</span>
-                </div>
-            </div>
-
-            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">Inscribe</button>
-            <button class="tool-btn" data-tool="vertex-edit" title="Edit Points">Edit</button>
-            <button class="tool-btn" data-tool="transform" title="Transform (Move/Scale)">Shift</button>
-            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">Scrape</button>
+            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">✎</button>
+            <button class="tool-btn" data-tool="vertex-edit" title="Edit Points">⬡</button>
+            <button class="tool-btn" data-tool="transform" title="Transform (Move/Scale)">⇱</button>
+            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
         </div>
 
     </div>
@@ -134,11 +117,28 @@
 
     <div id="info-panel" class="pointer-events-auto">
         <input type="text" id="info-name-input" class="info-input" value="Region Name">
-        <div class="info-row">
+
+        <!-- NEW: The Entity Dial (Triple Wheel) -->
+        <div id="entity-dial" title="Ontology: Domain - Form - Rank" style="margin-bottom: 0.5rem; justify-content: space-around;">
+            <div class="dial-tumbler" id="dial-domain">
+                <span class="dial-label">Dom</span>
+                <span class="dial-value" id="val-domain">POL</span>
+            </div>
+            <div class="dial-tumbler" id="dial-form">
+                <span class="dial-label">Frm</span>
+                <span class="dial-value" id="val-form">RLM</span>
+            </div>
+            <div class="dial-tumbler" id="dial-rank">
+                <span class="dial-label">Rnk</span>
+                <span class="dial-value" id="val-rank">KGD</span>
+            </div>
+        </div>
+
+        <div class="info-row" style="display:none;">
             <span>Category:</span>
             <span id="info-cat" style="font-weight:bold;">Political</span>
         </div>
-        <div class="info-row">
+        <div class="info-row" style="display:none;">
             <span>Type:</span>
             <span id="info-type" style="font-weight:bold;">Polity</span>
         </div>

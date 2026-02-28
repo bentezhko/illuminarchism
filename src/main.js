@@ -1122,8 +1122,14 @@ export default class IlluminarchismApp {
                 if (!e || !e.currentGeometry || e.currentGeometry.length === 0) continue;
 
                 let hit = false;
-                if (e.currentGeometry.length === 1) {
-                    if (distance(wp, e.currentGeometry[0]) < 25 / (this.renderer.transform.k || 1)) hit = true;
+
+                // Account for dynamic zoom point rendering for cities
+                const isPointRendered = e.currentGeometry.length === 1 ||
+                    ((e.typology === 'city' || e.typology === 'sacred-site') && this.renderer.transform.k <= 1.0);
+
+                if (isPointRendered) {
+                    const pt = e.currentGeometry.length > 1 ? getCentroid(e.currentGeometry) : e.currentGeometry[0];
+                    if (distance(wp, pt) < 25 / (this.renderer.transform.k || 1)) hit = true;
                 } else if (e.type === 'river') {
                     const pts = e.currentGeometry;
                     for (let j = 0; j < pts.length - 1; j++) {

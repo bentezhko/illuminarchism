@@ -46,7 +46,15 @@ export default class MedievalRenderer {
     }
 
     _isPointEntity(ent) {
-        return !!(ent && ent.currentGeometry && ent.currentGeometry.length === 1);
+        if (!ent || !ent.currentGeometry) return false;
+        if (ent.currentGeometry.length === 1) return true;
+        // Check if it's a city/settlement-like typology and we are zoomed out
+        if (ent.typology === 'city' || ent.typology === 'sacred-site') {
+            if (this.transform.k <= 1.0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     _getEntityScore(e) {
@@ -579,8 +587,14 @@ export default class MedievalRenderer {
 
     drawPointMarker(ent, isHovered, isSelected, targetCtx = null) {
         const ctx = targetCtx || this.ctx;
-        const pt = ent.currentGeometry[0];
+        if (!ent.currentGeometry || ent.currentGeometry.length === 0) return;
+
+        let pt = ent.currentGeometry[0];
+        if (ent.currentGeometry.length > 1) {
+            pt = getCentroid(ent.currentGeometry);
+        }
         if (!pt) return;
+
         const size = 6 / this.transform.k;
 
         // Decorative diamond marker (same as legacy city marker for now)
@@ -606,8 +620,9 @@ export default class MedievalRenderer {
     drawLabel(ent, isSelected) {
         let cx, cy;
         if (this._isPointEntity(ent)) {
-            cx = ent.currentGeometry[0].x + 10 / this.transform.k;
-            cy = ent.currentGeometry[0].y + 2 / this.transform.k;
+            const pt = ent.currentGeometry.length > 1 ? getCentroid(ent.currentGeometry) : ent.currentGeometry[0];
+            cx = pt.x + 10 / this.transform.k;
+            cy = pt.y + 2 / this.transform.k;
         } else {
             const c = getCentroid(ent.currentGeometry);
             cx = c.x; cy = c.y;
