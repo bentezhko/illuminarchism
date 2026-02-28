@@ -1,5 +1,6 @@
 import { getCentroid, getBoundingBox } from '../core/math.js';
 import { fbm, perturbPoint } from './filters.js';
+import { isRenderedAsPoint } from '../core/Ontology.js';
 
 const GRID_CONFIG = {
     CELL_SIZE: 100,
@@ -48,13 +49,8 @@ export default class MedievalRenderer {
     _isPointEntity(ent) {
         if (!ent || !ent.currentGeometry) return false;
         if (ent.currentGeometry.length === 1) return true;
-        // Check if it's a city/settlement-like typology and we are zoomed out
-        if (ent.typology === 'city' || ent.typology === 'sacred-site') {
-            if (this.transform.k <= 1.0) {
-                return true;
-            }
-        }
-        return false;
+        // Check if it's a zoom-dependent point entity
+        return isRenderedAsPoint(ent, this.transform.k);
     }
 
     _getEntityScore(e) {

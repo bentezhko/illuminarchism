@@ -550,8 +550,27 @@ export const WALS_FEATURES = {
 };
 
 // ============================================================================
+// ZOOM-DEPENDENT RENDERING CONFIGURATION
+// ============================================================================
+
+export const POINT_RENDERING_ZOOM_THRESHOLD = 1.0;
+export const POINT_RENDERING_TYPOLOGIES = ['city', 'sacred-site'];
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+/**
+ * Determines if an entity should be rendered as a point based on its typology and zoom level.
+ * Used to conditionally render cities as polygons when zoomed in.
+ */
+export function isRenderedAsPoint(entity, zoomLevel) {
+    if (!entity || !entity.typology) return false;
+    if (POINT_RENDERING_TYPOLOGIES.includes(entity.typology)) {
+        return zoomLevel <= POINT_RENDERING_ZOOM_THRESHOLD;
+    }
+    return false;
+}
 
 /**
  * Get all typologies for a given domain
@@ -715,5 +734,8 @@ export default {
     POLITICAL_SUBTYPES,
     LINGUISTIC_SUBTYPES,
     RELIGIOUS_SUBTYPES,
-    GEOGRAPHIC_SUBTYPES
+    GEOGRAPHIC_SUBTYPES,
+    POINT_RENDERING_ZOOM_THRESHOLD,
+    POINT_RENDERING_TYPOLOGIES,
+    isRenderedAsPoint
 };

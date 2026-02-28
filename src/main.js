@@ -4,7 +4,7 @@ import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
 import { distance, getCentroid, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
 
-import { buildTaxonomyForUI } from './core/Ontology.js';
+import { buildTaxonomyForUI, isRenderedAsPoint } from './core/Ontology.js';
 import { Quadtree } from './core/SpatialIndex.js';
 import RegistryRenderer from './ui/RegistryRenderer.js';
 import Timeline from './ui/Timeline.js';
@@ -813,7 +813,7 @@ export default class IlluminarchismApp {
                 const ent = this.entitiesById.get(this.selectedEntityId);
                 hint.textContent = `EDITING: Redrawing geometry for ${ent.name} in ${this.currentYear}.`;
             } else {
-                if (this.drawTypology === 'city') hint.textContent = "Click once to place City.";
+                if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') hint.textContent = "Click once to place Settlement.";
                 else hint.textContent = `Click to draw new ${this.drawCategory} ${this.drawType}. Double-click to finish.`;
             }
         } else if (name === 'transform') {
@@ -1124,8 +1124,7 @@ export default class IlluminarchismApp {
                 let hit = false;
 
                 // Account for dynamic zoom point rendering for cities
-                const isPointRendered = e.currentGeometry.length === 1 ||
-                    ((e.typology === 'city' || e.typology === 'sacred-site') && this.renderer.transform.k <= 1.0);
+                const isPointRendered = e.currentGeometry.length === 1 || isRenderedAsPoint(e, this.renderer.transform.k);
 
                 if (isPointRendered) {
                     const pt = e.currentGeometry.length > 1 ? getCentroid(e.currentGeometry) : e.currentGeometry[0];
