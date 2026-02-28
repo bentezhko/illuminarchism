@@ -46,7 +46,17 @@ export default class MedievalRenderer {
     }
 
     _isPointEntity(ent) {
-        return !!(ent && ent.currentGeometry && ent.currentGeometry.length === 1);
+        if (!ent || !ent.currentGeometry) return false;
+
+        // Explicit point geometry
+        if (ent.currentGeometry.length === 1) return true;
+
+        // If it's a city and we are zoomed out, render it as a point
+        if (ent.typology === 'city' && this.transform && this.transform.k < 0.8) {
+            return true;
+        }
+
+        return false;
     }
 
     _getEntityScore(e) {
@@ -579,7 +589,15 @@ export default class MedievalRenderer {
 
     drawPointMarker(ent, isHovered, isSelected, targetCtx = null) {
         const ctx = targetCtx || this.ctx;
-        const pt = ent.currentGeometry[0];
+
+        let pt;
+        if (ent.currentGeometry.length === 1) {
+            pt = ent.currentGeometry[0];
+        } else {
+            // If it's a polygon acting as a point (e.g., a city zoomed out), use its centroid
+            pt = getCentroid(ent.currentGeometry);
+        }
+
         if (!pt) return;
         const size = 6 / this.transform.k;
 
@@ -606,8 +624,14 @@ export default class MedievalRenderer {
     drawLabel(ent, isSelected) {
         let cx, cy;
         if (this._isPointEntity(ent)) {
-            cx = ent.currentGeometry[0].x + 10 / this.transform.k;
-            cy = ent.currentGeometry[0].y + 2 / this.transform.k;
+            let pt;
+            if (ent.currentGeometry.length === 1) {
+                pt = ent.currentGeometry[0];
+            } else {
+                pt = getCentroid(ent.currentGeometry);
+            }
+            cx = pt.x + 10 / this.transform.k;
+            cy = pt.y + 2 / this.transform.k;
         } else {
             const c = getCentroid(ent.currentGeometry);
             cx = c.x; cy = c.y;

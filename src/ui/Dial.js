@@ -144,6 +144,25 @@ export default class Dial {
         }
 
         this.updateDisplay();
+
+        // If an entity is selected, update it and re-render
+        if (this.app.selectedEntityId) {
+            const ent = this.app.entitiesById.get(this.app.selectedEntityId);
+            if (ent) {
+                ent.domain = this.app.drawDomain;
+                ent.typology = this.app.drawTypology;
+                ent.subtype = this.app.drawSubtype;
+
+                // Update the Info Panel text to match
+                const catEl = document.getElementById('info-cat');
+                if (catEl) catEl.textContent = ent.domain;
+                const typeEl = document.getElementById('info-type');
+                if (typeEl) typeEl.textContent = ent.typology;
+
+                this.app.updateEntities();
+                this.app.render();
+            }
+        }
     }
 
     /**

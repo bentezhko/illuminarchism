@@ -889,39 +889,33 @@ export default class IlluminarchismApp {
             const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
             const color = colors[Math.floor(Math.random() * colors.length)];
 
-            // Generate descriptive name based on typology
-            let name = "New Territory";
-            if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') name = "New Settlement";
-            else if (this.drawTypology === 'river' || this.drawTypology === 'coast') name = "New River";
-            else if (this.drawTypology === 'aquatic') name = "New Sea/Lake";
-            else if (this.drawDomain === 'linguistic') name = "New Language Zone";
-            else if (this.drawDomain === 'religious') name = "New Faith Zone";
-            else if (typologyData) name = `New ${typologyData.label}`;
-
-            // Create entity using new ontology config format
-            const newEnt = new HistoricalEntity(id, name, {
-                domain: this.drawDomain,
-                typology: this.drawTypology,
-                subtype: this.drawSubtype,
+            // Create entity using default generic configuration
+            // so users can define it later via the Info Box
+            const newEnt = new HistoricalEntity(id, "New Entity", {
+                domain: "POL",      // Default Political Domain
+                typology: "RLM",    // Default Polity Form
+                subtype: "KGD",     // Default Kingdom Rank
                 color: color,
-                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9,
+                boundaryConfidence: 0.9,
                 layerId: this.activeLayerId || 'layer_land'
             });
+
             // New shape creation (no resampling)
             newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
             newEnt.validRange.start = this.currentYear - 200;
             newEnt.validRange.end = this.currentYear + 200;
 
             this.entities.push(newEnt);
-            this.selectEntity(id);
+            this.entitiesById.set(id, newEnt);
             this.renderRegistry();
+            this.selectEntity(id, true);
         }
 
         this.draftPoints = [];
         this.draftCursor = null;
         this.updateEntities();
         this.render();
-        if (this.activeTool === 'draw') this.setTool('draw');
+        this.setActiveTool('pan');
     }
 
     cancelDraft() { this.draftPoints = []; this.draftCursor = null; this.render(); }
@@ -965,8 +959,13 @@ export default class IlluminarchismApp {
                 }
 
                 this.drawSubtype = ent.subtype || null;
-                this.updateDialDisplay();
+            } else {
+                // If invalid or missing, default to POL
+                this.drawDomain = "POL";
+                this.drawTypology = "RLM";
+                this.drawSubtype = "KGD";
             }
+            this.updateDialDisplay();
 
             const p = document.getElementById('info-panel');
             const isVisible = p && p.style.display === 'block';

@@ -204,13 +204,15 @@ h1 span {
     border-radius: 4px;
     box-shadow: var(--ui-shadow);
     align-items: center;
+    width: 50px; /* Make toolbar more vertical and less wide */
 }
 
 .tool-btn {
-    min-width: 44px;
-    width: auto;
-    padding: 0 0.5rem;
-    height: 44px;
+    min-width: 36px;
+    width: 36px;
+    padding: 0;
+    height: 36px;
+    font-size: 1.2rem;
     background: var(--parchment-dark);
     border: 1px solid var(--ink-faded);
     cursor: pointer;
