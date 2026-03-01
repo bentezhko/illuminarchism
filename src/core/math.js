@@ -45,6 +45,12 @@ export function getCentroid(points) {
     return { x: cx / points.length, y: cy / points.length };
 }
 
+export function getRepresentativePoint(geometry) {
+    if (!geometry || geometry.length === 0) return { x: 0, y: 0 };
+    if (geometry.length === 1) return geometry[0];
+    return getCentroid(geometry);
+}
+
 export function getBoundingBox(points) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (let p of points) {

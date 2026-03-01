@@ -783,7 +783,7 @@ export default class Timeline {
                         e.preventDefault();
                         e.stopPropagation();
                         this.app.selectEntity(ent.id, true);
-                        this.app.showContextMenu(ent, e.clientX, e.clientY);
+                        // this.app.showContextMenu(ent, e.clientX, e.clientY); // Replaced by docked info-panel
                     });
 
                     // Hover interactions

@@ -218,7 +218,7 @@ export default class InputController {
                 const ent = this.app.entitiesById.get(this.app.hoveredEntityId);
                 if (ent) {
                     this.app.selectEntity(ent.id, true);
-                    this.app.showContextMenu(ent, e.clientX, e.clientY);
+                    // this.app.showContextMenu(ent, e.clientX, e.clientY); // Old context menu overlaps with new info-panel
                 }
             } else {
                 this.app.hideContextMenu();

@@ -1,4 +1,4 @@
-import { getCentroid, getBoundingBox } from '../core/math.js';
+import { getCentroid, getRepresentativePoint, getBoundingBox } from '../core/math.js';
 import { fbm, perturbPoint } from './filters.js';
 import { isRenderedAsPoint } from '../core/Ontology.js';
 
@@ -585,10 +585,7 @@ export default class MedievalRenderer {
         const ctx = targetCtx || this.ctx;
         if (!ent.currentGeometry || ent.currentGeometry.length === 0) return;
 
-        let pt = ent.currentGeometry[0];
-        if (ent.currentGeometry.length > 1) {
-            pt = getCentroid(ent.currentGeometry);
-        }
+        const pt = getRepresentativePoint(ent.currentGeometry);
         if (!pt) return;
 
         const size = 6 / this.transform.k;
@@ -615,13 +612,14 @@ export default class MedievalRenderer {
 
     drawLabel(ent, isSelected) {
         let cx, cy;
+        const pt = getRepresentativePoint(ent.currentGeometry);
+
         if (this._isPointEntity(ent)) {
-            const pt = ent.currentGeometry.length > 1 ? getCentroid(ent.currentGeometry) : ent.currentGeometry[0];
             cx = pt.x + 10 / this.transform.k;
             cy = pt.y + 2 / this.transform.k;
         } else {
-            const c = getCentroid(ent.currentGeometry);
-            cx = c.x; cy = c.y;
+            cx = pt.x;
+            cy = pt.y;
         }
 
         let fontSize;

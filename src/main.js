@@ -2,7 +2,7 @@
 import MedievalRenderer from './renderer/MedievalRenderer.js';
 import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
-import { distance, getCentroid, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
+import { distance, getCentroid, getRepresentativePoint, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
 
 import { buildTaxonomyForUI, isRenderedAsPoint } from './core/Ontology.js';
 import { Quadtree } from './core/SpatialIndex.js';
@@ -481,11 +481,8 @@ export default class IlluminarchismApp {
 
         // Context Menu elements
         this.ctxMenu = document.getElementById('context-menu');
-        // Attach to toolbar for persistent positioning
-        const toolbar = document.getElementById('toolbar');
-        if (toolbar && this.ctxMenu) {
-            toolbar.appendChild(this.ctxMenu);
-        }
+        // The context menu is deprecated in favor of the docked info-panel,
+        // so we don't append it to the toolbar to prevent overlapping if it is accidentally shown.
         this.ctxHeader = document.getElementById('ctx-header');
         this.ctxNameInput = document.getElementById('ctx-name-input');
         this.ctxType = document.getElementById('ctx-type');
@@ -707,12 +704,7 @@ export default class IlluminarchismApp {
         if (!this.selectedEntityId) return;
         const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
-            let c = { x: 0, y: 0 };
-            if (ent.currentGeometry.length === 1) {
-                c = ent.currentGeometry[0];
-            } else {
-                c = getCentroid(ent.currentGeometry);
-            }
+            let c = getRepresentativePoint(ent.currentGeometry);
             // Animate or set transform
             this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
             this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
@@ -1127,7 +1119,7 @@ export default class IlluminarchismApp {
                 const isPointRendered = e.currentGeometry.length === 1 || isRenderedAsPoint(e, this.renderer.transform.k);
 
                 if (isPointRendered) {
-                    const pt = e.currentGeometry.length > 1 ? getCentroid(e.currentGeometry) : e.currentGeometry[0];
+                    const pt = getRepresentativePoint(e.currentGeometry);
                     if (distance(wp, pt) < 25 / (this.renderer.transform.k || 1)) hit = true;
                 } else if (e.type === 'river') {
                     const pts = e.currentGeometry;
