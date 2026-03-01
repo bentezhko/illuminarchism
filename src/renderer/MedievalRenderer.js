@@ -1,5 +1,6 @@
-import { getCentroid, getBoundingBox } from '../core/math.js';
+import { getCentroid, getRepresentativePoint, getBoundingBox } from '../core/math.js';
 import { fbm, perturbPoint } from './filters.js';
+import { isRenderedAsPoint } from '../core/Ontology.js';
 
 const GRID_CONFIG = {
     CELL_SIZE: 100,
@@ -46,7 +47,10 @@ export default class MedievalRenderer {
     }
 
     _isPointEntity(ent) {
-        return !!(ent && ent.currentGeometry && ent.currentGeometry.length === 1);
+        if (!ent || !ent.currentGeometry) return false;
+        if (ent.currentGeometry.length === 1) return true;
+        // Check if it's a zoom-dependent point entity
+        return isRenderedAsPoint(ent, this.transform.k);
     }
 
     _getEntityScore(e) {
@@ -579,8 +583,11 @@ export default class MedievalRenderer {
 
     drawPointMarker(ent, isHovered, isSelected, targetCtx = null) {
         const ctx = targetCtx || this.ctx;
-        const pt = ent.currentGeometry[0];
+        if (!ent.currentGeometry || ent.currentGeometry.length === 0) return;
+
+        const pt = getRepresentativePoint(ent.currentGeometry);
         if (!pt) return;
+
         const size = 6 / this.transform.k;
 
         // Decorative diamond marker (same as legacy city marker for now)
@@ -605,12 +612,14 @@ export default class MedievalRenderer {
 
     drawLabel(ent, isSelected) {
         let cx, cy;
+        const pt = getRepresentativePoint(ent.currentGeometry);
+
         if (this._isPointEntity(ent)) {
-            cx = ent.currentGeometry[0].x + 10 / this.transform.k;
-            cy = ent.currentGeometry[0].y + 2 / this.transform.k;
+            cx = pt.x + 10 / this.transform.k;
+            cy = pt.y + 2 / this.transform.k;
         } else {
-            const c = getCentroid(ent.currentGeometry);
-            cx = c.x; cy = c.y;
+            cx = pt.x;
+            cy = pt.y;
         }
 
         let fontSize;

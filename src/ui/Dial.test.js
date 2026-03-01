@@ -32,10 +32,18 @@ describe("Dial", () => {
         global.document.getElementById = (id) => elements[id];
 
         // Mock App State
+        const mockEntity = {
+            id: 'ent1',
+            domain: 'political',
+            typology: 'nation-state',
+            subtype: 'sovereign'
+        };
+        const mockEntitiesById = new Map();
+        mockEntitiesById.set('ent1', mockEntity);
+
         app = {
-            drawDomain: 'political',
-            drawTypology: 'nation-state',
-            drawSubtype: 'sovereign',
+            selectedEntityId: 'ent1',
+            entitiesById: mockEntitiesById,
             ontologyTaxonomy: {
                 'political': {
                     domain: { name: 'Political & Administrative', abbr: 'POL' },

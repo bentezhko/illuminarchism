@@ -54,29 +54,79 @@
         </header>
 
         <div id="toolbar" class="pointer-events-auto">
-            <button class="tool-btn active" data-tool="pan" title="Navigate (Left: Pan | Right: Seek)">Navigate</button>
+            <button class="tool-btn active" data-tool="pan" title="Navigate (Left: Pan | Right: Seek)">⌖</button>
             <div style="border-top: 1px solid var(--ink-faded); width: 100%; margin: 0.2rem 0;"></div>
+            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">✎</button>
+            <button class="tool-btn" data-tool="vertex-edit" title="Edit Points">⬡</button>
+            <button class="tool-btn" data-tool="transform" title="Transform (Move/Scale)">⇱</button>
+            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
 
-            <!-- NEW: The Entity Dial (Triple Wheel) -->
-            <div id="entity-dial" title="Ontology: Domain - Form - Rank">
-                <div class="dial-tumbler" id="dial-domain">
-                    <span class="dial-label">Dom</span>
-                    <span class="dial-value" id="val-domain">POL</span>
+            <!-- Info Panel embedded in Toolbar for easy relative positioning to the right side of the toolbar -->
+            <div id="info-panel" class="pointer-events-auto">
+                <input type="text" id="info-name-input" class="info-input" value="Region Name">
+
+                <!-- NEW: The Entity Dial (Triple Wheel) -->
+                <div id="entity-dial" title="Ontology: Domain - Form - Rank">
+                    <div class="dial-tumbler" id="dial-domain">
+                        <span class="dial-label">Dom</span>
+                        <span class="dial-value" id="val-domain">POL</span>
+                    </div>
+                    <div class="dial-tumbler" id="dial-form">
+                        <span class="dial-label">Frm</span>
+                        <span class="dial-value" id="val-form">RLM</span>
+                    </div>
+                    <div class="dial-tumbler" id="dial-rank">
+                        <span class="dial-label">Rnk</span>
+                        <span class="dial-value" id="val-rank">KGD</span>
+                    </div>
                 </div>
-                <div class="dial-tumbler" id="dial-form">
-                    <span class="dial-label">Frm</span>
-                    <span class="dial-value" id="val-form">RLM</span>
+
+                <div class="info-row" style="display:none;">
+                    <span>Category:</span>
+                    <span id="info-cat" style="font-weight:bold;">Political</span>
                 </div>
-                <div class="dial-tumbler" id="dial-rank">
-                    <span class="dial-label">Rnk</span>
-                    <span class="dial-value" id="val-rank">KGD</span>
+                <div class="info-row" style="display:none;">
+                    <span>Type:</span>
+                    <span id="info-type" style="font-weight:bold;">Polity</span>
+                </div>
+                <div class="info-row">
+                    <span>Pigment:</span>
+                    <input type="color" id="info-color-input" title="Change Color">
+                </div>
+
+                <div class="info-row">
+                    <span>Texture:</span>
+                    <select id="info-hatch-input">
+                        <option value="solid">Solid</option>
+                        <option value="diagonal-right">Diagonal (Right)</option>
+                        <option value="diagonal-left">Diagonal (Left)</option>
+                        <option value="vertical">Vertical</option>
+                        <option value="horizontal">Horizontal</option>
+                        <option value="cross">Cross Hatch</option>
+                        <option value="saltire">Saltire (X)</option>
+                        <option value="stipple">Stipple (Dots)</option>
+                        <option value="waves">Undy (Waves)</option>
+                    </select>
+                </div>
+
+                <div class="info-row">
+                    <span>Span:</span>
+                    <div style="display:flex; gap:0.25rem; align-items:center; width:100%; justify-content:flex-end;">
+                        <input type="number" id="info-start-input" class="info-input" style="width:60px; padding:0.1rem;" title="Start Year">
+                        <span style="color:var(--ink-faded);">-</span>
+                        <input type="number" id="info-end-input" class="info-input" style="width:60px; padding:0.1rem;" title="End Year">
+                    </div>
+                </div>
+                <div class="info-row" id="info-parent-row" style="display:none;">
+                    <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
+                </div>
+                <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years:</div>
+                <div id="keyframe-list"></div>
+                <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
+                    <button class="small-btn" id="btn-update-meta" style="flex:1;">Update</button>
+                    <button class="small-btn" id="btn-deselect">Close</button>
                 </div>
             </div>
-
-            <button class="tool-btn" data-tool="draw" title="Quill (Draw)">Inscribe</button>
-            <button class="tool-btn" data-tool="vertex-edit" title="Edit Points">Edit</button>
-            <button class="tool-btn" data-tool="transform" title="Transform (Move/Scale)">Shift</button>
-            <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">Scrape</button>
         </div>
 
     </div>
@@ -132,47 +182,6 @@
         </div>
     </div>
 
-    <div id="info-panel" class="pointer-events-auto">
-        <input type="text" id="info-name-input" class="info-input" value="Region Name">
-        <div class="info-row">
-            <span>Category:</span>
-            <span id="info-cat" style="font-weight:bold;">Political</span>
-        </div>
-        <div class="info-row">
-            <span>Type:</span>
-            <span id="info-type" style="font-weight:bold;">Polity</span>
-        </div>
-        <div class="info-row">
-            <span>Pigment:</span>
-            <input type="color" id="info-color-input" title="Change Color">
-        </div>
-
-        <div class="info-row">
-            <span>Texture:</span>
-            <select id="info-hatch-input">
-                <option value="solid">Solid</option>
-                <option value="diagonal-right">Diagonal (Right)</option>
-                <option value="diagonal-left">Diagonal (Left)</option>
-                <option value="vertical">Vertical</option>
-                <option value="horizontal">Horizontal</option>
-                <option value="cross">Cross Hatch</option>
-                <option value="saltire">Saltire (X)</option>
-                <option value="stipple">Stipple (Dots)</option>
-                <option value="waves">Undy (Waves)</option>
-            </select>
-        </div>
-
-        <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
-        <div class="info-row" id="info-parent-row" style="display:none;">
-            <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
-        </div>
-        <div style="margin-top: 0.5rem; font-weight: bold; color: var(--ink-faded);">Recorded Years:</div>
-        <div id="keyframe-list"></div>
-        <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
-            <button class="small-btn" id="btn-update-meta" style="flex:1;">Update</button>
-            <button class="small-btn" id="btn-deselect">Close</button>
-        </div>
-    </div>
 
     <div id="draw-hint"></div>
     <!-- Button Reset View Removed -->

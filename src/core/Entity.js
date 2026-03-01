@@ -140,6 +140,15 @@ export default class HistoricalEntity {
     }
 
     /**
+     * Updates legacy properties based on the current domain and typology.
+     * Should be called when an entity's domain or typology is modified post-creation.
+     */
+    updateDerivedProperties() {
+        this.category = this._deriveCategoryFromDomain(this.domain);
+        this.type = this._deriveTypeFromTypology(this.typology);
+    }
+
+    /**
      * Derive legacy category from domain
      */
     _deriveCategoryFromDomain(domain) {
@@ -337,9 +346,7 @@ export default class HistoricalEntity {
         this.timeline = this.timeline.filter(k => k.year !== year);
         let finalGeo;
 
-        const typologyInfo = getTypology(this.domain, this.typology);
-        const isPointType = (typologyInfo && typologyInfo.geometryType === 'Point') ||
-            (Array.isArray(geometry) && geometry.length === 1);
+        const isPointType = (Array.isArray(geometry) && geometry.length === 1);
 
         if (isPointType) {
             // Deep copy to prevent reference issues, but keep as a single point
