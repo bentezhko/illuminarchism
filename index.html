@@ -109,7 +109,14 @@
                     </select>
                 </div>
 
-                <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
+                <div class="info-row">
+                    <span>Span:</span>
+                    <div style="display:flex; gap:0.25rem; align-items:center; width:100%; justify-content:flex-end;">
+                        <input type="number" id="info-start-input" class="info-input" style="width:60px; padding:0.1rem;" title="Start Year">
+                        <span style="color:var(--ink-faded);">-</span>
+                        <input type="number" id="info-end-input" class="info-input" style="width:60px; padding:0.1rem;" title="End Year">
+                    </div>
+                </div>
                 <div class="info-row" id="info-parent-row" style="display:none;">
                     <span>Fealty To:</span> <span id="info-parent" style="color:var(--lapis-lazuli);"></span>
                 </div>

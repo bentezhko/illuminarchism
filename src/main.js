@@ -468,6 +468,10 @@ export default class IlluminarchismApp {
         // HATCH INPUT LISTENER
         this.safeAddListener('info-hatch-input', 'change', () => this.updateSelectedMetadata());
 
+        // Year INPUT LISTENERS
+        this.safeAddListener('info-start-input', 'change', () => this.updateSelectedMetadata());
+        this.safeAddListener('info-end-input', 'change', () => this.updateSelectedMetadata());
+
         // Save/Load
         this.safeAddListener('btn-save', 'click', () => this.exporter.downloadAtlas());
 
@@ -971,7 +975,8 @@ export default class IlluminarchismApp {
                 document.getElementById('info-cat').textContent = ent.domain; // updated to match property name
                 document.getElementById('info-color-input').value = ent.color;
                 document.getElementById('info-hatch-input').value = ent.hatchStyle; // SYNC DROPDOWN
-                document.getElementById('info-span').textContent = `${ent.validRange.start} - ${ent.validRange.end}`;
+                document.getElementById('info-start-input').value = ent.validRange.start;
+                document.getElementById('info-end-input').value = ent.validRange.end;
 
                 const parentRow = document.getElementById('info-parent-row');
                 if (ent.parentId) {
@@ -995,11 +1000,20 @@ export default class IlluminarchismApp {
             ent.color = document.getElementById('info-color-input').value;
             ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
 
+            // Update Valid Range
+            const startYear = parseInt(document.getElementById('info-start-input').value, 10);
+            const endYear = parseInt(document.getElementById('info-end-input').value, 10);
+            if (!isNaN(startYear) && !isNaN(endYear) && startYear <= endYear) {
+                ent.validRange.start = startYear;
+                ent.validRange.end = endYear;
+            }
+
             // Invalidate cache as styling changed
             if (this.renderer) this.renderer.worldLayerValid = false;
 
             this.renderRegistry();
             this.render();
+            if (this.timelineAPI) this.timelineAPI.renderCustomTrack(); // Update timeline bars
         });
     }
 

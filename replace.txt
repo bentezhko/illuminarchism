@@ -1,0 +1,12 @@
+<<<<<<< SEARCH
+                <div class="info-row"><span>Span:</span> <span id="info-span">1000-1200</span></div>
+=======
+                <div class="info-row">
+                    <span>Span:</span>
+                    <div style="display:flex; gap:0.25rem; align-items:center;">
+                        <input type="number" id="info-start-input" class="info-input" style="width:60px;" title="Start Year">
+                        <span>-</span>
+                        <input type="number" id="info-end-input" class="info-input" style="width:60px;" title="End Year">
+                    </div>
+                </div>
+>>>>>>> REPLACE
