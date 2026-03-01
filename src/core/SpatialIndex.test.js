@@ -196,4 +196,110 @@ describe("Quadtree", () => {
         expect(tree.nodes.length).toBe(0);
         expect(tree.divided).toBe(false);
     });
+
+    describe("boundary conditions", () => {
+        beforeEach(() => {
+            // Force subdivision to test boundary interactions between children.
+            // Spread them across quadrants so children don't immediately subdivide again.
+            tree.insert({ x: 10, y: 10, w: 1, h: 1, id: 'filler-tl' });
+            tree.insert({ x: 80, y: 10, w: 1, h: 1, id: 'filler-tr' });
+            tree.insert({ x: 10, y: 80, w: 1, h: 1, id: 'filler-bl' });
+            tree.insert({ x: 80, y: 80, w: 1, h: 1, id: 'filler-br' });
+            // 5th object to trigger split
+            tree.insert({ x: 45, y: 45, w: 10, h: 10, id: 'filler-straddle' });
+        });
+
+        test("objects touching but not crossing the horizontal midpoint", () => {
+            // Midpoint Y is 50.
+            const touchingTL = { x: 10, y: 40, w: 10, h: 10, id: 'touching-tl' }; // Bottom edge is 50
+            const touchingBL = { x: 10, y: 50, w: 10, h: 10, id: 'touching-bl' }; // Top edge is 50
+
+            tree.insert(touchingTL);
+            tree.insert(touchingBL);
+
+            // touchingTL should be wholly in TL (node 1)
+            expect(tree.nodes[1].objects).toContain(touchingTL);
+            // touchingBL should be wholly in BL (node 2)
+            expect(tree.nodes[2].objects).toContain(touchingBL);
+
+            // Neither should be trapped in the parent as a straddler
+            expect(tree.objects).not.toContain(touchingTL);
+            expect(tree.objects).not.toContain(touchingBL);
+        });
+
+        test("objects touching but not crossing the vertical midpoint", () => {
+            // Midpoint X is 50.
+            const touchingTL = { x: 40, y: 10, w: 10, h: 10, id: 'touching-tl-x' }; // Right edge is 50
+            const touchingTR = { x: 50, y: 10, w: 10, h: 10, id: 'touching-tr-x' }; // Left edge is 50
+
+            tree.insert(touchingTL);
+            tree.insert(touchingTR);
+
+            // touchingTL should be wholly in TL (node 1)
+            expect(tree.nodes[1].objects).toContain(touchingTL);
+            // touchingTR should be wholly in TR (node 0)
+            expect(tree.nodes[0].objects).toContain(touchingTR);
+
+            // Neither should be trapped in the parent as a straddler
+            expect(tree.objects).not.toContain(touchingTL);
+            expect(tree.objects).not.toContain(touchingTR);
+        });
+
+        test("objects exactly on the intersection fall into the first matching quadrant due to inclusive bounds", () => {
+            const exactIntersection = { x: 50, y: 50, w: 0, h: 0, id: 'intersection' };
+            const crossingH = { x: 10, y: 45, w: 10, h: 10, id: 'crossing-h' }; // Y crosses 50
+            const crossingV = { x: 45, y: 10, w: 10, h: 10, id: 'crossing-v' }; // X crosses 50
+
+            tree.insert(exactIntersection);
+            tree.insert(crossingH);
+            tree.insert(crossingV);
+
+            // Due to `contains` using `>=` and `<=`, an object at exactly (50, 50) is treated
+            // as fitting completely inside the Top-Right (TR) node (bounds: x: 50-100, y: 0-50).
+            expect(tree.nodes[0].objects).toContain(exactIntersection);
+
+            // Objects crossing boundaries cannot fit entirely in any single quadrant
+            // and must remain in the parent node as straddlers.
+            expect(tree.objects).toContain(crossingH);
+            expect(tree.objects).toContain(crossingV);
+        });
+
+        test("retrieval handles inclusive boundaries correctly", () => {
+            // Setup objects that each sit firmly in one quadrant but touch the center intersection (50, 50)
+            const objTL = { x: 40, y: 40, w: 10, h: 10, id: 'tl' };
+            const objTR = { x: 50, y: 40, w: 10, h: 10, id: 'tr' };
+            const objBL = { x: 40, y: 50, w: 10, h: 10, id: 'bl' };
+            const objBR = { x: 50, y: 50, w: 10, h: 10, id: 'br' };
+
+            tree.insert(objTL);
+            tree.insert(objTR);
+            tree.insert(objBL);
+            tree.insert(objBR);
+
+            // A search exactly at the intersection should retrieve all 4 objects
+            // because `intersects` uses `>=` and `<=` equivalent logic (not strictly greater/less).
+            const centerSearch = tree.retrieve({ x: 50, y: 50, w: 0, h: 0 });
+            expect(centerSearch).toContain(objTL);
+            expect(centerSearch).toContain(objTR);
+            expect(centerSearch).toContain(objBL);
+            expect(centerSearch).toContain(objBR);
+
+            // A search completely overlapping TL quadrant (0,0 to 50,50)
+            const tlSearch = tree.retrieve({ x: 0, y: 0, w: 50, h: 50 });
+            expect(tlSearch).toContain(objTL);
+
+            // Since the bounds are inclusive, a search region from 0..50
+            // intersects objects whose bounds start at 50.
+            expect(tlSearch).toContain(objTR);
+            expect(tlSearch).toContain(objBL);
+            expect(tlSearch).toContain(objBR);
+
+            // A search strictly isolated from the boundary (0,0 to 10,10)
+            const isolatedSearch = tree.retrieve({ x: 0, y: 0, w: 10, h: 10 });
+            expect(isolatedSearch).not.toContain(objTL);
+            expect(isolatedSearch).not.toContain(objTR);
+            expect(isolatedSearch).not.toContain(objBL);
+            expect(isolatedSearch).not.toContain(objBR);
+        });
+    });
 });
