@@ -198,15 +198,22 @@ describe("Quadtree", () => {
     });
 
     describe("boundary conditions", () => {
+        let fillerTL, fillerTR, fillerBL, fillerBR, fillerStraddle;
+
         beforeEach(() => {
             // Force subdivision to test boundary interactions between children.
             // Spread them across quadrants so children don't immediately subdivide again.
-            tree.insert({ x: 10, y: 10, w: 1, h: 1, id: 'filler-tl' });
-            tree.insert({ x: 80, y: 10, w: 1, h: 1, id: 'filler-tr' });
-            tree.insert({ x: 10, y: 80, w: 1, h: 1, id: 'filler-bl' });
-            tree.insert({ x: 80, y: 80, w: 1, h: 1, id: 'filler-br' });
-            // 5th object to trigger split
-            tree.insert({ x: 45, y: 45, w: 10, h: 10, id: 'filler-straddle' });
+            fillerTL = { x: 10, y: 10, w: 1, h: 1, id: 'filler-tl' };
+            fillerTR = { x: 80, y: 10, w: 1, h: 1, id: 'filler-tr' };
+            fillerBL = { x: 10, y: 80, w: 1, h: 1, id: 'filler-bl' };
+            fillerBR = { x: 80, y: 80, w: 1, h: 1, id: 'filler-br' };
+            fillerStraddle = { x: 45, y: 45, w: 10, h: 10, id: 'filler-straddle' };
+
+            tree.insert(fillerTL);
+            tree.insert(fillerTR);
+            tree.insert(fillerBL);
+            tree.insert(fillerBR);
+            tree.insert(fillerStraddle); // 5th object to trigger split
         });
 
         test("objects touching but not crossing the horizontal midpoint", () => {
@@ -278,28 +285,25 @@ describe("Quadtree", () => {
 
             // A search exactly at the intersection should retrieve all 4 objects
             // because `intersects` uses `>=` and `<=` equivalent logic (not strictly greater/less).
+            // It should also retrieve the filler object that straddles the center.
             const centerSearch = tree.retrieve({ x: 50, y: 50, w: 0, h: 0 });
-            expect(centerSearch).toContain(objTL);
-            expect(centerSearch).toContain(objTR);
-            expect(centerSearch).toContain(objBL);
-            expect(centerSearch).toContain(objBR);
+            const expectedCenter = [objTL, objTR, objBL, objBR, fillerStraddle];
+            expect(centerSearch.length).toBe(expectedCenter.length);
+            expect(centerSearch).toEqual(expect.arrayContaining(expectedCenter));
 
             // A search completely overlapping TL quadrant (0,0 to 50,50)
             const tlSearch = tree.retrieve({ x: 0, y: 0, w: 50, h: 50 });
-            expect(tlSearch).toContain(objTL);
-
-            // Since the bounds are inclusive, a search region from 0..50
-            // intersects objects whose bounds start at 50.
-            expect(tlSearch).toContain(objTR);
-            expect(tlSearch).toContain(objBL);
-            expect(tlSearch).toContain(objBR);
+            // This search should find all objects that touch the TL quadrant, including those on its boundaries,
+            // the filler in the TL quadrant, and the straddling filler.
+            const expectedTL = [objTL, objTR, objBL, objBR, fillerTL, fillerStraddle];
+            expect(tlSearch.length).toBe(expectedTL.length);
+            expect(tlSearch).toEqual(expect.arrayContaining(expectedTL));
 
             // A search strictly isolated from the boundary (0,0 to 10,10)
             const isolatedSearch = tree.retrieve({ x: 0, y: 0, w: 10, h: 10 });
-            expect(isolatedSearch).not.toContain(objTL);
-            expect(isolatedSearch).not.toContain(objTR);
-            expect(isolatedSearch).not.toContain(objBL);
-            expect(isolatedSearch).not.toContain(objBR);
+            // This should only find the top-left filler object, which touches the (10,10) point.
+            expect(isolatedSearch.length).toBe(1);
+            expect(isolatedSearch).toContain(fillerTL);
         });
     });
 });
