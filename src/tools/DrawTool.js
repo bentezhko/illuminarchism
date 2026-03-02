@@ -61,9 +61,7 @@ export default class DrawTool {
             const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
             const color = colors[Math.floor(Math.random() * colors.length)];
 
-            // Generate descriptive name based on typology
-            let name = "New Territory";
-            if (this.app.drawTypology === 'city' || this.app.drawTypology === 'sacred-site') name = "New Settlement";
+            let name = `NewArea${this.app.newAreaCounter++}`;
 
             const newEnt = new HistoricalEntity(id, name, {
                 domain: this.app.drawDomain,

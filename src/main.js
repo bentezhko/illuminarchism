@@ -69,6 +69,8 @@ export default class IlluminarchismApp {
         this.isPlaying = false;
         this.playInterval = null;
 
+        this.newAreaCounter = 1;
+
         this.initData();
         this.initUI();
         this.updateEntities();
@@ -885,14 +887,7 @@ export default class IlluminarchismApp {
             const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
             const color = colors[Math.floor(Math.random() * colors.length)];
 
-            // Generate descriptive name based on typology
-            let name = "New Territory";
-            if (this.drawTypology === 'city' || this.drawTypology === 'sacred-site') name = "New Settlement";
-            else if (this.drawTypology === 'river' || this.drawTypology === 'coast') name = "New River";
-            else if (this.drawTypology === 'aquatic') name = "New Sea/Lake";
-            else if (this.drawDomain === 'linguistic') name = "New Language Zone";
-            else if (this.drawDomain === 'religious') name = "New Faith Zone";
-            else if (typologyData) name = `New ${typologyData.label}`;
+            let name = `NewArea${this.newAreaCounter++}`;
 
             // Create entity using new ontology config format
             const newEnt = new HistoricalEntity(id, name, {
