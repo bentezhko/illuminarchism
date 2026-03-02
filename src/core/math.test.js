@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { escapeHTML, resampleGeometry, alignPolygonClosed } from "./math.js";
+import { escapeHTML, resampleGeometry, alignPolygonClosed, getBoundingBox, enforceClockwise } from "./math.js";
 
 describe("alignPolygonClosed", () => {
     test("returns second polygon as-is if lengths differ", () => {
@@ -103,6 +103,104 @@ describe("resampleGeometry", () => {
     test("handles edge cases", () => {
         expect(resampleGeometry([], 5)).toEqual([]);
         expect(resampleGeometry([{ x: 0, y: 0 }], 5)).toEqual([{ x: 0, y: 0 }]);
+    });
+});
+
+describe("getBoundingBox", () => {
+    test("calculates bounding box correctly for a standard polygon", () => {
+        const points = [
+            { x: 10, y: 20 },
+            { x: 30, y: 10 },
+            { x: 40, y: 40 },
+            { x: 20, y: 50 }
+        ];
+        const bbox = getBoundingBox(points);
+        expect(bbox).toEqual({
+            x: 10, y: 10,
+            w: 30, h: 40,
+            minX: 10, minY: 10,
+            maxX: 40, maxY: 50
+        });
+    });
+
+    test("handles a single point", () => {
+        const points = [{ x: 5, y: 5 }];
+        const bbox = getBoundingBox(points);
+        expect(bbox).toEqual({
+            x: 5, y: 5,
+            w: 0, h: 0,
+            minX: 5, minY: 5,
+            maxX: 5, maxY: 5
+        });
+    });
+
+    test("handles an empty array gracefully", () => {
+        const points = [];
+        const bbox = getBoundingBox(points);
+        expect(bbox).toEqual({
+            x: Infinity, y: Infinity,
+            w: -Infinity, h: -Infinity,
+            minX: Infinity, minY: Infinity,
+            maxX: -Infinity, maxY: -Infinity
+        });
+    });
+
+    test("handles negative coordinates correctly", () => {
+        const points = [
+            { x: -10, y: -20 },
+            { x: -30, y: 10 },
+            { x: 40, y: -40 },
+            { x: 20, y: 50 }
+        ];
+        const bbox = getBoundingBox(points);
+        expect(bbox).toEqual({
+            x: -30, y: -40,
+            w: 70, h: 90,
+            minX: -30, minY: -40,
+            maxX: 40, maxY: 50
+        });
+    });
+});
+
+describe("enforceClockwise", () => {
+    test("returns points unchanged if already clockwise", () => {
+        // Clockwise in Y-down screen coordinates (positive signed area)
+        const points = [
+            { x: 0, y: 0 },
+            { x: 10, y: 0 },
+            { x: 10, y: 10 },
+            { x: 0, y: 10 }
+        ];
+        const result = enforceClockwise([...points]);
+        expect(result).toEqual(points);
+    });
+
+    test("reverses points if counter-clockwise", () => {
+        // Counter-clockwise in Y-down screen coordinates (negative signed area)
+        const points = [
+            { x: 0, y: 0 },
+            { x: 0, y: 10 },
+            { x: 10, y: 10 },
+            { x: 10, y: 0 }
+        ];
+        const result = enforceClockwise([...points]);
+        expect(result).toEqual([...points].reverse());
+    });
+
+    test("handles collinear points gracefully (area is 0)", () => {
+        const points = [
+            { x: 0, y: 0 },
+            { x: 5, y: 5 },
+            { x: 10, y: 10 }
+        ];
+        const result = enforceClockwise([...points]);
+        expect(result).toEqual(points);
+    });
+
+    test("handles empty array gracefully", () => {
+        const points = [];
+        const result = enforceClockwise([...points]);
+        expect(result).toEqual([]);
     });
 });
 
