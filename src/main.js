@@ -15,6 +15,7 @@ import LayerManager from './ui/LayerManager.js';
 import AtlasLoader from './io/AtlasLoader.js';
 import AtlasExporter from './io/AtlasExporter.js';
 import { initialEntities } from './data/initialEntities.js';
+import DrawTool from './tools/DrawTool.js';
 
 export default class IlluminarchismApp {
     constructor() {
@@ -34,6 +35,7 @@ export default class IlluminarchismApp {
         this.layerManager = new LayerManager(this);
         this.loader = new AtlasLoader(this);
         this.exporter = new AtlasExporter(this);
+        this.drawTool = new DrawTool(this);
 
         this.entities = [];
         this.entitiesById = new Map();
@@ -843,79 +845,21 @@ export default class IlluminarchismApp {
     updateDraftCursor(p) { this.draftCursor = p; this.render(); }
 
     commitDraft() {
-        if (this.draftPoints.length === 0) return;
-
-        // Check if current typology requires specific geometry (e.g., city = point)
-        const domainData = this.ontologyTaxonomy[this.drawDomain];
-        const typologyData = domainData?.types?.find(t => t.value === this.drawTypology);
-        const isPointGeometry = typologyData?.geometryType === 'Point' || this.drawTypology === 'city' || this.drawTypology === 'sacred-site';
-
-        if (!isPointGeometry && this.draftPoints.length < 2) return;
-
-        const isAnnex = this.drawTypology === 'vassal';
-
-        if (this.selectedEntityId) {
-            const ent = this.entitiesById.get(this.selectedEntityId);
-            if (ent) {
-                if (isAnnex) {
-                    const id = 'vassal_' + Date.now();
-                    // Create vassal using new ontology config format
-                    const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
-                        domain: this.drawDomain,
-                        typology: this.drawTypology,
-                        subtype: this.drawSubtype,
-                        color: ent.color,
-                        parentId: ent.id,
-                        boundaryConfidence: 0.8
-                    });
-                    // New shape creation (no resampling)
-                    newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
-                    newEnt.validRange.start = this.currentYear;
-                    newEnt.validRange.end = this.currentYear + 200;
-                    this.entities.push(newEnt);
-                    this.selectEntity(id);
-                    this.renderRegistry();
-                } else {
-                    // Updating existing shape (no resampling to preserve corners)
-                    ent.addKeyframe(this.currentYear, [...this.draftPoints], true);
-                    this.invalidateConnectionsFor(ent.id);
-                    this.updateInfoPanel(ent);
-                }
-            }
-        } else {
-            const id = 'ent_' + Date.now();
-            const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-
-            let name = `NewArea${this.newAreaCounter++}`;
-
-            // Create entity using new ontology config format
-            const newEnt = new HistoricalEntity(id, name, {
-                domain: this.drawDomain,
-                typology: this.drawTypology,
-                subtype: this.drawSubtype,
-                color: color,
-                boundaryConfidence: typologyData?.boundaryType === 'fuzzy' ? 0.5 : 0.9,
-                layerId: this.activeLayerId || 'layer_land'
-            });
-            // New shape creation (no resampling)
-            newEnt.addKeyframe(this.currentYear, [...this.draftPoints], true);
-            newEnt.validRange.start = this.currentYear - 200;
-            newEnt.validRange.end = this.currentYear + 200;
-
-            this.entities.push(newEnt);
-            this.selectEntity(id);
-            this.renderRegistry();
-        }
-
-        this.draftPoints = [];
-        this.draftCursor = null;
+        this.drawTool.commit();
         this.updateEntities();
         this.render();
-        if (this.activeTool === 'draw') this.setTool('draw');
+        if (this.activeTool === 'draw') this.setActiveTool('draw');
     }
 
-    cancelDraft() { this.draftPoints = []; this.draftCursor = null; this.render(); }
+    cancelDraft() {
+        if (this.drawTool) {
+            this.drawTool.cancel();
+        } else {
+            this.draftPoints = [];
+            this.draftCursor = null;
+            this.render();
+        }
+    }
 
     deleteEntity(id) {
         this.entities = this.entities.filter(e => e.id !== id);
