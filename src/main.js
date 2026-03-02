@@ -736,7 +736,6 @@ export default class IlluminarchismApp {
         const mapCanvas = document.getElementById('map-canvas');
         const timelineDiv = document.getElementById('view-timeline');
         const toolbar = document.getElementById('toolbar');
-        const linkBtn = document.getElementById('btn-timeline-link');
 
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
 
@@ -748,7 +747,6 @@ export default class IlluminarchismApp {
                 timelineDiv.style.display = 'none'; // Explicitly hide
             }
             if (toolbar) toolbar.style.display = 'flex';
-            if (linkBtn) linkBtn.style.display = 'none';
             this.render();
         } else {
             document.getElementById('btn-view-timeline').classList.add('active');
@@ -757,8 +755,7 @@ export default class IlluminarchismApp {
                 timelineDiv.classList.add('active');
                 timelineDiv.style.display = 'block'; // Explicitly show
             }
-            if (toolbar) toolbar.style.display = 'none';
-            if (linkBtn) linkBtn.style.display = 'inline-block';
+            if (toolbar) toolbar.style.display = 'flex'; // Keep toolbar visible in timeline view
             this.timeline.renderView();
         }
     }
@@ -829,6 +826,9 @@ export default class IlluminarchismApp {
         } else if (name === 'transform') {
             hint.classList.add('visible');
             hint.textContent = "TRANSFORM: Drag corners to Resize (Hold Shift for Aspect Ratio). Drag center to Move.";
+        } else if (name === 'link') {
+            hint.classList.add('visible');
+            hint.textContent = "LINK: Click a timeline bar to start linking, then click another bar of the same domain to connect.";
         } else {
             hint.classList.remove('visible');
         }
@@ -841,6 +841,7 @@ export default class IlluminarchismApp {
         else if (name === 'erase') c.style.cursor = 'not-allowed';
         else if (name === 'vertex-edit') c.style.cursor = 'alias';
         else if (name === 'transform') c.style.cursor = 'default'; // managed by InputController hover
+        else if (name === 'link') c.style.cursor = 'crosshair';
 
         this.render();
     }
