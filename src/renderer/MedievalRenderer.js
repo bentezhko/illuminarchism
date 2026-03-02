@@ -287,6 +287,17 @@ export default class MedievalRenderer {
             const isHovered = ent.id === hoveredId;
             const isSelected = ent.id === selectedId;
 
+            // Dynamically redraw hovered or selected entities so their highlight is animated
+            if (isSelected || isHovered) {
+                if (this._isPointEntity(ent)) {
+                    this.drawPointMarker(ent, isHovered, isSelected, ctx);
+                } else if (ent.type === 'river') {
+                    this.drawRiver(ent, isHovered, isSelected, ctx);
+                } else if (ent.type !== 'water') {
+                    this.drawPolygon(ent, isHovered, isSelected, ctx);
+                }
+            }
+
             // Draw Label (for all types, including water)
             if (isSelected || isHovered || t.k > 0.5) {
                 this.drawLabel(ent, isSelected);
@@ -553,6 +564,19 @@ export default class MedievalRenderer {
 
         ctx.beginPath();
         this.traceRoughPath(pts, true, ctx);
+
+        if (isSelected) {
+            // Animated highlight drawn UNDER the main border
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)'; // Bright gold
+            ctx.lineWidth = (ctx.lineWidth || (1.5 / this.transform.k)) * 4; // Thicker than main border
+            ctx.lineCap = 'round';
+            ctx.setLineDash([15 / this.transform.k, 15 / this.transform.k]);
+            ctx.lineDashOffset = -(performance.now() / 40) % (30 / this.transform.k);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         if (isSelected) {
             ctx.shadowColor = '#000'; ctx.shadowBlur = 10;
             ctx.lineWidth *= 1.5;
@@ -569,6 +593,19 @@ export default class MedievalRenderer {
 
         ctx.beginPath();
         this.traceRoughPath(pts, false, ctx);
+
+        if (isSelected) {
+            // Animated highlight underneath
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+            ctx.lineWidth = (4 / this.transform.k) * 2;
+            ctx.lineCap = 'round';
+            ctx.setLineDash([15 / this.transform.k, 15 / this.transform.k]);
+            ctx.lineDashOffset = -(performance.now() / 40) % (30 / this.transform.k);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         ctx.strokeStyle = isSelected ? '#8a3324' : ent.color;
         ctx.lineWidth = (isSelected ? 4 : 2.5) / this.transform.k;
         ctx.lineCap = 'round';
@@ -602,6 +639,18 @@ export default class MedievalRenderer {
         ctx.fill();
 
         if (isSelected || isHovered) {
+            if (isSelected) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, size * 1.5, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+                ctx.lineWidth = 3 / this.transform.k;
+                ctx.setLineDash([8 / this.transform.k, 8 / this.transform.k]);
+                ctx.lineDashOffset = -(performance.now() / 40) % (16 / this.transform.k);
+                ctx.stroke();
+                ctx.restore();
+            }
+
             ctx.beginPath();
             ctx.arc(pt.x, pt.y, size * 1.5, 0, Math.PI * 2);
             ctx.strokeStyle = '#8a3324';

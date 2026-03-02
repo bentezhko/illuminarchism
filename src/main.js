@@ -72,12 +72,22 @@ export default class IlluminarchismApp {
         this.playInterval = null;
 
         this.newAreaCounter = 1;
+        this.isSelectionAnimating = false;
 
         this.initData();
         this.initUI();
         this.updateEntities();
         this.renderRegistry();
         this.render();
+    }
+
+    _animationLoop = () => {
+        if (this.selectedEntityId) {
+            this.render();
+            requestAnimationFrame(this._animationLoop);
+        } else {
+            this.isSelectionAnimating = false;
+        }
     }
 
     // --- TRANSFORM LOGIC ---
@@ -848,7 +858,6 @@ export default class IlluminarchismApp {
         this.drawTool.commit();
         this.updateEntities();
         this.render();
-        if (this.activeTool === 'draw') this.setActiveTool('draw');
     }
 
     cancelDraft() {
@@ -928,6 +937,12 @@ export default class IlluminarchismApp {
 
                 this.updateInfoPanel(ent);
             }
+
+            if (!this.isSelectionAnimating) {
+                this.isSelectionAnimating = true;
+                requestAnimationFrame(this._animationLoop);
+            }
+
             this.renderTimelineNotches(); // Update timeline notches for selected entity
         }
         this.render();
