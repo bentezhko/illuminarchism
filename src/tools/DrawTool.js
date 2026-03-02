@@ -81,7 +81,11 @@ export default class DrawTool {
 
         this.app.draftPoints = [];
         this.app.draftCursor = null;
-        this.app.setActiveTool('pan'); // Reset to pan after draw
+        if (this.app.toolbar) {
+            this.app.toolbar.selectTool('pan'); // Reset to pan after draw
+        } else {
+            this.app.setActiveTool('pan');
+        }
     }
 
     cancel() {

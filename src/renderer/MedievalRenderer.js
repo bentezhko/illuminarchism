@@ -556,8 +556,15 @@ export default class MedievalRenderer {
         if (isSelected) {
             ctx.shadowColor = '#000'; ctx.shadowBlur = 10;
             ctx.lineWidth *= 1.5;
+            ctx.setLineDash([10 / this.transform.k, 10 / this.transform.k]);
+            ctx.lineDashOffset = -(performance.now() / 50) % (20 / this.transform.k);
         }
         ctx.stroke();
+
+        if (isSelected) {
+            ctx.setLineDash([]);
+            ctx.lineDashOffset = 0;
+        }
 
         ctx.restore();
     }
@@ -572,9 +579,17 @@ export default class MedievalRenderer {
         ctx.strokeStyle = isSelected ? '#8a3324' : ent.color;
         ctx.lineWidth = (isSelected ? 4 : 2.5) / this.transform.k;
         ctx.lineCap = 'round';
+
+        if (isSelected) {
+            ctx.setLineDash([10 / this.transform.k, 10 / this.transform.k]);
+            ctx.lineDashOffset = -(performance.now() / 50) % (20 / this.transform.k);
+        }
         ctx.stroke();
 
-        if (!isSelected) {
+        if (isSelected) {
+            ctx.setLineDash([]);
+            ctx.lineDashOffset = 0;
+        } else {
             ctx.strokeStyle = 'rgba(255,255,255,0.4)';
             ctx.lineWidth = 1 / this.transform.k;
             ctx.stroke();
@@ -606,7 +621,15 @@ export default class MedievalRenderer {
             ctx.arc(pt.x, pt.y, size * 1.5, 0, Math.PI * 2);
             ctx.strokeStyle = '#8a3324';
             ctx.lineWidth = 1 / this.transform.k;
+            if (isSelected) {
+                ctx.setLineDash([5 / this.transform.k, 5 / this.transform.k]);
+                ctx.lineDashOffset = -(performance.now() / 50) % (10 / this.transform.k);
+            }
             ctx.stroke();
+            if (isSelected) {
+                ctx.setLineDash([]);
+                ctx.lineDashOffset = 0;
+            }
         }
     }
 
