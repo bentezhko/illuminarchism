@@ -31,7 +31,6 @@ export default class Timeline {
         this.epochEndYear = 2025;
         this.isPlaying = false;
         this.playInterval = null;
-        this.isLinking = false;
         this.linkSource = null; // { id, year }
 
         // Drag State
@@ -69,16 +68,6 @@ export default class Timeline {
             this.playButton.addEventListener('click', () => {
                 this.togglePlayback();
                 this.playButton.blur(); // Prevent focus trapping
-            });
-        }
-
-        // Link button in header
-        const linkBtn = document.getElementById('btn-timeline-link');
-        if (linkBtn) {
-            linkBtn.addEventListener('click', () => {
-                this.isLinking = !this.isLinking;
-                this.linkSource = null;
-                this.renderView();
             });
         }
 
@@ -649,12 +638,6 @@ export default class Timeline {
         const header = document.createElement('div');
         header.className = 'timeline-header';
 
-        const linkBtn = document.getElementById('btn-timeline-link');
-        if (linkBtn) {
-            if (this.isLinking) linkBtn.classList.add('active');
-            else linkBtn.classList.remove('active');
-        }
-
         container.appendChild(header);
 
         // Draw ticks
@@ -727,7 +710,8 @@ export default class Timeline {
                     const bar = document.createElement('div');
                     bar.className = 'timeline-bar';
                     bar.style.zIndex = '20';
-                    if (this.isLinking && this.linkSource && this.linkSource.id === ent.id) {
+                    const isLinkingMode = this.app.activeTool === 'link';
+                    if (isLinkingMode && this.linkSource && this.linkSource.id === ent.id) {
                         bar.classList.add('linking-source');
                     }
                     bar.dataset.id = ent.id;
@@ -739,7 +723,7 @@ export default class Timeline {
                         const handleL = document.createElement('div');
                         handleL.className = 'timeline-handle handle-l';
                         handleL.addEventListener('mousedown', (e) => {
-                            if (this.isLinking) {
+                            if (this.app.activeTool === 'link') {
                                 e.stopPropagation();
                                 e.preventDefault();
                                 this.handleTimelineClick(ent.id, ent.validRange.start);
@@ -753,7 +737,7 @@ export default class Timeline {
                         const handleR = document.createElement('div');
                         handleR.className = 'timeline-handle handle-r';
                         handleR.addEventListener('mousedown', (e) => {
-                            if (this.isLinking) {
+                            if (this.app.activeTool === 'link') {
                                 e.stopPropagation();
                                 e.preventDefault();
                                 this.handleTimelineClick(ent.id, ent.validRange.end);
@@ -765,7 +749,7 @@ export default class Timeline {
                     }
 
                     bar.addEventListener('mousedown', (e) => {
-                        if (this.isLinking) {
+                        if (this.app.activeTool === 'link') {
                             e.stopPropagation();
                             e.preventDefault();
                             const rect = bar.getBoundingClientRect();
@@ -788,7 +772,7 @@ export default class Timeline {
 
                     // Hover interactions
                     bar.addEventListener('mousemove', (e) => {
-                        if (this.isLinking) {
+                        if (this.app.activeTool === 'link') {
                             if (this.linkInfo && this.linkInfo.classList.contains('editor-mode')) return;
                             const rect = bar.getBoundingClientRect();
                             const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -803,7 +787,7 @@ export default class Timeline {
                     });
 
                     bar.addEventListener('mouseleave', () => {
-                        if (this.isLinking) this.hideLinkInfo();
+                        if (this.app.activeTool === 'link') this.hideLinkInfo();
                     });
 
                     track.appendChild(bar);
@@ -861,7 +845,7 @@ export default class Timeline {
             }
             if (sourceEnt.domain !== targetEnt.domain) {
                 this.app.showMessage("Connections can only be made between entities of the same domain.");
-                this.linkSource = null; this.isLinking = false; this.renderView(); return;
+                this.linkSource = null; this.renderView(); return;
             }
             const conn = {
                 id: 'conn_' + Date.now(),
@@ -873,7 +857,10 @@ export default class Timeline {
             };
             this.app.connections.push(conn);
             this.linkSource = null;
-            this.isLinking = false;
+            // Removed: this.isLinking = false;
+            // We shouldn't auto-deselect the active tool unless we want to fall back to 'pan'.
+            // For now, let the tool remain active so user can link more entities.
+            this.app.setActiveTool('pan');
             this.renderView();
         }
     }
@@ -945,7 +932,7 @@ export default class Timeline {
             const setupInteractions = (el) => {
                 el.addEventListener('mouseenter', (e) => {
                     e.stopPropagation();
-                    if (this.isLinking) {
+                    if (this.app.activeTool === 'link') {
                         this.showLinkEditor(e, conn, fromEnt, targetEnt);
                     } else {
                         this.showLinkInfo(e, conn, fromEnt, targetEnt);
@@ -953,7 +940,7 @@ export default class Timeline {
                 });
                 el.addEventListener('mousemove', (e) => {
                     e.stopPropagation();
-                    if (this.isLinking) return;
+                    if (this.app.activeTool === 'link') return;
                     this.updateLinkInfoPos(e);
                 });
                 el.addEventListener('mouseleave', (e) => {
@@ -964,7 +951,7 @@ export default class Timeline {
                 });
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    if (this.isLinking) {
+                    if (this.app.activeTool === 'link') {
                         this.showLinkEditor(e, conn, fromEnt, targetEnt);
                     } else if (!isConfirmed || !isValid) {
                         if (this.app.isConnectionValid(conn)) {
