@@ -1,0 +1,20 @@
+--- src/renderer/MedievalRenderer.js
++++ src/renderer/MedievalRenderer.js
+@@ -825,6 +825,16 @@
+             const isHovered = ent.id === hoveredId;
+             const isSelected = ent.id === selectedId;
+
++            // Dynamically redraw hovered or selected entities so their highlight is animated
++            if (isSelected || isHovered) {
++                if (this._isPointEntity(ent)) {
++                    this.drawPointMarker(ent, isHovered, isSelected, ctx);
++                } else if (ent.type === 'river') {
++                    this.drawRiver(ent, isHovered, isSelected, ctx);
++                } else if (ent.type !== 'water') {
++                    this.drawPolygon(ent, isHovered, isSelected, ctx);
++                }
++            }
++
+             // Draw Label (for all types, including water)
+             if (isSelected || isHovered || t.k > 0.5) {
+                 this.drawLabel(ent, isSelected);
