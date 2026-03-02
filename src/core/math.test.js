@@ -184,12 +184,7 @@ describe("enforceClockwise", () => {
             { x: 10, y: 0 }
         ];
         const result = enforceClockwise([...points]);
-        expect(result).toEqual([
-            { x: 10, y: 0 },
-            { x: 10, y: 10 },
-            { x: 0, y: 10 },
-            { x: 0, y: 0 }
-        ]);
+        expect(result).toEqual([...points].reverse());
     });
 
     test("handles collinear points gracefully (area is 0)", () => {
