@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { describe, it, expect, beforeEach, mock, spyOn } from "bun:test";
 import DrawTool from "./DrawTool.js";
 import HistoricalEntity from "../core/Entity.js";
 
@@ -92,23 +92,26 @@ describe("DrawTool", () => {
             appMock.drawTypology = 'city';
             appMock.draftPoints = [{ x: 10, y: 10 }];
 
-            // Mock Math.random to ensure predictable color
-            const originalRandom = Math.random;
-            Math.random = () => 0.5; // Will pick the middle color '#c5a059'
+            const randomSpy = spyOn(Math, 'random').mockImplementation(() => 0.5); // Will pick the middle color '#c5a059'
+            const dateSpy = spyOn(Date, 'now').mockImplementation(() => 12345);
 
             try {
                 tool.commit();
 
                 expect(appMock.entities.length).toBe(1);
-                expect(appMock.entities[0].name).toBe('NewArea1');
-                expect(appMock.entities[0].color).toBe('#c5a059');
-                expect(appMock.entities[0].timeline[0].geometry).toEqual([{ x: 10, y: 10 }]);
+                const newEnt = appMock.entities[0];
+                expect(newEnt.id).toBe('ent_12345');
+                expect(newEnt.name).toBe('NewArea1');
+                expect(newEnt.color).toBe('#c5a059');
+                expect(newEnt.timeline[0].geometry).toEqual([{ x: 10, y: 10 }]);
+                expect(appMock.selectEntity).toHaveBeenCalledWith('ent_12345');
 
                 expect(appMock.draftPoints.length).toBe(0);
                 expect(appMock.draftCursor).toBeNull();
                 expect(appMock.toolbar.selectTool).toHaveBeenCalledWith('pan');
             } finally {
-                Math.random = originalRandom;
+                randomSpy.mockRestore();
+                dateSpy.mockRestore();
             }
         });
 
