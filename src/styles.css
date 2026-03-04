@@ -223,8 +223,29 @@ h1 span {
     font-weight: bold;
     font-size: 1.2rem;
     color: var(--ink-primary);
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
+    overflow: hidden;
+}
+
+body.view-timeline .tool-map {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    border-width: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.view-map .tool-timeline {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    border-width: 0;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
 }
 
 .tool-btn:hover {
