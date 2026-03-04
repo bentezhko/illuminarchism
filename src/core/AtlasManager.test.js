@@ -30,7 +30,7 @@ describe("AtlasManager", () => {
             {
                 id: "entity-2",
                 name: "Test Entity 2",
-                domain: "cultural",
+                domain: "linguistic",
                 typology: "language",
                 geometry: {
                     type: "Point",
@@ -198,7 +198,7 @@ describe("AtlasManager", () => {
         test("creates new format entities with explicit domain", () => {
             const entity2 = manager.entities.find(e => e.id === "entity-2");
             expect(entity2).toBeDefined();
-            expect(entity2.domain).toBe("cultural");
+            expect(entity2.domain).toBe("linguistic");
             expect(entity2.typology).toBe("language");
 
             // Should process 'when' timespans
@@ -274,12 +274,10 @@ describe("AtlasManager", () => {
         });
 
         test("returns null for unsupported type", () => {
-            const geojson = { type: "FeatureCollection", features: [] };
+            const geojson = { type: "FeatureCollection", coordinates: [] };
             const result = manager.convertGeometry(geojson);
             expect(result).toBeNull();
-            // console.warn is called in convertGeometry for unsupported types, but since it's an internal warning, we can just check the return value. Or we can restore original console logic.
-            // Actually, we mocked console.warn in beforeEach so we should just check the return value.
-            // If the call wasn't tracked it could be an issue with how Bun mock tracks global console methods if not spyOn'd correctly.
+            expect(console.warn).toHaveBeenCalledWith("Unsupported geometry type: FeatureCollection");
         });
 
         test("returns null for missing data", () => {
@@ -328,6 +326,9 @@ describe("AtlasManager", () => {
             // We can mock `existsAtYear` on entities to test the manager's logic
             manager.entities[0].existsAtYear = () => true;
             manager.entities[1].existsAtYear = () => false;
+
+            spyOn(manager.entities[0], 'existsAtYear').mockReturnValue(true);
+            spyOn(manager.entities[1], 'existsAtYear').mockReturnValue(false);
 
             const entities = manager.getEntitiesAtYear(1000);
             expect(entities.length).toBe(1);
