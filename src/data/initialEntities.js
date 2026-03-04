@@ -101,7 +101,7 @@ export const initialEntities = [
             hatchStyle: 'vertical',
             layerId: 'layer_political',
             validRange: COMMON_RANGES.DEFAULT,
-            description: 'A narrow land corridor running east–west, connecting the western mainland to the eastern island zone. The only overland route between the two major political bodies, making it strategically critical. Its contested status across different periods makes it a natural focus for political transition studies.'
+            description: 'A narrow land corridor running east\u2013west, connecting the western mainland to the eastern island zone. The only overland route between the two major political bodies, making it strategically critical. Its contested status across different periods makes it a natural focus for political transition studies.'
         },
         keyframes: [
             { year: -2000, geometry: [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], preventResampling: true },
@@ -135,7 +135,7 @@ export const initialEntities = [
             hatchStyle: 'cross',
             layerId: 'layer_misc',
             validRange: COMMON_RANGES.LANG_OLD,
-            description: 'An ancient language zone covering the western mainland, first attested from the 9th century CE. Classified as a genealogical unit representing the oldest documented linguistic stratum in the atlas. Its territorial extent overlaps with Regnum Magna, illustrating the standard political–linguistic co-mapping use case.'
+            description: 'An ancient language zone covering the western mainland, first attested from the 9th century CE. Classified as a genealogical unit representing the oldest documented linguistic stratum in the atlas. Its territorial extent overlaps with Regnum Magna, illustrating the standard political\u2013linguistic co-mapping use case.'
         },
         keyframes: [
             { year: 800, geometry: [{ x: -280, y: -80 }, { x: -120, y: -80 }, { x: -120, y: 80 }, { x: -280, y: 80 }], preventResampling: true }
@@ -152,7 +152,7 @@ export const initialEntities = [
             hatchStyle: 'stipple',
             layerId: 'layer_misc',
             validRange: COMMON_RANGES.SOUND_TH,
-            description: 'The distributional boundary of the dental fricative [θ] sound, mapped from 1200 CE. A WALS-style typological feature zone delineating where the sound is present versus absent. Demonstrates how phonological isoglosses can be tracked spatiotemporally as the feature spreads or contracts across contact zones.'
+            description: 'The distributional boundary of the dental fricative [\u03b8] sound, mapped from 1200 CE. A WALS-style typological feature zone delineating where the sound is present versus absent. Demonstrates how phonological isoglosses can be tracked spatiotemporally as the feature spreads or contracts across contact zones.'
         },
         keyframes: [
             { year: 1200, geometry: [{ x: -250, y: -50 }, { x: -150, y: -50 }, { x: -150, y: 50 }, { x: -250, y: 50 }], preventResampling: true }
@@ -179,11 +179,11 @@ export const initialEntities = [
         id: 'cult_fest',
         name: 'Solar Calendar Zone',
         config: {
-            domain: 'political',
-            typology: 'band',
+            domain: 'cultural',
+            typology: 'norm',
             color: COMMON_COLORS.CULT_GOLD,
             hatchStyle: 'vertical',
-            layerId: 'layer_political',
+            layerId: 'layer_misc',
             validRange: COMMON_RANGES.CULT_FEST,
             description: 'A broad region sharing a solar calendar tradition, active from the 10th century CE. Represents the spatial diffusion of solar timekeeping as a normative cultural practice. The fuzzy band boundary reflects the gradual adoption pattern typical of calendar reform spread rather than a hard political border.'
         },
@@ -211,13 +211,13 @@ export const initialEntities = [
         id: 'cult_sleep',
         name: 'Biphasic Sleep Zone',
         config: {
-            domain: 'political',
-            typology: 'band',
+            domain: 'cultural',
+            typology: 'norm',
             color: COMMON_COLORS.SLEEP_GREEN,
             hatchStyle: 'horizontal',
-            layerId: 'layer_political',
+            layerId: 'layer_misc',
             validRange: COMMON_RANGES.SLEEP_BIPHASIC,
-            description: 'The historical zone where biphasic sleep — a two-phase nightly rest pattern with a waking interval around midnight — was practiced. Spans from deep prehistory to approximately 1900 CE, when industrialization and artificial lighting suppressed the practice. Based on HRAF OCM code 513 (Sleeping). A prime example of a cultural-physiological norm that receded under modernization pressure.'
+            description: 'The historical zone where biphasic sleep \u2014 a two-phase nightly rest pattern with a waking interval around midnight \u2014 was practiced. Spans from deep prehistory to approximately 1900 CE, when industrialization and artificial lighting suppressed the practice. Based on HRAF OCM code 513 (Sleeping). A prime example of a cultural-physiological norm that receded under modernization pressure.'
         },
         keyframes: [
             { year: -10000, geometry: [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], preventResampling: true },
