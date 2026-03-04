@@ -858,7 +858,7 @@ export default class IlluminarchismApp {
         // Initial tool cursors before hover
         if (name === 'pan') c.style.cursor = 'grab';
         else if (name === 'draw') c.style.cursor = 'crosshair';
-        else if (name === 'erase') c.style.cursor = 'crosshair';
+        else if (name === 'erase') c.style.cursor = 'not-allowed';
         else if (name === 'vertex-edit') c.style.cursor = 'crosshair';
         else if (name === 'transform') c.style.cursor = 'crosshair';
         else if (name === 'link') c.style.cursor = 'crosshair';
@@ -1134,7 +1134,7 @@ export default class IlluminarchismApp {
                 if (this.activeTool === 'pan') {
                     this.renderer.canvas.style.cursor = fid ? 'pointer' : 'grab';
                 } else if (this.activeTool === 'erase') {
-                    this.renderer.canvas.style.cursor = fid ? 'not-allowed' : 'crosshair';
+                    this.renderer.canvas.style.cursor = fid ? 'pointer' : 'not-allowed';
                 } else if (this.activeTool === 'transform') {
                     // Let transform hover handle handles, but fallback to pointer if hovering an entity to edit
                     // If no entity is selected, show crosshair. If hovering to select, show pointer.
