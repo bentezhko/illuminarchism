@@ -52,7 +52,7 @@ export default class RegistryRenderer {
 
         unitSelect.addEventListener('change', (e) => {
             this.app.renderer.scaleUnit = e.target.value;
-            this.app.renderer.invalidateWorldLayer(); // Just to be safe, though scale is dynamic
+            this.app.renderer.invalidateWorldLayer();
             this.app.render();
         });
 
@@ -90,7 +90,9 @@ export default class RegistryRenderer {
             domainTitle.onclick = () => {
                 const content = domainTitle.nextElementSibling;
                 content.classList.toggle('open');
-                domainTitle.textContent = content.classList.contains('open') ? `▼ ${domainLabel} (${domainAbbr})` : `▶ ${domainLabel} (${domainAbbr})`;
+                domainTitle.textContent = content.classList.contains('open')
+                    ? `▼ ${domainLabel} (${domainAbbr})`
+                    : `▶ ${domainLabel} (${domainAbbr})`;
             };
             domainDiv.appendChild(domainTitle);
 
@@ -103,7 +105,8 @@ export default class RegistryRenderer {
                 domainData.types.forEach(typeDef => {
                     const typeId = typeDef.value;
                     const typeLabel = typeDef.label;
-                    const existingEnts = (entityMap[domainId] && entityMap[domainId][typeId]) ? entityMap[domainId][typeId] : [];
+                    const existingEnts = (entityMap[domainId] && entityMap[domainId][typeId])
+                        ? entityMap[domainId][typeId] : [];
                     const count = existingEnts.length;
 
                     // Typology Header
@@ -117,7 +120,7 @@ export default class RegistryRenderer {
                     typeTitle.className = 'registry-type-title';
                     typeTitle.style.cursor = 'pointer';
                     typeTitle.style.fontStyle = 'italic';
-                    typeTitle.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)'; // Dim if empty
+                    typeTitle.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)';
                     typeTitle.style.fontSize = '0.85rem';
                     typeTitle.textContent = `▶ ${typeLabel} (${count})`;
 
@@ -125,7 +128,9 @@ export default class RegistryRenderer {
                         e.stopPropagation();
                         const typeList = typeTitle.nextElementSibling;
                         typeList.classList.toggle('open');
-                        typeTitle.textContent = typeList.classList.contains('open') ? `▼ ${typeLabel} (${count})` : `▶ ${typeLabel} (${count})`;
+                        typeTitle.textContent = typeList.classList.contains('open')
+                            ? `▼ ${typeLabel} (${count})`
+                            : `▶ ${typeLabel} (${count})`;
                     };
                     typeDiv.appendChild(typeTitle);
 
@@ -138,40 +143,32 @@ export default class RegistryRenderer {
                         existingEnts.forEach(ent => {
                             const item = document.createElement('div');
                             item.className = 'registry-item';
-                            if (ent.id === this.app.selectedEntityId) item.classList.add('selected'); // Highlight selected
-
-                            const left = document.createElement('div');
-                            left.style.display = 'flex';
-                            left.style.alignItems = 'center';
-
-                            const toggle = document.createElement('input');
-                            toggle.type = 'checkbox';
-                            toggle.className = 'toggle-vis';
-                            toggle.checked = ent.visible;
-                            toggle.onclick = (e) => {
-                                e.stopPropagation();
-                                ent.visible = toggle.checked;
-                                this.app.render();
-                            };
-                            left.appendChild(toggle);
-
-                            const nameSpan = document.createElement('span');
-                            nameSpan.textContent = ent.name;
-                            left.appendChild(nameSpan);
-
-                            item.appendChild(left);
-
-                            const goTo = document.createElement('span');
-                            goTo.innerHTML = '⌖';
-                            goTo.title = 'Go to location';
-                            goTo.style.fontSize = '0.8rem';
-                            goTo.style.cursor = 'pointer';
+                            item.style.display = 'block'; // allow description to stack below name row
+                            if (ent.id === this.app.selectedEntityId) item.classList.add('selected');
 
                             item.onclick = () => {
                                 this.app.selectEntity(ent.id, true);
                             };
 
-                            // Re-bind target click
+                            // --- Top row: name + go-to button ---
+                            const topRow = document.createElement('div');
+                            topRow.style.display = 'flex';
+                            topRow.style.alignItems = 'center';
+                            topRow.style.justifyContent = 'space-between';
+
+                            const nameSpan = document.createElement('span');
+                            nameSpan.className = 'registry-item-name';
+                            nameSpan.textContent = ent.name;
+                            topRow.appendChild(nameSpan);
+
+                            const goTo = document.createElement('span');
+                            goTo.innerHTML = '&#8982;';
+                            goTo.title = 'Go to location';
+                            goTo.style.fontSize = '0.8rem';
+                            goTo.style.cursor = 'pointer';
+                            goTo.style.flexShrink = '0';
+                            goTo.style.marginLeft = '0.4rem';
+
                             goTo.onclick = (e) => {
                                 e.stopPropagation();
                                 this.app.selectEntity(ent.id, false);
@@ -189,7 +186,25 @@ export default class RegistryRenderer {
                                     }
                                 }
                             };
-                            item.appendChild(goTo);
+                            topRow.appendChild(goTo);
+                            item.appendChild(topRow);
+
+                            // --- Description row ---
+                            const desc = ent.description;
+                            // Only show if it's a real description (skip the generic fallback)
+                            if (desc && desc !== 'A mapped entity.') {
+                                const descDiv = document.createElement('div');
+                                descDiv.className = 'registry-item-desc';
+                                descDiv.style.fontSize = '0.7rem';
+                                descDiv.style.color = 'var(--ink-faded)';
+                                descDiv.style.fontStyle = 'italic';
+                                descDiv.style.marginTop = '0.2rem';
+                                descDiv.style.lineHeight = '1.35';
+                                descDiv.style.paddingRight = '1.2rem'; // keep clear of the goTo button area
+                                descDiv.textContent = desc;
+                                item.appendChild(descDiv);
+                            }
+
                             typeList.appendChild(item);
                         });
                     } else {
