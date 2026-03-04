@@ -1044,16 +1044,11 @@ body.view-map .tool-timeline {
     font-family: 'Cinzel', serif;
     background: transparent;
     border: none;
-    color: var(--ink-faded);
+    color: var(--ink-primary);
     transition: all 0.2s;
 }
 
-.view-btn.active {
-    background: var(--rubric-red);
-    color: var(--parchment-bg);
-}
-
-.view-btn:hover:not(.active) {
+.view-btn:hover {
     background: var(--gold-leaf);
     color: white;
 }

@@ -266,8 +266,13 @@ export default class IlluminarchismApp {
         }
 
         // Add listeners for view switching
-        this.safeAddListener('btn-view-map', 'click', () => this.switchView('map'));
-        this.safeAddListener('btn-view-timeline', 'click', () => this.switchView('timeline'));
+        this.safeAddListener('btn-view-toggle', 'click', () => {
+            if (this.currentView === 'map') {
+                this.switchView('timeline');
+            } else {
+                this.switchView('map');
+            }
+        });
 
         // Toggle Chronographer Panel
         this.safeAddListener('btn-toggle-chronographer', 'click', () => {
@@ -551,11 +556,10 @@ export default class IlluminarchismApp {
         const mapCanvas = document.getElementById('map-canvas');
         const timelineDiv = document.getElementById('view-timeline');
         const toolbar = document.getElementById('toolbar');
-
-        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        const toggleBtn = document.getElementById('btn-view-toggle');
 
         if (viewName === 'map') {
-            document.getElementById('btn-view-map').classList.add('active');
+            if (toggleBtn) toggleBtn.textContent = 'Timeline';
             document.body.classList.remove('view-timeline');
             document.body.classList.add('view-map');
 
@@ -571,7 +575,7 @@ export default class IlluminarchismApp {
             if (toolbar) toolbar.style.display = 'flex';
             this.render();
         } else {
-            document.getElementById('btn-view-timeline').classList.add('active');
+            if (toggleBtn) toggleBtn.textContent = 'Map';
             document.body.classList.remove('view-map');
             document.body.classList.add('view-timeline');
 
