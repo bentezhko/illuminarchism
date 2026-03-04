@@ -1,4 +1,5 @@
 import { getCentroid } from '../core/math.js';
+import { getTypology } from '../core/Ontology.js';
 
 export default class RegistryRenderer {
     constructor(app, containerId = 'registry-content') {
@@ -79,6 +80,7 @@ export default class RegistryRenderer {
 
             const domainLabel = domainData.domain.name;
             const domainAbbr = domainData.domain.abbr;
+            const domainDescription = domainData.domain.description || null;
 
             const domainDiv = document.createElement('div');
             domainDiv.className = 'registry-category';
@@ -86,19 +88,33 @@ export default class RegistryRenderer {
             // Domain Header
             const domainTitle = document.createElement('div');
             domainTitle.className = 'registry-cat-title';
-            domainTitle.textContent = `▶ ${domainLabel} (${domainAbbr})`;
+            domainTitle.textContent = `\u25b6 ${domainLabel} (${domainAbbr})`;
             domainTitle.onclick = () => {
                 const content = domainTitle.nextElementSibling;
                 content.classList.toggle('open');
                 domainTitle.textContent = content.classList.contains('open')
-                    ? `▼ ${domainLabel} (${domainAbbr})`
-                    : `▶ ${domainLabel} (${domainAbbr})`;
+                    ? `\u25bc ${domainLabel} (${domainAbbr})`
+                    : `\u25b6 ${domainLabel} (${domainAbbr})`;
             };
             domainDiv.appendChild(domainTitle);
 
             // Domain Content
             const domainContent = document.createElement('div');
             domainContent.className = 'registry-list';
+
+            // Domain wiki description — shown at top of expanded domain section
+            if (domainDescription) {
+                const domainDescDiv = document.createElement('div');
+                domainDescDiv.style.fontSize = '0.75rem';
+                domainDescDiv.style.color = 'var(--ink-faded)';
+                domainDescDiv.style.fontStyle = 'italic';
+                domainDescDiv.style.padding = '0.3rem 0.4rem 0.5rem';
+                domainDescDiv.style.borderBottom = '1px solid var(--ink-faded)';
+                domainDescDiv.style.marginBottom = '0.4rem';
+                domainDescDiv.style.lineHeight = '1.4';
+                domainDescDiv.textContent = domainDescription;
+                domainContent.appendChild(domainDescDiv);
+            }
 
             // Iterate Typologies defined in Ontology
             if (domainData.types) {
@@ -108,6 +124,9 @@ export default class RegistryRenderer {
                     const existingEnts = (entityMap[domainId] && entityMap[domainId][typeId])
                         ? entityMap[domainId][typeId] : [];
                     const count = existingEnts.length;
+
+                    // Pull full typology object from Ontology for wiki content
+                    const fullTypology = getTypology(domainId, typeId);
 
                     // Typology Header
                     const typeDiv = document.createElement('div');
@@ -122,52 +141,93 @@ export default class RegistryRenderer {
                     typeTitle.style.fontStyle = 'italic';
                     typeTitle.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)';
                     typeTitle.style.fontSize = '0.85rem';
-                    typeTitle.textContent = `▶ ${typeLabel} (${count})`;
+                    typeTitle.textContent = `\u25b6 ${typeLabel} (${count})`;
 
                     typeTitle.onclick = (e) => {
                         e.stopPropagation();
                         const typeList = typeTitle.nextElementSibling;
                         typeList.classList.toggle('open');
                         typeTitle.textContent = typeList.classList.contains('open')
-                            ? `▼ ${typeLabel} (${count})`
-                            : `▶ ${typeLabel} (${count})`;
+                            ? `\u25bc ${typeLabel} (${count})`
+                            : `\u25b6 ${typeLabel} (${count})`;
                     };
                     typeDiv.appendChild(typeTitle);
 
-                    // Entity List
+                    // Typology Content
                     const typeList = document.createElement('div');
                     typeList.className = 'registry-list';
                     typeList.style.marginLeft = '0.5rem';
 
+                    // --- Typology wiki block ---
+                    if (fullTypology) {
+                        // Description
+                        if (fullTypology.description) {
+                            const typeDescDiv = document.createElement('div');
+                            typeDescDiv.style.fontSize = '0.72rem';
+                            typeDescDiv.style.color = 'var(--ink-faded)';
+                            typeDescDiv.style.fontStyle = 'italic';
+                            typeDescDiv.style.padding = '0.25rem 0.3rem 0.15rem';
+                            typeDescDiv.style.lineHeight = '1.35';
+                            typeDescDiv.textContent = fullTypology.description;
+                            typeList.appendChild(typeDescDiv);
+                        }
+
+                        // Metadata line: boundary type, historical validity, population, examples
+                        const metaItems = [];
+                        if (fullTypology.boundaryType) {
+                            metaItems.push(`Boundary\u00a0type: ${fullTypology.boundaryType}`);
+                        }
+                        if (fullTypology.historicalValidity) {
+                            metaItems.push(fullTypology.historicalValidity);
+                        }
+                        if (fullTypology.population) {
+                            metaItems.push(`Pop.\u00a0${fullTypology.population.min}\u2013${fullTypology.population.max}`);
+                        }
+                        if (fullTypology.examples) {
+                            metaItems.push(`e.g.\u00a0${fullTypology.examples}`);
+                        }
+
+                        if (metaItems.length > 0) {
+                            const metaDiv = document.createElement('div');
+                            metaDiv.style.fontSize = '0.65rem';
+                            metaDiv.style.color = 'var(--rubric-red)';
+                            metaDiv.style.padding = '0.05rem 0.3rem 0.3rem';
+                            metaDiv.style.fontVariant = 'small-caps';
+                            metaDiv.style.lineHeight = '1.4';
+                            metaDiv.textContent = metaItems.join(' \u00b7 ');
+                            typeList.appendChild(metaDiv);
+                        }
+
+                        // Divider before entity instances
+                        if (count > 0) {
+                            const divider = document.createElement('div');
+                            divider.style.borderTop = '1px solid var(--ink-faded)';
+                            divider.style.margin = '0.2rem 0.3rem 0.25rem';
+                            divider.style.opacity = '0.4';
+                            typeList.appendChild(divider);
+                        }
+                    }
+
+                    // --- Entity instances (name + go-to only) ---
                     if (count > 0) {
                         existingEnts.forEach(ent => {
                             const item = document.createElement('div');
                             item.className = 'registry-item';
-                            item.style.display = 'block'; // allow description to stack below name row
                             if (ent.id === this.app.selectedEntityId) item.classList.add('selected');
 
                             item.onclick = () => {
                                 this.app.selectEntity(ent.id, true);
                             };
 
-                            // --- Top row: name + go-to button ---
-                            const topRow = document.createElement('div');
-                            topRow.style.display = 'flex';
-                            topRow.style.alignItems = 'center';
-                            topRow.style.justifyContent = 'space-between';
-
                             const nameSpan = document.createElement('span');
-                            nameSpan.className = 'registry-item-name';
                             nameSpan.textContent = ent.name;
-                            topRow.appendChild(nameSpan);
+                            item.appendChild(nameSpan);
 
                             const goTo = document.createElement('span');
                             goTo.innerHTML = '&#8982;';
                             goTo.title = 'Go to location';
                             goTo.style.fontSize = '0.8rem';
                             goTo.style.cursor = 'pointer';
-                            goTo.style.flexShrink = '0';
-                            goTo.style.marginLeft = '0.4rem';
 
                             goTo.onclick = (e) => {
                                 e.stopPropagation();
@@ -186,29 +246,10 @@ export default class RegistryRenderer {
                                     }
                                 }
                             };
-                            topRow.appendChild(goTo);
-                            item.appendChild(topRow);
-
-                            // --- Description row ---
-                            const desc = ent.description;
-                            // Only show if it's a real description (skip the generic fallback)
-                            if (desc && desc !== 'A mapped entity.') {
-                                const descDiv = document.createElement('div');
-                                descDiv.className = 'registry-item-desc';
-                                descDiv.style.fontSize = '0.7rem';
-                                descDiv.style.color = 'var(--ink-faded)';
-                                descDiv.style.fontStyle = 'italic';
-                                descDiv.style.marginTop = '0.2rem';
-                                descDiv.style.lineHeight = '1.35';
-                                descDiv.style.paddingRight = '1.2rem'; // keep clear of the goTo button area
-                                descDiv.textContent = desc;
-                                item.appendChild(descDiv);
-                            }
-
+                            item.appendChild(goTo);
                             typeList.appendChild(item);
                         });
                     } else {
-                        // Empty state indicator
                         const emptyMsg = document.createElement('div');
                         emptyMsg.style.fontStyle = 'italic';
                         emptyMsg.style.fontSize = '0.7rem';
