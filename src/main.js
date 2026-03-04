@@ -324,10 +324,10 @@ export default class IlluminarchismApp {
             if (modal) modal.classList.remove('visible');
         });
 
-        // Ontology Button
+        // Ontology Button — toggles modal open/closed
         this.safeAddListener('btn-ontology', 'click', () => {
             const modal = document.getElementById('ontology-modal');
-            if (modal) modal.classList.add('visible');
+            if (modal) modal.classList.toggle('visible');
         });
 
 
