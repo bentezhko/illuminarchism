@@ -374,26 +374,23 @@ export default class InputController {
         });
 
         // Global document click listener for reverting tools on UI/empty clicks
+        const interactiveAreas = [
+            'map-canvas',
+            'view-timeline',
+            'toolbar',
+            'info-panel',
+            'ontology-modal',
+            'atlas-registry'
+        ].map(id => document.getElementById(id)).filter(Boolean);
+
         document.addEventListener('mousedown', (e) => {
             if (this.app.activeTool === 'pan' || this.app.activeTool === 'draw') return; // Draw is exempt
 
-            // Check if the click was inside the interactive area (map, timeline, toolbar, panel)
-            const mapArea = document.getElementById('map-canvas');
-            const timelineArea = document.getElementById('view-timeline');
-            const toolbar = document.getElementById('toolbar');
-            const panel = document.getElementById('info-panel');
-            const modal = document.getElementById('ontology-modal');
-            const registry = document.getElementById('atlas-registry');
+            // Check if the click was inside an interactive area
+            const clickedOnInteractiveArea = interactiveAreas.some(area => area.contains(e.target));
 
-            const clickedMap = mapArea && mapArea.contains(e.target);
-            const clickedTimeline = timelineArea && timelineArea.contains(e.target);
-            const clickedToolbar = toolbar && toolbar.contains(e.target);
-            const clickedPanel = panel && panel.contains(e.target);
-            const clickedModal = modal && modal.contains(e.target);
-            const clickedRegistry = registry && registry.contains(e.target);
-
-            // If click is on the header, chronographer body, or just empty space not in these containers
-            if (!clickedMap && !clickedTimeline && !clickedToolbar && !clickedPanel && !clickedModal && !clickedRegistry) {
+            // If click is outside interactive areas, revert tool to pan
+            if (!clickedOnInteractiveArea) {
                 this.app.toolbar.selectTool('pan');
                 this.app.deselect();
             }
