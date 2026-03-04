@@ -197,4 +197,22 @@ describe('MedievalRenderer', () => {
         expect(Number.isFinite(args[0])).toBe(true);
         expect(Number.isFinite(args[1])).toBe(true);
     });
+
+    it('resize should not block the main thread with texture generation', () => {
+        // Measure execution time of resize() to ensure it's fast
+        const start = performance.now();
+
+        // Call resize multiple times to simulate rapid window resizing
+        for (let i = 0; i < 10; i++) {
+            renderer.resize();
+        }
+
+        const end = performance.now();
+        const duration = end - start;
+
+        // If texture generation (especially fbm with 262,144 iterations) was still
+        // inside resize(), this would take hundreds of milliseconds or even seconds.
+        // We expect it to be well under 50ms for 10 calls.
+        expect(duration).toBeLessThan(50);
+    });
 });

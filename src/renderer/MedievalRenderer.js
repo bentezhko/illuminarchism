@@ -74,8 +74,6 @@ export default class MedievalRenderer {
         this.worldLayer.height = this.height;
         this.worldLayerValid = false;
 
-        this.createParchmentTexture();
-        this.createWaterTexture();
         this.worldLayerValid = false; // Invalidate cache on resize
         if (window.illuminarchismApp) window.illuminarchismApp.render();
     }
