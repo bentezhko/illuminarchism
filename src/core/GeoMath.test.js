@@ -110,10 +110,10 @@ describe("GeoMath.isPointInPolygon", () => {
         expect(GeoMath.isPointInPolygon({ x: -5, y: 5 }, polygon)).toBe(false);
     });
 
-    // Ray casting behavior on edges/vertices can be inconsistent, but typically:
-    test("handles point on edge (might depend on implementation, testing for no crash)", () => {
+    test("handles point on edge", () => {
         const result = GeoMath.isPointInPolygon({ x: 5, y: 0 }, polygon);
         expect(typeof result).toBe("boolean");
+        expect(result).toBe(true);
     });
 });
 
