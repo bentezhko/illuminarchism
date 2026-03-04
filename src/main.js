@@ -74,6 +74,9 @@ export default class IlluminarchismApp {
         this.newAreaCounter = 1;
         this.isSelectionAnimating = false;
 
+        // Initial setup for toolbar sliding based on view
+        document.body.classList.add('view-map');
+
         this.initData();
         this.initUI();
         this.updateEntities();
@@ -741,6 +744,13 @@ export default class IlluminarchismApp {
 
         if (viewName === 'map') {
             document.getElementById('btn-view-map').classList.add('active');
+            document.body.classList.remove('view-timeline');
+            document.body.classList.add('view-map');
+
+            if (this.activeTool === 'link') {
+                this.toolbar.selectTool('pan');
+            }
+
             if (mapCanvas) mapCanvas.style.display = 'block';
             if (timelineDiv) {
                 timelineDiv.classList.remove('active');
@@ -750,6 +760,14 @@ export default class IlluminarchismApp {
             this.render();
         } else {
             document.getElementById('btn-view-timeline').classList.add('active');
+            document.body.classList.remove('view-map');
+            document.body.classList.add('view-timeline');
+
+            const mapTools = ['draw', 'vertex-edit', 'transform'];
+            if (mapTools.includes(this.activeTool)) {
+                this.toolbar.selectTool('pan');
+            }
+
             if (mapCanvas) mapCanvas.style.display = 'none';
             if (timelineDiv) {
                 timelineDiv.classList.add('active');
@@ -836,11 +854,13 @@ export default class IlluminarchismApp {
         // Update Cursor
         const c = this.renderer.canvas;
         c.style.cursor = 'default';
+
+        // Initial tool cursors before hover
         if (name === 'pan') c.style.cursor = 'grab';
         else if (name === 'draw') c.style.cursor = 'crosshair';
         else if (name === 'erase') c.style.cursor = 'not-allowed';
-        else if (name === 'vertex-edit') c.style.cursor = 'alias';
-        else if (name === 'transform') c.style.cursor = 'default'; // managed by InputController hover
+        else if (name === 'vertex-edit') c.style.cursor = 'crosshair';
+        else if (name === 'transform') c.style.cursor = 'crosshair';
         else if (name === 'link') c.style.cursor = 'crosshair';
 
         this.render();
@@ -1019,10 +1039,6 @@ export default class IlluminarchismApp {
         // Safety checks to prevent crashes
         if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
 
-        // We still want to know what's under the mouse for deselection logic,
-        // but we might skip cursor updates or heavy rendering in certain tools.
-        const isModalTool = this.activeTool === 'draw' || this.activeTool === 'vertex-edit' || this.activeTool === 'transform';
-
         try {
             let fid = null;
 
@@ -1110,14 +1126,28 @@ export default class IlluminarchismApp {
 
             if (fid !== this.hoveredEntityId) {
                 this.hoveredEntityId = fid;
-
-                // Only update cursor if not in a modal tool that manages its own cursor
-                if (!isModalTool) {
-                    this.renderer.canvas.style.cursor = (this.activeTool === 'erase') ?
-                        (fid ? 'pointer' : 'not-allowed') :
-                        (fid ? 'pointer' : (this.activeTool === 'pan' ? 'grab' : 'default'));
-                }
                 this.render();
+            }
+
+            // Always update hover cursors unless we're drawing
+            if (this.activeTool !== 'draw') {
+                if (this.activeTool === 'pan') {
+                    this.renderer.canvas.style.cursor = fid ? 'pointer' : 'grab';
+                } else if (this.activeTool === 'erase') {
+                    this.renderer.canvas.style.cursor = fid ? 'pointer' : 'not-allowed';
+                } else if (this.activeTool === 'transform') {
+                    // Let transform hover handle handles, but fallback to pointer if hovering an entity to edit
+                    // If no entity is selected, show crosshair. If hovering to select, show pointer.
+                    if (!this.selectedEntityId) {
+                        this.renderer.canvas.style.cursor = fid ? 'pointer' : 'crosshair';
+                    }
+                } else if (this.activeTool === 'vertex-edit') {
+                    if (!this.selectedEntityId) {
+                        this.renderer.canvas.style.cursor = fid ? 'cell' : 'crosshair';
+                    }
+                } else if (this.activeTool === 'link') {
+                    this.renderer.canvas.style.cursor = fid ? 'alias' : 'crosshair';
+                }
             }
         } catch (error) {
             console.error('Hover check failed:', error);

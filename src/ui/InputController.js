@@ -168,6 +168,14 @@ export default class InputController {
                 }
 
                 // Priority 4: Default Navigation (Pan)
+
+                // If user clicks empty map space and tool is transform/vertex-edit/erase, revert to Pan
+                if (!this.app.hoveredEntityId &&
+                    (this.app.activeTool === 'transform' || this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'erase')) {
+                    this.app.toolbar.selectTool('pan');
+                    this.app.deselect();
+                }
+
                 this.interactionStartX = e.clientX;
                 this.interactionStartY = e.clientY;
                 this.wasHoveringOnDown = !!this.app.hoveredEntityId;
@@ -275,12 +283,35 @@ export default class InputController {
             }
 
             // CRITICAL FIX: Enable hover detection in pan mode when NOT dragging (unified Navigate tool)
-            if (!this.isDragging && (this.app.activeTool === 'pan' || this.app.activeTool === 'erase')) {
+            // Now expanded to other tools that rely on hover cursors
+            if (!this.isDragging && this.app.activeTool !== 'draw') {
                 const now = Date.now();
                 if (now - this.hoverThrottle > 50) { // Increased throttle to 50ms
                     this.hoverThrottle = now;
                     try {
                         this.app.checkHover(wp);
+
+                        // Handled correctly by checkHover in main.js, EXCEPT for transform tool bounding box handling:
+                        if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
+                            const ent = this.app.entitiesById.get(this.app.selectedEntityId);
+                            if (ent && ent.currentGeometry) {
+                                const isPoint = ent.currentGeometry.length === 1;
+                                if (isPoint) {
+                                    const d = distance(wp, ent.currentGeometry[0]);
+                                    c.style.cursor = (d < 25 / this.renderer.transform.k) ? 'move' : 'crosshair';
+                                } else {
+                                    const bbox = getBoundingBox(ent.currentGeometry);
+                                    const handle = this.getTransformHandle(wp, bbox, this.renderer.transform.k);
+                                    if (handle) {
+                                        c.style.cursor = 'nwse-resize';
+                                    } else if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
+                                        c.style.cursor = 'move';
+                                    } else {
+                                        c.style.cursor = 'crosshair';
+                                    }
+                                }
+                            }
+                        }
                     } catch (err) {
                         console.error('checkHover failed:', err);
                         // Reset hover state on error
@@ -312,7 +343,10 @@ export default class InputController {
             this.transformStart = null;
             this.originalGeometry = null;
 
-            if (this.app.activeTool === 'pan') c.style.cursor = 'grab';
+            if (this.app.activeTool === 'pan') {
+                const c = document.getElementById('map-canvas');
+                if (c) c.style.cursor = 'grab';
+            }
         });
 
         // Spacebar Handler
@@ -336,6 +370,29 @@ export default class InputController {
             if (this.app.activeTool === 'draw') {
                 if (e.key === 'Enter') this.app.commitDraft();
                 if (e.key === 'Escape') this.app.cancelDraft();
+            }
+        });
+
+        // Global document click listener for reverting tools on UI/empty clicks
+        const interactiveAreas = [
+            'map-canvas',
+            'view-timeline',
+            'toolbar',
+            'info-panel',
+            'ontology-modal',
+            'atlas-registry'
+        ].map(id => document.getElementById(id)).filter(Boolean);
+
+        document.addEventListener('mousedown', (e) => {
+            if (this.app.activeTool === 'pan' || this.app.activeTool === 'draw') return; // Draw is exempt
+
+            // Check if the click was inside an interactive area
+            const clickedOnInteractiveArea = interactiveAreas.some(area => area.contains(e.target));
+
+            // If click is outside interactive areas, revert tool to pan
+            if (!clickedOnInteractiveArea) {
+                this.app.toolbar.selectTool('pan');
+                this.app.deselect();
             }
         });
 
