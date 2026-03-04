@@ -1,4 +1,3 @@
-
 import MedievalRenderer from './renderer/MedievalRenderer.js';
 import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
@@ -127,9 +126,6 @@ export default class IlluminarchismApp {
             const originalW = Math.max(0.1, bbox.maxX - bbox.minX);
             const originalH = Math.max(0.1, bbox.maxY - bbox.minY);
 
-            // Calculate Scale Factors
-            // Note: Logic simplifies depending on quadrant. 
-            // For BR handle: newW = origW + dx.
             if (mode === 'resize-br') {
                 scaleX = (originalW + dx) / originalW;
                 scaleY = (originalH + dy) / originalH;
@@ -145,13 +141,11 @@ export default class IlluminarchismApp {
             }
 
             if (keepAspect) {
-                // Take the larger scale factor
                 const s = Math.max(Math.abs(scaleX), Math.abs(scaleY));
                 scaleX = scaleX < 0 ? -s : s;
                 scaleY = scaleY < 0 ? -s : s;
             }
 
-            // Apply Scale relative to Anchor
             ent.currentGeometry = originalGeo.map(p => ({
                 x: anchorX + (p.x - anchorX) * scaleX,
                 y: anchorY + (p.y - anchorY) * scaleY
@@ -172,149 +166,15 @@ export default class IlluminarchismApp {
         this.activeLayerId = 'layer_political';
         if (this.layerManager) this.layerManager.render();
 
-        // Create entities using the new config-object format for constructor
-        const seaNorth = new HistoricalEntity('sea_north', 'Mare Borealis', {
-            domain: 'geographic',
-            typology: 'aquatic',
-            color: '#264e86',
-            hatchStyle: 'waves',
-            layerId: 'layer_water',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
+        // Create entities from the canonical initialEntities definition.
+        // initialEntities.js is the single source of truth for seed data.
+        initialEntities.forEach(def => {
+            const ent = new HistoricalEntity(def.id, def.name, def.config);
+            def.keyframes.forEach(kf => {
+                ent.addKeyframe(kf.year, kf.geometry, kf.preventResampling || false);
+            });
+            this.entities.push(ent);
         });
-        seaNorth.addKeyframe(-2000, [{ x: 0, y: -400 }, { x: 500, y: -400 }, { x: 500, y: 0 }, { x: 0, y: 0 }], true);
-        seaNorth.addKeyframe(2025, [{ x: -10, y: -410 }, { x: 510, y: -410 }, { x: 510, y: 10 }, { x: -10, y: 10 }], true);
-        this.entities.push(seaNorth);
-
-        const seaSouth = new HistoricalEntity('sea_south', 'Mare Australis', {
-            domain: 'geographic',
-            typology: 'aquatic',
-            color: '#264e86',
-            hatchStyle: 'waves',
-            layerId: 'layer_water',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        seaSouth.addKeyframe(-2000, [{ x: 0, y: -100 }, { x: 500, y: -100 }, { x: 500, y: 300 }, { x: 0, y: 300 }], true);
-        seaSouth.addKeyframe(2025, [{ x: -10, y: -110 }, { x: 510, y: -110 }, { x: 510, y: 310 }, { x: -10, y: 310 }], true);
-        this.entities.push(seaSouth);
-
-        const mainland = new HistoricalEntity('mainland', 'Regnum Magna', {
-            domain: 'political',
-            typology: 'nation-state',
-            color: '#264e86',
-            hatchStyle: 'diagonal-right',
-            layerId: 'layer_political',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        mainland.addKeyframe(-2000, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
-        mainland.addKeyframe(2025, [{ x: -300, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 100 }, { x: -300, y: 100 }], true);
-        this.entities.push(mainland);
-
-        const island = new HistoricalEntity('island', 'Insula Minor', {
-            domain: 'political',
-            typology: 'nation-state',
-            color: '#264e86',
-            hatchStyle: 'diagonal-left',
-            layerId: 'layer_political',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        island.addKeyframe(-2000, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
-        island.addKeyframe(2025, [{ x: 200, y: -50 }, { x: 300, y: -50 }, { x: 300, y: 50 }, { x: 200, y: 50 }], true);
-        this.entities.push(island);
-
-        const bridge = new HistoricalEntity('bridge', 'The Causeway', {
-            domain: 'political',
-            typology: 'nation-state',
-            color: '#8a3324',
-            hatchStyle: 'vertical',
-            layerId: 'layer_political',
-            validRange: { start: -2000, end: 2050 } // FIXED: Finite range for editing
-        });
-        bridge.addKeyframe(-2000, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
-        bridge.addKeyframe(2025, [{ x: -100, y: -10 }, { x: 200, y: -10 }, { x: 200, y: 10 }, { x: -100, y: 10 }], true);
-        this.entities.push(bridge);
-
-        const city = new HistoricalEntity('city_capital', 'Urbs Aeterna', {
-            domain: 'political',
-            typology: 'archaic-state',
-            subtype: 'sovereign',
-            color: '#000000',
-            layerId: 'layer_misc',
-            validRange: { start: -1000, end: 2050 } // FIXED: Finite range for editing
-        });
-        city.addKeyframe(-1000, [{ x: 0, y: 0 }]);
-        this.entities.push(city);
-
-        const oldTongue = new HistoricalEntity('lang_old', 'Lingua Antiqua', {
-            domain: 'linguistic',
-            typology: 'genealogical',
-            subtype: 'language',
-            color: '#5c3c92',
-            hatchStyle: 'cross',
-            layerId: 'layer_misc',
-            validRange: { start: 800, end: 2050 } // FIXED: Finite range for editing
-        });
-        oldTongue.addKeyframe(800, [{ x: -280, y: -80 }, { x: -120, y: -80 }, { x: -120, y: 80 }, { x: -280, y: 80 }], true);
-        this.entities.push(oldTongue);
-
-        const thSound = new HistoricalEntity('sound_th', 'Theta Isogloss', {
-            domain: 'linguistic',
-            typology: 'typological',
-            subtype: 'feature',
-            color: '#800080',
-            hatchStyle: 'stipple',
-            layerId: 'layer_misc',
-            validRange: { start: 1200, end: 2050 } // FIXED: Finite range for editing
-        });
-        thSound.addKeyframe(1200, [{ x: -250, y: -50 }, { x: -150, y: -50 }, { x: -150, y: 50 }, { x: -250, y: 50 }], true);
-        this.entities.push(thSound);
-
-        const sodaWord = new HistoricalEntity('word_soda', 'Soda/Pop Line', {
-            domain: 'linguistic',
-            typology: 'typological',
-            subtype: 'feature',
-            color: '#FF4500',
-            hatchStyle: 'stipple',
-            layerId: 'layer_misc',
-            validRange: { start: 1900, end: 2050 } // FIXED: Finite range for editing
-        });
-        sodaWord.addKeyframe(1900, [{ x: -200, y: -100 }, { x: -100, y: -100 }, { x: -100, y: 0 }, { x: -200, y: 0 }], true);
-        this.entities.push(sodaWord);
-
-        const festivalZone = new HistoricalEntity('cult_fest', 'Solar Calendar Zone', {
-            domain: 'political', // Mapped to Political/Band for "Shared Use" activity zone
-            typology: 'band',
-            color: '#c5a059',
-            hatchStyle: 'vertical',
-            layerId: 'layer_political',
-            validRange: { start: 900, end: 2050 } // FIXED: Finite range for editing
-        });
-        festivalZone.addKeyframe(900, [{ x: -290, y: -90 }, { x: 100, y: -90 }, { x: 100, y: 90 }, { x: -290, y: 90 }], true);
-        this.entities.push(festivalZone);
-
-        const paganEnclave = new HistoricalEntity('faith_pagan', 'Old Gods', {
-            domain: 'religious',
-            typology: 'ethnic',
-            color: '#228B22',
-            hatchStyle: 'stipple',
-            layerId: 'layer_misc',
-            validRange: { start: -500, end: 2050 } // FIXED: Finite range for editing
-        });
-        paganEnclave.addKeyframe(-500, [{ x: 250, y: -50 }, { x: 350, y: -50 }, { x: 350, y: 50 }, { x: 250, y: 50 }], true);
-        this.entities.push(paganEnclave);
-
-        // --- NEW CULTURAL DOMAIN ENTITY ---
-        const biphasicSleep = new HistoricalEntity('cult_sleep', 'Biphasic Sleep Zone', {
-            domain: 'political', // Mapped to Political/Band
-            typology: 'band',
-            color: '#3a5f3a',
-            hatchStyle: 'horizontal',
-            layerId: 'layer_political',
-            validRange: { start: -10000, end: 1900 }
-        });
-        // Represents the pre-industrial world, fading out by the early 20th century
-        biphasicSleep.addKeyframe(-10000, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true);
-        biphasicSleep.addKeyframe(1900, [{ x: -50, y: -50 }, { x: 50, y: -50 }, { x: 50, y: 50 }, { x: -50, y: 50 }], true); // Fade out, keep low poly
-        this.entities.push(biphasicSleep);
 
         // Update Layer Manager to show entities
         if (this.layerManager) this.layerManager.render();
@@ -409,10 +269,6 @@ export default class IlluminarchismApp {
         this.safeAddListener('btn-view-map', 'click', () => this.switchView('map'));
         this.safeAddListener('btn-view-timeline', 'click', () => this.switchView('timeline'));
 
-        // Epoch listeners moved to Timeline.js, but keeping DOM Refs logic here is fine if not conflicting.
-        // Timeline.js handles 'change' on epoch-start/end to update bounds.
-        // We can remove the logic here to avoid double binding.
-
         // Toggle Chronographer Panel
         this.safeAddListener('btn-toggle-chronographer', 'click', () => {
             const panel = document.getElementById('temporal-controls');
@@ -421,10 +277,10 @@ export default class IlluminarchismApp {
                 const isClosed = panel.classList.contains('closed');
                 if (isClosed) {
                     panel.classList.remove('closed');
-                    if (btn) btn.textContent = '▼'; // Show "Down" when open (to hide)
+                    if (btn) btn.textContent = '\u25bc'; // Show "Down" when open (to hide)
                 } else {
                     panel.classList.add('closed');
-                    if (btn) btn.textContent = '▲'; // Show "Up" when closed (to pull up)
+                    if (btn) btn.textContent = '\u25b2'; // Show "Up" when closed (to pull up)
                 }
             }
         });
@@ -433,10 +289,6 @@ export default class IlluminarchismApp {
         this.speedOptions = [-16, -8, -4, -2, -1, -0.5, 0, 0.5, 1, 2, 4, 8, 16];
         this.playbackSpeed = 1; // Default
         this.initSpeedDial();
-        // Play button listener moved to Timeline.js but we can keep it here if ref undefined or do nothing.
-        // Timeline.js captures it by ID 'btn-play'.
-
-
 
         // Initialize Dial
         this.dial.updateDisplay();
@@ -502,8 +354,6 @@ export default class IlluminarchismApp {
 
         // Context Menu elements
         this.ctxMenu = document.getElementById('context-menu');
-        // The context menu is deprecated in favor of the docked info-panel,
-        // so we don't append it to the toolbar to prevent overlapping if it is accidentally shown.
         this.ctxHeader = document.getElementById('ctx-header');
         this.ctxNameInput = document.getElementById('ctx-name-input');
         this.ctxType = document.getElementById('ctx-type');
@@ -583,38 +433,26 @@ export default class IlluminarchismApp {
 
         if (!dial || !hand || !display) return;
 
-        // Current index tracking
         let currentIndex = this.speedOptions.indexOf(this.playbackSpeed);
         if (currentIndex === -1) currentIndex = 8; // Default to 1x (index 8)
 
         const updateVisuals = () => {
-            // Map index 0..12 to percentage width (5% to 95%)
             const pct = 5 + (currentIndex / (this.speedOptions.length - 1)) * 90;
-
-            // Move Hand
             hand.style.left = `${pct}%`;
-
-            // Move Hub (Cap) to match
             const hub = document.querySelector('.speed-dial-hub');
             if (hub) hub.style.left = `${pct}%`;
-
-            // Reset transform used by old dial
             hand.style.transform = 'translateX(-50%)';
-
             const val = this.speedOptions[currentIndex];
             display.textContent = `${val}x`;
             this.playbackSpeed = val;
         };
 
-        // Initial update
         updateVisuals();
 
-        // Interaction State
         let isDragging = false;
         let startX = 0;
         let startIndex = 0;
 
-        // Mouse Down (Start Drag OR Click Jump)
         dial.addEventListener('mousedown', (e) => {
             isDragging = true;
             startX = e.clientX;
@@ -622,45 +460,34 @@ export default class IlluminarchismApp {
             document.body.style.cursor = 'ew-resize';
             e.preventDefault();
 
-            // Calculate jump to position immediately
             const rect = dial.getBoundingClientRect();
             const relX = e.clientX - rect.left;
             const pct = Math.max(0, Math.min(1, relX / rect.width));
-
-            // Map 0..1 to index range
             const newIndex = Math.round(pct * (this.speedOptions.length - 1));
 
             if (newIndex !== currentIndex) {
                 currentIndex = newIndex;
-                startIndex = newIndex; // Reset drag start relative to new pos
+                startIndex = newIndex;
                 updateVisuals();
             }
 
-            // Add global listeners
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
         });
 
-        // Mouse Move (Drag)
         const onMouseMove = (e) => {
             if (!isDragging) return;
-            const dx = e.clientX - startX; // Drag right is positive
-            // Reduced sensitivity for finer control on larger dial
-            const SENSITIVITY = 15; // Pixels per step (was 10)
+            const dx = e.clientX - startX;
+            const SENSITIVITY = 15;
             const steps = Math.round(dx / SENSITIVITY);
-
             let newIndex = startIndex + steps;
-
-            // Clamp using Math.min/max
             newIndex = Math.max(0, Math.min(newIndex, this.speedOptions.length - 1));
-
             if (newIndex !== currentIndex) {
                 currentIndex = newIndex;
                 updateVisuals();
             }
         };
 
-        // Mouse Up (End Drag)
         const onMouseUp = () => {
             if (isDragging) {
                 isDragging = false;
@@ -670,12 +497,10 @@ export default class IlluminarchismApp {
             }
         };
 
-        // Wheel Interaction (Refactored)
         dial.addEventListener('wheel', (e) => {
             e.preventDefault();
             const direction = e.deltaY < 0 ? 1 : -1;
             const newIndex = Math.max(0, Math.min(currentIndex + direction, this.speedOptions.length - 1));
-
             if (newIndex !== currentIndex) {
                 currentIndex = newIndex;
                 updateVisuals();
@@ -685,28 +510,16 @@ export default class IlluminarchismApp {
 
     showContextMenu(ent, x, y) {
         if (!this.ctxMenu) return;
-
-        // Ensure the entity is selected for the listeners to work on the correct one
         this.selectedEntityId = ent.id;
-
-        // Populate Data
         if (this.ctxHeader) this.ctxHeader.textContent = ent.name || "Entity Details";
         if (this.ctxNameInput) this.ctxNameInput.value = ent.name || "";
         if (this.ctxType) this.ctxType.textContent = ent.type === 'polity' ? (ent.typology || 'Polity') : ent.type;
-
-        // Span
         const start = ent.validRange ? ent.validRange.start : -10000;
         const end = ent.validRange ? ent.validRange.end : 2025;
         if (this.ctxStartYear) this.ctxStartYear.value = Number.isFinite(start) ? start : -10000;
         if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : 2025;
-
-        // Color
         if (this.ctxColorInput) this.ctxColorInput.value = ent.color || '#000000';
-
-        // Texture
         if (this.ctxHatchInput) this.ctxHatchInput.value = ent.hatchStyle || 'solid';
-
-        // Position and Show
         this.ctxMenu.style.display = 'block';
     }
 
@@ -726,7 +539,6 @@ export default class IlluminarchismApp {
         const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent && ent.currentGeometry && ent.currentGeometry.length > 0) {
             let c = getRepresentativePoint(ent.currentGeometry);
-            // Animate or set transform
             this.renderer.transform.x = this.renderer.width / 2 - c.x * this.renderer.transform.k;
             this.renderer.transform.y = this.renderer.height / 2 - c.y * this.renderer.transform.k;
             this.render();
@@ -754,7 +566,7 @@ export default class IlluminarchismApp {
             if (mapCanvas) mapCanvas.style.display = 'block';
             if (timelineDiv) {
                 timelineDiv.classList.remove('active');
-                timelineDiv.style.display = 'none'; // Explicitly hide
+                timelineDiv.style.display = 'none';
             }
             if (toolbar) toolbar.style.display = 'flex';
             this.render();
@@ -771,9 +583,9 @@ export default class IlluminarchismApp {
             if (mapCanvas) mapCanvas.style.display = 'none';
             if (timelineDiv) {
                 timelineDiv.classList.add('active');
-                timelineDiv.style.display = 'block'; // Explicitly show
+                timelineDiv.style.display = 'block';
             }
-            if (toolbar) toolbar.style.display = 'flex'; // Keep toolbar visible in timeline view
+            if (toolbar) toolbar.style.display = 'flex';
             this.timeline.renderView();
         }
     }
@@ -790,25 +602,20 @@ export default class IlluminarchismApp {
 
         if (!entFrom || !entTo) return false;
 
-        // Domain check
         if (entFrom.domain !== entTo.domain) return false;
 
-        // Check temporal validity
         const { fromYear, toYear } = this.getConnectionYears(conn);
 
-        // Ensure both ends exist in their respective entities' timelines
         if (fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end) return false;
         if (toYear < entTo.validRange.start || toYear > entTo.validRange.end) return false;
 
         return true;
     }
 
-    // Timeline View now handled by Timeline.js
     renderTimelineView() {
         this.timeline.renderView();
     }
 
-    // Timeline Notches handled by Timeline.js
     renderTimelineNotches() {
         this.timeline.renderNotches();
     }
@@ -821,7 +628,6 @@ export default class IlluminarchismApp {
         this.timeline.togglePlayback();
     }
 
-    // Persistence methods moved to io/* modules
     setActiveTool(name) {
         this.activeTool = name;
         this.cancelDraft();
@@ -851,11 +657,9 @@ export default class IlluminarchismApp {
             hint.classList.remove('visible');
         }
 
-        // Update Cursor
         const c = this.renderer.canvas;
         c.style.cursor = 'default';
 
-        // Initial tool cursors before hover
         if (name === 'pan') c.style.cursor = 'grab';
         else if (name === 'draw') c.style.cursor = 'crosshair';
         else if (name === 'erase') c.style.cursor = 'not-allowed';
@@ -903,8 +707,8 @@ export default class IlluminarchismApp {
     deselect() {
         this.selectedEntityId = null;
         document.getElementById('info-panel').style.display = 'none';
-        this.hideContextMenu(); // Ensure context menu is hidden
-        this.renderTimelineNotches(); // Clear notches
+        this.hideContextMenu();
+        this.renderTimelineNotches();
         if (this.activeTool === 'draw') this.setActiveTool('draw');
         this.render();
     }
@@ -913,19 +717,13 @@ export default class IlluminarchismApp {
         this.selectedEntityId = id;
         const ent = this.entitiesById.get(id);
         if (ent) {
-            // --- SYNC DIAL ---
-            // If the entity's domain is valid in current ontology, sync the dial
             if (this.ontologyTaxonomy[ent.domain]) {
                 this.drawDomain = ent.domain;
-                // If the typology exists in that domain (or maybe it was legacy), try to sync
-                // If typology is valid:
                 const domainData = this.ontologyTaxonomy[ent.domain];
                 const typeExists = domainData.types.some(t => t.value === ent.typology);
                 if (typeExists) {
                     this.drawTypology = ent.typology;
                 } else {
-                    // Fallback to first? Or leave as is if invalid?
-                    // Better to just keep what we have or default
                     if (domainData.types.length > 0) this.drawTypology = domainData.types[0].value;
                 }
 
@@ -936,14 +734,13 @@ export default class IlluminarchismApp {
             const p = document.getElementById('info-panel');
             const isVisible = p && p.style.display === 'block';
 
-            // Update panel if explicitly requested OR if it is already open
             if (showPanel || isVisible) {
                 if (showPanel) p.style.display = 'block';
                 document.getElementById('info-name-input').value = ent.name;
-                document.getElementById('info-type').textContent = ent.typology; // updated to match property name
-                document.getElementById('info-cat').textContent = ent.domain; // updated to match property name
+                document.getElementById('info-type').textContent = ent.typology;
+                document.getElementById('info-cat').textContent = ent.domain;
                 document.getElementById('info-color-input').value = ent.color;
-                document.getElementById('info-hatch-input').value = ent.hatchStyle; // SYNC DROPDOWN
+                document.getElementById('info-hatch-input').value = ent.hatchStyle;
                 document.getElementById('info-start-input').value = ent.validRange.start;
                 document.getElementById('info-end-input').value = ent.validRange.end;
 
@@ -964,7 +761,7 @@ export default class IlluminarchismApp {
                 requestAnimationFrame(this._animationLoop);
             }
 
-            this.renderTimelineNotches(); // Update timeline notches for selected entity
+            this.renderTimelineNotches();
         }
         this.render();
     }
@@ -973,9 +770,8 @@ export default class IlluminarchismApp {
         this._withSelectedEntity(ent => {
             ent.name = document.getElementById('info-name-input').value;
             ent.color = document.getElementById('info-color-input').value;
-            ent.hatchStyle = document.getElementById('info-hatch-input').value; // UPDATE HATCH
+            ent.hatchStyle = document.getElementById('info-hatch-input').value;
 
-            // Update Valid Range
             const startYear = parseInt(document.getElementById('info-start-input').value, 10);
             const endYear = parseInt(document.getElementById('info-end-input').value, 10);
             if (!isNaN(startYear) && !isNaN(endYear) && startYear <= endYear) {
@@ -983,17 +779,15 @@ export default class IlluminarchismApp {
                 ent.validRange.end = endYear;
             }
 
-            // Invalidate cache as styling changed
             if (this.renderer) this.renderer.worldLayerValid = false;
 
             this.renderRegistry();
             this.render();
-            if (this.timelineAPI) this.timelineAPI.renderCustomTrack(); // Update timeline bars
+            if (this.timelineAPI) this.timelineAPI.renderCustomTrack();
         });
     }
 
 
-    // Vertex Editing Logic
     editVertex(index, newPos) {
         if (!this.selectedEntityId) return;
         const ent = this.entitiesById.get(this.selectedEntityId);
@@ -1013,37 +807,33 @@ export default class IlluminarchismApp {
         if (!this.selectedEntityId) return;
         const ent = this.entitiesById.get(this.selectedEntityId);
         if (ent) {
-            // Commit change to timeline (preventResampling = true)
             ent.addKeyframe(this.currentYear, [...ent.currentGeometry], true);
             this.invalidateConnectionsFor(ent.id);
             this.updateInfoPanel(ent);
-            this.renderTimelineNotches(); // Update notches as keyframes changed
+            this.renderTimelineNotches();
         }
     }
 
     updateInfoPanel(ent) {
         const list = document.getElementById('keyframe-list');
-        if (!list) return; // Safety check for missing element
+        if (!list) return;
 
         list.innerHTML = '';
         ent.timeline.forEach(kf => {
             const div = document.createElement('div');
-            div.textContent = `• ${kf.year} AD`;
+            div.textContent = `\u2022 ${kf.year} AD`;
             div.style.borderBottom = '1px solid rgba(0,0,0,0.1)';
             list.appendChild(div);
         });
     }
 
-    // FIXED: Single optimized checkHover with safety checks - NOW WORKS IN PAN MODE
     checkHover(wp) {
-        // Safety checks to prevent crashes
         if (!wp || typeof wp.x !== 'number' || typeof wp.y !== 'number') return;
 
         try {
             let fid = null;
 
-            // Use Spatial Index for Hit Testing
-            const searchSize = 25 / (this.renderer.transform.k || 1); // Prevent division by zero
+            const searchSize = 25 / (this.renderer.transform.k || 1);
             const searchBox = {
                 x: wp.x - searchSize / 2,
                 y: wp.y - searchSize / 2,
@@ -1058,27 +848,21 @@ export default class IlluminarchismApp {
                     candidates = results.map(r => r.entity).filter(e => e && e.visible);
                 } catch (e) {
                     console.warn('Spatial index query failed:', e);
-                    // Fallback to full entity list
                     candidates = this.entities.filter(e => e && e.visible);
                 }
             } else {
-                // Fallback if index not ready
                 candidates = this.entities.filter(e => e && e.visible);
             }
 
-            // Filter by Layer (Visible and Not Locked)
             if (this.layers) {
-                // Optimization: Create Map for O(1) lookup
                 const layerMap = new Map(this.layers.map(l => [l.id, l]));
                 candidates = candidates.filter(e => {
                     const layer = layerMap.get(e.layerId);
-                    // If layer not found, assume visible/unlocked
                     if (!layer) return true;
                     return layer.visible && !layer.locked;
                 });
             }
 
-            // Sort candidates for Z-order
             const sorted = candidates.sort((a, b) => {
                 const typeScore = (ent) => {
                     if (!ent) return 0;
@@ -1100,7 +884,6 @@ export default class IlluminarchismApp {
 
                 let hit = false;
 
-                // Account for dynamic zoom point rendering for cities
                 const isPointRendered = e.currentGeometry.length === 1 || isRenderedAsPoint(e, this.renderer.transform.k);
 
                 if (isPointRendered) {
@@ -1129,15 +912,12 @@ export default class IlluminarchismApp {
                 this.render();
             }
 
-            // Always update hover cursors unless we're drawing
             if (this.activeTool !== 'draw') {
                 if (this.activeTool === 'pan') {
                     this.renderer.canvas.style.cursor = fid ? 'pointer' : 'grab';
                 } else if (this.activeTool === 'erase') {
                     this.renderer.canvas.style.cursor = fid ? 'pointer' : 'not-allowed';
                 } else if (this.activeTool === 'transform') {
-                    // Let transform hover handle handles, but fallback to pointer if hovering an entity to edit
-                    // If no entity is selected, show crosshair. If hovering to select, show pointer.
                     if (!this.selectedEntityId) {
                         this.renderer.canvas.style.cursor = fid ? 'pointer' : 'crosshair';
                     }
@@ -1156,10 +936,8 @@ export default class IlluminarchismApp {
     }
 
     updateEntities() {
-        // Update lookup map
         this.entitiesById = new Map(this.entities.map(e => [e.id, e]));
 
-        // Invalidate renderer cache as geometry or visibility might have changed
         if (this.renderer) this.renderer.worldLayerValid = false;
 
         let cnt = 0;
@@ -1171,16 +949,13 @@ export default class IlluminarchismApp {
             if (ent.currentGeometry && ent.currentGeometry.length > 0) {
                 cnt++;
                 try {
-                    // Calculate BBox for Indexing with safety checks
                     const bbox = getBoundingBox(ent.currentGeometry);
 
-                    // Ensure valid dimensions for spatial indexing
                     if (Math.abs(bbox.w) < 0.001) bbox.w = 0.001;
                     if (Math.abs(bbox.h) < 0.001) bbox.h = 0.001;
 
-                    ent.bbox = bbox; // Store for reuse
+                    ent.bbox = bbox;
 
-                    // Track World Bounds
                     if (bbox.minX < minX) minX = bbox.minX;
                     if (bbox.minY < minY) minY = bbox.minY;
                     if (bbox.maxX > maxX) maxX = bbox.maxX;
@@ -1193,7 +968,6 @@ export default class IlluminarchismApp {
             }
         });
 
-        // Rebuild Quadtree with safety checks
         if (minX === Infinity) {
             minX = -1000; maxX = 1000; minY = -1000; maxY = 1000;
         }
@@ -1221,7 +995,7 @@ export default class IlluminarchismApp {
             });
         } catch (e) {
             console.error('Failed to rebuild spatial index:', e);
-            this.spatialIndex = null; // Fallback to no index
+            this.spatialIndex = null;
         }
 
         const d = document.querySelector('.debug-info');
@@ -1229,12 +1003,10 @@ export default class IlluminarchismApp {
     }
 
     render() {
-        // VIEWPORT CULLING
-        let entitiesToDraw = this.entities; // Default to all if check fails
+        let entitiesToDraw = this.entities;
 
         if (this.spatialIndex && this.renderer.width > 0) {
             try {
-                // Inverse transform: screen (0,0) -> world TL, screen (w,h) -> world BR
                 const tl = this.renderer.toWorld(0, 0);
                 const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
                 const viewportBox = {
@@ -1244,7 +1016,6 @@ export default class IlluminarchismApp {
                     h: br.y - tl.y
                 };
 
-                // Retrieve only visible entities
                 const visibleNodes = this.spatialIndex.retrieve(viewportBox);
                 entitiesToDraw = visibleNodes.map(n => n.entity).filter(e => e);
             } catch (e) {
@@ -1254,7 +1025,6 @@ export default class IlluminarchismApp {
 
         this.renderer.draw(entitiesToDraw, this.hoveredEntityId, this.selectedEntityId, this.activeTool, this.highlightedVertexIndex, this.layers);
 
-        // Draw draft with safety check
         if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
             if (typeof this.renderer.drawDraft === 'function') {
                 try {
@@ -1304,7 +1074,6 @@ export default class IlluminarchismApp {
         const noBtn = document.getElementById('confirm-no');
 
         if (!modal || !msgEl || !yesBtn || !noBtn) {
-            // Fallback
             if (confirm(message)) onConfirm();
             return;
         }
@@ -1341,15 +1110,13 @@ export default class IlluminarchismApp {
 
             const { fromYear, toYear } = this.getConnectionYears(conn);
 
-            // Auto-delete if strictly outside the new range
             const fromOutside = fromYear < entFrom.validRange.start || fromYear > entFrom.validRange.end;
             const toOutside = toYear < entTo.validRange.start || toYear > entTo.validRange.end;
 
             if (fromOutside || toOutside) {
-                return false; // Remove connection
+                return false;
             }
 
-            // Otherwise mark as unconfirmed to draw attention
             conn.confirmed = false;
             return true;
         });
@@ -1365,7 +1132,6 @@ if (typeof window !== 'undefined') {
     window.onload = () => {
         try {
             window.illuminarchismApp = new IlluminarchismApp();
-            // Remove loading overlay if successful
             const overlay = document.getElementById('loading-overlay');
             if (overlay) overlay.style.display = 'none';
         } catch (e) {
