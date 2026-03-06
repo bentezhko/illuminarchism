@@ -230,7 +230,6 @@ export default class MedievalRenderer {
 
         // FIXED: Safety check for entities input
         if (!entities || !Array.isArray(entities)) {
-            // console.warn('Renderer received invalid entities, using empty array'); // Uncomment for debugging
             entities = [];
         }
 
