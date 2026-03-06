@@ -314,6 +314,5 @@ export default class AtlasManager {
         this.layers.clear();
         this.entities = [];
         this.loadedFiles.clear();
-        console.log('All atlases cleared');
     }
 }
