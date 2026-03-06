@@ -99,10 +99,11 @@ export class Quadtree {
 
         if (this.divided && intersectsBounds) {
             // If range intersects with children, search them
-            if (this.intersects(this.nodes[0].bounds, range)) this.nodes[0].retrieve(range, found);
-            if (this.intersects(this.nodes[1].bounds, range)) this.nodes[1].retrieve(range, found);
-            if (this.intersects(this.nodes[2].bounds, range)) this.nodes[2].retrieve(range, found);
-            if (this.intersects(this.nodes[3].bounds, range)) this.nodes[3].retrieve(range, found);
+            for (let i = 0; i < 4; i++) {
+                if (this.intersects(this.nodes[i].bounds, range)) {
+                    this.nodes[i].retrieve(range, found);
+                }
+            }
         }
 
         // Add objects at this level
