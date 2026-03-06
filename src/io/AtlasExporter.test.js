@@ -97,3 +97,33 @@ describe("AtlasExporter.convertToGeoJSON", () => {
         });
     });
 });
+
+describe("AtlasExporter.generateId", () => {
+    test("returns a string", () => {
+        const id = AtlasExporter.generateId();
+        expect(typeof id).toBe("string");
+    });
+
+    test("starts with 'atlas-' prefix", () => {
+        const id = AtlasExporter.generateId();
+        expect(id.startsWith("atlas-")).toBe(true);
+    });
+
+    test("generates unique IDs", () => {
+        const id1 = AtlasExporter.generateId();
+        const id2 = AtlasExporter.generateId();
+        expect(id1).not.toBe(id2);
+    });
+
+    test("has correct format parts", () => {
+        const id = AtlasExporter.generateId();
+        const parts = id.split('-');
+
+        expect(parts.length).toBe(3);
+        expect(parts[0]).toBe('atlas');
+        // The timestamp part should be numeric
+        expect(!isNaN(parseInt(parts[1], 10))).toBe(true);
+        // The random part should exist and have length
+        expect(parts[2].length).toBeGreaterThan(0);
+    });
+});
