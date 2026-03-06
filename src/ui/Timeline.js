@@ -870,31 +870,54 @@ export default class Timeline {
 
         const containerRect = this.viewContainer.getBoundingClientRect();
         const barElements = new Map();
+        const rectCache = new Map();
+        const trackRectCache = new Map();
+
         this.viewContainer.querySelectorAll('.timeline-bar[data-id]').forEach(el => {
-            barElements.set(el.dataset.id, el);
+            const rect = el.getBoundingClientRect();
+            // Elements in collapsed groups may have zero dimensions. Skip them to avoid
+            // rendering connections incorrectly.
+            if (rect.width === 0 && rect.height === 0) {
+                return;
+            }
+
+            const id = el.dataset.id;
+            barElements.set(id, el);
+            rectCache.set(id, rect);
+
+            const trackEl = el.parentElement;
+            if (trackEl && !trackRectCache.has(trackEl)) {
+                trackRectCache.set(trackEl, trackEl.getBoundingClientRect());
+            }
         });
+
+        const scrollTop = this.viewContainer.scrollTop;
+        const epochStart = this.epochStartYear;
+        const epochEnd = this.epochEndYear;
+        const totalYears = epochEnd - epochStart;
 
         this.app.connections.forEach(conn => {
             const fromEnt = this.app.entitiesById.get(conn.fromId);
             const targetEnt = this.app.entitiesById.get(conn.targetId);
             if (!fromEnt || !targetEnt) return;
+
             const fromEl = barElements.get(conn.fromId);
             const toEl = barElements.get(conn.targetId);
             if (!fromEl || !toEl) return;
-            const fromRect = fromEl.getBoundingClientRect();
-            const toRect = toEl.getBoundingClientRect();
-            const epochStart = this.epochStartYear;
-            const epochEnd = this.epochEndYear;
-            const totalYears = epochEnd - epochStart;
-            let x1, y1, x2, y2;
+
+            const fromRect = rectCache.get(conn.fromId);
+            const toRect = rectCache.get(conn.targetId);
             const trackEl = toEl.parentElement;
-            const trackRect = trackEl.getBoundingClientRect();
+            const trackRect = trackRectCache.get(trackEl);
+            if (!trackRect) return;
+
+            let x1, y1, x2, y2;
             const getXForYear = (y) => {
                 const pct = (y - epochStart) / totalYears;
                 return trackRect.left - containerRect.left + (pct * trackRect.width);
             };
-            y1 = fromRect.top + fromRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
-            y2 = toRect.top + toRect.height / 2 - containerRect.top + this.viewContainer.scrollTop;
+            y1 = fromRect.top + fromRect.height / 2 - containerRect.top + scrollTop;
+            y2 = toRect.top + toRect.height / 2 - containerRect.top + scrollTop;
             const { fromYear, toYear } = this.app.getConnectionYears(conn);
             x1 = getXForYear(fromYear);
             x2 = getXForYear(toYear);
