@@ -298,7 +298,6 @@ export default class AtlasManager {
         const loaded = results.filter(r => r.status === 'fulfilled' && r.value !== null);
         const failed = results.filter(r => r.status === 'rejected' || r.value === null);
 
-        console.log(`Loaded ${loaded.length}/${paths.length} atlases`);
         if (failed.length > 0) {
             console.warn(`Failed to load ${failed.length} atlases`);
         }
