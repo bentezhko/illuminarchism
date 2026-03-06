@@ -874,9 +874,16 @@ export default class Timeline {
         const trackRectCache = new Map();
 
         this.viewContainer.querySelectorAll('.timeline-bar[data-id]').forEach(el => {
+            const rect = el.getBoundingClientRect();
+            // Elements in collapsed groups may have zero dimensions. Skip them to avoid
+            // rendering connections incorrectly.
+            if (rect.width === 0 && rect.height === 0) {
+                return;
+            }
+
             const id = el.dataset.id;
             barElements.set(id, el);
-            rectCache.set(id, el.getBoundingClientRect());
+            rectCache.set(id, rect);
 
             const trackEl = el.parentElement;
             if (trackEl && !trackRectCache.has(trackEl)) {
