@@ -64,8 +64,6 @@ export default class WebGLRenderer {
         this.startTime = Date.now();
         
         this.init();
-        
-        console.log('✓ WebGL Renderer initialized');
     }
     
     init() {
