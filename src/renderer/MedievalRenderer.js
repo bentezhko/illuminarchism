@@ -138,40 +138,44 @@ export default class MedievalRenderer {
     }
 
     createParchmentTexture() {
-        const size = 512;
-        const c = document.createElement('canvas');
-        c.width = size; c.height = size;
-        const ctx = c.getContext('2d');
+        if (!MedievalRenderer.cachedParchmentCanvas) {
+            const size = 512;
+            const c = document.createElement('canvas');
+            c.width = size; c.height = size;
+            const ctx = c.getContext('2d');
 
-        const imageData = ctx.createImageData(size, size);
-        const data = imageData.data;
+            const imageData = ctx.createImageData(size, size);
+            const data = imageData.data;
 
-        const baseColor = { r: 243, g: 233, b: 210 }; // #f3e9d2
+            const baseColor = { r: 243, g: 233, b: 210 }; // #f3e9d2
 
-        for (let y = 0; y < size; y++) {
-            for (let x = 0; x < size; x++) {
-                // Generate FBM noise for "cloudy" paper texture
-                // Scale coordinate to get good frequency
-                const n = fbm(x / 150, y / 150, 4, 0.5, 2);
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    // Generate FBM noise for "cloudy" paper texture
+                    // Scale coordinate to get good frequency
+                    const n = fbm(x / 150, y / 150, 4, 0.5, 2);
 
-                // Map noise -1..1 to brightness variation
-                const brightness = 1 + (n * 0.15); // +/- 15% variation
+                    // Map noise -1..1 to brightness variation
+                    const brightness = 1 + (n * 0.15); // +/- 15% variation
 
-                // Add some high-frequency grain
-                const grain = (Math.random() - 0.5) * 0.05;
+                    // Add some high-frequency grain
+                    const grain = (Math.random() - 0.5) * 0.05;
 
-                const i = (y * size + x) * 4;
-                const mod = brightness + grain;
+                    const i = (y * size + x) * 4;
+                    const mod = brightness + grain;
 
-                data[i] = Math.min(255, Math.max(0, baseColor.r * mod));
-                data[i + 1] = Math.min(255, Math.max(0, baseColor.g * mod));
-                data[i + 2] = Math.min(255, Math.max(0, baseColor.b * mod));
-                data[i + 3] = 255;
+                    data[i] = Math.min(255, Math.max(0, baseColor.r * mod));
+                    data[i + 1] = Math.min(255, Math.max(0, baseColor.g * mod));
+                    data[i + 2] = Math.min(255, Math.max(0, baseColor.b * mod));
+                    data[i + 3] = 255;
+                }
             }
+
+            ctx.putImageData(imageData, 0, 0);
+            MedievalRenderer.cachedParchmentCanvas = c;
         }
 
-        ctx.putImageData(imageData, 0, 0);
-        this.noisePattern = this.ctx.createPattern(c, 'repeat');
+        this.noisePattern = this.ctx.createPattern(MedievalRenderer.cachedParchmentCanvas, 'repeat');
     }
 
     invalidateWorldLayer() {

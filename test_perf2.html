@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Perf Test 2</title>
+</head>
+<body>
+    <canvas id="map-canvas"></canvas>
+    <script type="module">
+        import InkRenderer from './src/renderer/InkRenderer.js';
+
+        const renderer = new InkRenderer('map-canvas');
+
+        // Warmup
+        renderer.resize();
+
+        const start = performance.now();
+        for (let i = 0; i < 10; i++) {
+            renderer.resize();
+        }
+        const end = performance.now();
+        console.log(`Average resize time (InkRenderer, 10 runs): ${(end - start) / 10} ms`);
+    </script>
+</body>
+</html>
