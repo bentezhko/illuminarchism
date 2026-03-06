@@ -1,11 +1,16 @@
-import { expect, test, describe, spyOn, afterEach, jest } from "bun:test";
+import { expect, test, describe, spyOn, afterEach, mock } from "bun:test";
 import HistoricalEntity from "./Entity.js";
+
+// Polyfill for Bun versions where mock.restoreAll is not defined but mock.restore handles it.
+if (mock && !mock.restoreAll) {
+    mock.restoreAll = mock.restore;
+}
 
 describe("HistoricalEntity Methods", () => {
     let entity;
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        mock.restoreAll();
     });
 
     describe("Attribute Management", () => {
@@ -92,6 +97,11 @@ describe("HistoricalEntity Methods", () => {
 
             // Removing non-existent child should not update time
             const later = now + 1000;
+            // Use the same spy instance if it were captured, but here we call spyOn again.
+            // In Bun, multiple spyOn calls on the same property without restoration may fail,
+            // but we can just use the global mock.restore() between tests.
+            // However, to be safe within a single test:
+            mock.restore();
             spyOn(Date, 'now').mockReturnValue(later);
             entity.removeChild("nonexistent");
             expect(entity.transactionTime.modified).toBe(now);
