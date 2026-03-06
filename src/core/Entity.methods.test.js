@@ -13,18 +13,14 @@ describe("HistoricalEntity Methods", () => {
             entity = new HistoricalEntity("ent-1", "Test Entity", { domain: "political" });
             const initialModified = entity.transactionTime.modified;
 
-            // Wait a bit to ensure Date.now() changes if not mocked
-            // Or better, mock Date.now()
             const now = Date.now() + 1000;
-            const dateSpy = spyOn(Date, 'now').mockReturnValue(now);
+            spyOn(Date, 'now').mockReturnValue(now);
 
             entity.setAttribute("OCM:430", "Value");
 
             expect(entity.attributes["OCM:430"]).toBe("Value");
             expect(entity.transactionTime.modified).toBe(now);
             expect(entity.transactionTime.modified).toBeGreaterThan(initialModified);
-
-            dateSpy.mockRestore();
         });
 
         test("getAttribute should retrieve the correct value", () => {
@@ -41,14 +37,12 @@ describe("HistoricalEntity Methods", () => {
             });
             const initialModified = entity.transactionTime.modified;
             const now = Date.now() + 1000;
-            const dateSpy = spyOn(Date, 'now').mockReturnValue(now);
+            spyOn(Date, 'now').mockReturnValue(now);
 
             entity.removeAttribute("key1");
 
             expect(entity.attributes["key1"]).toBeUndefined();
             expect(entity.transactionTime.modified).toBe(now);
-
-            dateSpy.mockRestore();
         });
 
         test("getAttributesList should return list of key-value objects", () => {
@@ -80,8 +74,6 @@ describe("HistoricalEntity Methods", () => {
             entity.addChild("child-1");
             expect(entity.children).toHaveLength(1);
             expect(entity.transactionTime.modified).toBe(now); // Still old 'now'
-
-            dateSpy.mockRestore();
         });
 
         test("removeChild should remove child ID and update modified time", () => {
@@ -90,7 +82,7 @@ describe("HistoricalEntity Methods", () => {
             });
             const initialModified = entity.transactionTime.modified;
             const now = Date.now() + 1000;
-            const dateSpy = spyOn(Date, 'now').mockReturnValue(now);
+            spyOn(Date, 'now').mockReturnValue(now);
 
             entity.removeChild("child-1");
 
@@ -100,11 +92,9 @@ describe("HistoricalEntity Methods", () => {
 
             // Removing non-existent child should not update time
             const later = now + 1000;
-            dateSpy.mockReturnValue(later);
+            spyOn(Date, 'now').mockReturnValue(later);
             entity.removeChild("nonexistent");
             expect(entity.transactionTime.modified).toBe(now);
-
-            dateSpy.mockRestore();
         });
     });
 
