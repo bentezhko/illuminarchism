@@ -220,6 +220,9 @@ export default class MedievalRenderer {
 
     clear() {
         this.ctx.globalCompositeOperation = 'source-over';
+        if (this.noisePattern) {
+            this.noisePattern.setTransform(new DOMMatrix().translate(this.transform.x, this.transform.y).scale(this.transform.k, this.transform.k));
+        }
         this.ctx.fillStyle = this.noisePattern || '#f3e9d2';
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.labelRegions = []; // Reset label collision registry
@@ -557,6 +560,7 @@ export default class MedievalRenderer {
 
         // Apply Pattern on top of wash
         if (pattern && ent.category !== 'cultural') {
+            pattern.setTransform(new DOMMatrix().translate(this.transform.x, this.transform.y).scale(this.transform.k, this.transform.k));
             ctx.fillStyle = pattern;
             ctx.beginPath();
             this.traceRoughPath(pts, true, ctx);
@@ -882,6 +886,9 @@ export default class MedievalRenderer {
         // Apply Pattern
         this.waterCtx.save();
         this.waterCtx.globalCompositeOperation = 'source-in';
+        if (this.waterPattern) {
+            this.waterPattern.setTransform(new DOMMatrix().translate(t.x, t.y).scale(t.k, t.k));
+        }
         this.waterCtx.fillStyle = this.waterPattern;
         this.waterCtx.fillRect(0, 0, this.width, this.height);
         this.waterCtx.restore();
@@ -889,7 +896,7 @@ export default class MedievalRenderer {
         // Composite back to World Layer
         targetCtx.save();
         targetCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset for direct canvas copy
-        targetCtx.globalAlpha = 0.5;
+        targetCtx.globalAlpha = 1.0;
         targetCtx.drawImage(this.waterLayer, 0, 0);
         targetCtx.restore();
     }
@@ -900,6 +907,9 @@ export default class MedievalRenderer {
 
         // Draw Background
         ctx.save();
+        if (this.noisePattern) {
+            this.noisePattern.setTransform(new DOMMatrix().translate(t.x, t.y).scale(t.k, t.k));
+        }
         ctx.fillStyle = this.noisePattern || '#f3e9d2';
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.restore();
