@@ -169,13 +169,6 @@ export default class InputController {
 
                 // Priority 4: Default Navigation (Pan)
 
-                // If user clicks empty map space and tool is transform/vertex-edit/erase, revert to Pan
-                if (!this.app.hoveredEntityId &&
-                    (this.app.activeTool === 'transform' || this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'erase')) {
-                    this.app.toolbar.selectTool('pan');
-                    this.app.deselect();
-                }
-
                 this.interactionStartX = e.clientX;
                 this.interactionStartY = e.clientY;
                 this.wasHoveringOnDown = !!this.app.hoveredEntityId;
@@ -234,6 +227,17 @@ export default class InputController {
         });
 
 
+
+        c.addEventListener('dblclick', (e) => {
+            if (this.app.currentView !== 'map') return;
+            if (e.button === 0) {
+                if (this.app.activeTool !== 'pan' && this.app.activeTool !== 'draw') {
+                    this.app.toolbar.selectTool('pan');
+                    this.app.deselect();
+                }
+            }
+        });
+
         // FIXED: Mousemove with better bounds checking and drag prevention
         c.addEventListener('mousemove', (e) => {
             if (this.app.currentView !== 'map') return;
@@ -256,7 +260,12 @@ export default class InputController {
             }
 
             // Handle Panning - CRITICAL: Don't call checkHover during pan drag!
-            if (this.isDragging && this.app.activeTool === 'pan') {
+            const isPanDrag = this.app.activeTool === 'pan' ||
+                (this.app.activeTool === 'transform' && !this.transformMode) ||
+                (this.app.activeTool === 'vertex-edit' && this.dragVertexIndex === null) ||
+                (this.app.activeTool === 'erase' && !this.wasHoveringOnDown);
+
+            if (this.isDragging && isPanDrag) {
                 const dx = e.clientX - this.lastX;
                 const dy = e.clientY - this.lastY;
                 this.lastX = e.clientX; this.lastY = e.clientY;
@@ -383,7 +392,7 @@ export default class InputController {
             'atlas-registry'
         ].map(id => document.getElementById(id)).filter(Boolean);
 
-        document.addEventListener('mousedown', (e) => {
+        document.addEventListener('dblclick', (e) => {
             if (this.app.activeTool === 'pan' || this.app.activeTool === 'draw') return; // Draw is exempt
 
             // Check if the click was inside an interactive area
