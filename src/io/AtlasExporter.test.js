@@ -106,7 +106,7 @@ describe("AtlasExporter.generateId", () => {
 
     test("starts with 'atlas-' prefix", () => {
         const id = AtlasExporter.generateId();
-        expect(id.startsWith("atlas-")).toBe(true);
+        expect(id).toStartWith("atlas-");
     });
 
     test("generates unique IDs", () => {
@@ -122,8 +122,8 @@ describe("AtlasExporter.generateId", () => {
         expect(parts.length).toBe(3);
         expect(parts[0]).toBe('atlas');
         // The timestamp part should be numeric
-        expect(!isNaN(parseInt(parts[1], 10))).toBe(true);
+        expect(parseInt(parts[1], 10)).not.toBeNaN();
         // The random part should exist and have length
-        expect(parts[2].length).toBeGreaterThan(0);
+        expect(parts[2].length).toBe(9);
     });
 });
