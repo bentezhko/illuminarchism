@@ -57,7 +57,6 @@ export default class AtlasLoader {
         // Restore Metadata
         if (json.meta) {
             this.app.atlasMeta = json.meta;
-            console.log("Loading Atlas Meta:", json.meta);
         }
 
         // Restore Layers (Groups) if present
@@ -94,8 +93,6 @@ export default class AtlasLoader {
 
         // Update Registry UI
         if (this.app.registry) this.app.registry.render();
-
-        console.log(`Loaded ${this.app.entities.length} entities.`);
     }
 
 }
