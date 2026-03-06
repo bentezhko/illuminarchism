@@ -1,11 +1,11 @@
-import { expect, test, describe, spyOn, afterEach, mock } from "bun:test";
+import { expect, test, describe, spyOn, afterEach, jest } from "bun:test";
 import HistoricalEntity from "./Entity.js";
 
 describe("HistoricalEntity Methods", () => {
     let entity;
 
     afterEach(() => {
-        mock.restore();
+        jest.restoreAllMocks();
     });
 
     describe("Attribute Management", () => {
