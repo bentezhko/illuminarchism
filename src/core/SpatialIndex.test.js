@@ -68,6 +68,25 @@ describe("Quadtree", () => {
         expect(child.objects.length).toBe(3); // All 3 stored here
     });
 
+    test("handles high zoom scale with larger maxDepth", () => {
+        // Simulate deep quadtree (maxDepth = 20)
+        const deepTree = new Quadtree(bounds, 1, 20);
+        deepTree.insert({ x: 10, y: 10, w: 0.001, h: 0.001, id: 1 });
+        deepTree.insert({ x: 10, y: 10, w: 0.001, h: 0.001, id: 2 });
+        // Should divide
+        expect(deepTree.divided).toBe(true);
+        // It splits recursively until the node's bounds are too small to completely contain the objects,
+        // so it might stop before maxDepth if objects overlap the center point
+        let node = deepTree;
+        while (node && node.divided) {
+            let nextNode = node.nodes.find(n => n.divided || n.objects.length > 0);
+            if (!nextNode) break; // Objects are stranded in the current parent node
+            node = nextNode;
+        }
+        expect(node.depth).toBeGreaterThan(10); // Check that it divides deeply
+        expect(node.objects.length).toBe(2);
+    });
+
     test("distributes objects correctly upon subdivision", () => {
         // TR: 60, 10
         // TL: 10, 10
