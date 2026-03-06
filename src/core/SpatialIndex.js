@@ -9,7 +9,7 @@ export class Quadtree {
      * @param {number} capacity bucket size before split
      * @param {number} maxDepth maximum recursion depth
      */
-    constructor(bounds, capacity = 10, maxDepth = 8, depth = 0) {
+    constructor(bounds, capacity = 10, maxDepth = 20, depth = 0) {
         this.bounds = bounds;
         this.capacity = capacity;
         this.maxDepth = maxDepth;

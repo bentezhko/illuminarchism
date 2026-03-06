@@ -1,7 +1,7 @@
 export const CONFIG = {
     ZOOM_SENSITIVITY: 0.001, 
-    MIN_ZOOM: 0.1, 
-    MAX_ZOOM: 5,
+    MIN_ZOOM: 0.05,
+    MAX_ZOOM: 5000,
     RESAMPLE_COUNT: 100, 
     WATERCOLOR_PASSES: 3, 
     WATERCOLOR_JITTER: 3,
