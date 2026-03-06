@@ -318,6 +318,10 @@ export default class IlluminarchismApp {
         this.safeAddListener('btn-toggle-registry', 'click', () => {
             const registry = document.getElementById('atlas-registry');
             if (registry) {
+                // If registry is being opened, close the outliner
+                if (!registry.classList.contains('open') && this.layerManager && this.layerManager.isOpen) {
+                    this.layerManager.toggle();
+                }
                 registry.classList.toggle('open');
                 this.renderRegistry(); // Refresh
             }
