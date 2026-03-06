@@ -85,9 +85,11 @@ export class Quadtree {
 
     /**
      * Retrieve all objects potentially colliding with range { x, y, w, h }
+     * @param {Object} range { x, y, w, h }
+     * @param {Array} found Array to append found objects to
+     * @returns {Array} Found objects
      */
-    retrieve(range) {
-        let found = [];
+    retrieve(range, found = []) {
         const intersectsBounds = this.intersects(this.bounds, range);
 
         // If range is outside bounds:
@@ -97,10 +99,11 @@ export class Quadtree {
 
         if (this.divided && intersectsBounds) {
             // If range intersects with children, search them
-            if (this.intersects(this.nodes[0].bounds, range)) found = found.concat(this.nodes[0].retrieve(range));
-            if (this.intersects(this.nodes[1].bounds, range)) found = found.concat(this.nodes[1].retrieve(range));
-            if (this.intersects(this.nodes[2].bounds, range)) found = found.concat(this.nodes[2].retrieve(range));
-            if (this.intersects(this.nodes[3].bounds, range)) found = found.concat(this.nodes[3].retrieve(range));
+            for (let i = 0; i < 4; i++) {
+                if (this.intersects(this.nodes[i].bounds, range)) {
+                    this.nodes[i].retrieve(range, found);
+                }
+            }
         }
 
         // Add objects at this level
