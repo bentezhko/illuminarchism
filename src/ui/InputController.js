@@ -1,5 +1,6 @@
 import { CONFIG } from '../config.js';
-import { distance, distanceToSegment, getBoundingBox } from '../core/math.js';
+import { distance, distanceToSegment, getBoundingBox, getRepresentativePoint } from '../core/math.js';
+import { isRenderedAsPoint } from '../core/Ontology.js';
 
 export default class InputController {
     constructor(app) {
@@ -35,6 +36,33 @@ export default class InputController {
 
         for (let key in corners) {
             if (distance(wp, corners[key]) < handleSize) return key;
+        }
+        return null;
+    }
+
+    _getTransformHoverMode(wp) {
+        if (!this.app.selectedEntityId) return null;
+
+        const ent = this.app.entitiesById.get(this.app.selectedEntityId);
+        if (!ent || !ent.currentGeometry) return null;
+
+        const isPoint = ent.currentGeometry.length === 1 || isRenderedAsPoint(ent, this.renderer.transform.k);
+        const k = this.renderer.transform.k;
+
+        if (isPoint) {
+            const pt = getRepresentativePoint(ent.currentGeometry);
+            if (distance(wp, pt) < 25 / k) {
+                return 'move';
+            }
+        } else {
+            const bbox = getBoundingBox(ent.currentGeometry);
+            const handle = this.getTransformHandle(wp, bbox, k);
+            if (handle) {
+                return handle;
+            }
+            if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
+                return 'move';
+            }
         }
         return null;
     }
@@ -82,44 +110,20 @@ export default class InputController {
 
                 // Priority 0: Transform Tool
                 if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
-                    const ent = this.app.entitiesById.get(this.app.selectedEntityId);
-                    if (ent && ent.currentGeometry) {
-                        const isPoint = ent.currentGeometry.length === 1;
+                    const hoverMode = this._getTransformHoverMode(wp);
+                    if (hoverMode) {
+                        this.isDragging = true;
+                        this.transformMode = hoverMode;
+                        this.transformStart = wp;
+                        const ent = this.app.entitiesById.get(this.app.selectedEntityId);
+                        this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
 
-                        if (isPoint) {
-                            // For points, only 'move' is supported, and we check distance to the point
-                            const pt = ent.currentGeometry[0];
-                            const d = distance(wp, pt);
-                            if (d < 25 / this.renderer.transform.k) {
-                                this.isDragging = true;
-                                this.transformMode = 'move';
-                                this.transformStart = wp;
-                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
-                                c.style.cursor = 'move';
-                                return;
-                            }
-                        } else {
-                            const bbox = getBoundingBox(ent.currentGeometry);
-                            // Check handles
-                            const handle = this.getTransformHandle(wp, bbox, this.renderer.transform.k);
-                            if (handle) {
-                                this.isDragging = true;
-                                this.transformMode = handle;
-                                this.transformStart = wp;
-                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
-                                c.style.cursor = 'nwse-resize';
-                                return;
-                            }
-                            // Check Inside Box (Move)
-                            if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
-                                this.isDragging = true;
-                                this.transformMode = 'move';
-                                this.transformStart = wp;
-                                this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
-                                c.style.cursor = 'move';
-                                return;
-                            }
+                        if (hoverMode.startsWith('resize')) {
+                            c.style.cursor = 'nwse-resize';
+                        } else if (hoverMode === 'move') {
+                            c.style.cursor = 'move';
                         }
+                        return;
                     }
                 }
 
@@ -295,36 +299,31 @@ export default class InputController {
             // Now expanded to other tools that rely on hover cursors
             if (!this.isDragging && this.app.activeTool !== 'draw') {
                 const now = Date.now();
+
                 if (now - this.hoverThrottle > 50) { // Increased throttle to 50ms
                     this.hoverThrottle = now;
                     try {
                         this.app.checkHover(wp);
-
-                        // Handled correctly by checkHover in main.js, EXCEPT for transform tool bounding box handling:
-                        if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
-                            const ent = this.app.entitiesById.get(this.app.selectedEntityId);
-                            if (ent && ent.currentGeometry) {
-                                const isPoint = ent.currentGeometry.length === 1;
-                                if (isPoint) {
-                                    const d = distance(wp, ent.currentGeometry[0]);
-                                    c.style.cursor = (d < 25 / this.renderer.transform.k) ? 'move' : 'crosshair';
-                                } else {
-                                    const bbox = getBoundingBox(ent.currentGeometry);
-                                    const handle = this.getTransformHandle(wp, bbox, this.renderer.transform.k);
-                                    if (handle) {
-                                        c.style.cursor = 'nwse-resize';
-                                    } else if (wp.x >= bbox.minX && wp.x <= bbox.maxX && wp.y >= bbox.minY && wp.y <= bbox.maxY) {
-                                        c.style.cursor = 'move';
-                                    } else {
-                                        c.style.cursor = 'crosshair';
-                                    }
-                                }
-                            }
-                        }
                     } catch (err) {
                         console.error('checkHover failed:', err);
                         // Reset hover state on error
                         this.app.hoveredEntityId = null;
+                    }
+                }
+
+                // Handled correctly by checkHover in main.js, EXCEPT for transform tool bounding box handling.
+                // Move this outside the 50ms throttle to prevent hover cursor lag over transform handles.
+                // Placed AFTER checkHover so that it takes precedence over the default pointer cursor.
+                if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
+                    const hoverMode = this._getTransformHoverMode(wp);
+                    if (hoverMode) {
+                        if (hoverMode.startsWith('resize')) {
+                            c.style.cursor = 'nwse-resize';
+                        } else if (hoverMode === 'move') {
+                            c.style.cursor = 'move';
+                        }
+                    } else {
+                        c.style.cursor = 'crosshair';
                     }
                 }
             }
