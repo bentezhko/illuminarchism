@@ -176,7 +176,6 @@ describe("AtlasLoader", () => {
             expect(mockApp.layerManager.render).toHaveBeenCalled();
             expect(mockApp.render).toHaveBeenCalled();
             expect(mockApp.registry.render).toHaveBeenCalled();
-            expect(console.log).toHaveBeenCalledWith("Loaded 1 entities.");
         });
 
         test("restores metadata and layers if present", () => {

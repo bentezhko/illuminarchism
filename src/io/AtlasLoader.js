@@ -94,8 +94,6 @@ export default class AtlasLoader {
 
         // Update Registry UI
         if (this.app.registry) this.app.registry.render();
-
-        console.log(`Loaded ${this.app.entities.length} entities.`);
     }
 
 }
