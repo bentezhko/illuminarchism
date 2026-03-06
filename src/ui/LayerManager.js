@@ -52,6 +52,15 @@ export default class LayerManager {
 
     toggle() {
         this.isOpen = !this.isOpen;
+
+        if (this.isOpen) {
+            const registry = document.getElementById('atlas-registry');
+            if (registry && registry.classList.contains('open')) {
+                registry.classList.remove('open');
+                if (this.app) this.app.renderRegistry();
+            }
+        }
+
         this.container.classList.toggle('closed', !this.isOpen);
         const btn = document.getElementById('btn-toggle-layers');
         if (btn) btn.textContent = this.isOpen ? '▶' : '◀';
