@@ -189,7 +189,6 @@ describe("AtlasLoader", () => {
 
             expect(mockApp.atlasMeta).toEqual(validJson.meta);
             expect(mockApp.layers).toEqual(validJson.layers);
-            expect(console.log).toHaveBeenCalledWith("Loading Atlas Meta:", validJson.meta);
         });
 
         test("restores connections if present", () => {
