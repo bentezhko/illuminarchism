@@ -118,8 +118,10 @@ export default class InputController {
                         const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                         this.originalGeometry = ent.currentGeometry.map(p => ({ ...p }));
 
-                        if (hoverMode.startsWith('resize')) {
+                        if (hoverMode === 'resize-tl' || hoverMode === 'resize-br') {
                             c.style.cursor = 'nwse-resize';
+                        } else if (hoverMode === 'resize-tr' || hoverMode === 'resize-bl') {
+                            c.style.cursor = 'nesw-resize';
                         } else if (hoverMode === 'move') {
                             c.style.cursor = 'move';
                         }
@@ -279,16 +281,6 @@ export default class InputController {
                 return;
             }
 
-            // Handle Vertex Hover Effect
-            if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
-                const ent = this.app.entitiesById.get(this.app.selectedEntityId);
-                if (ent && ent.currentGeometry) {
-                    const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
-                    this.app.highlightVertex(hitIdx !== -1 ? hitIdx : null);
-                    c.style.cursor = (hitIdx !== -1) ? 'pointer' : 'default';
-                }
-            }
-
             // Drawing mode cursor update
             if (this.app.activeTool === 'draw') {
                 this.app.updateDraftCursor(wp);
@@ -311,19 +303,39 @@ export default class InputController {
                     }
                 }
 
+                // Handle Vertex Hover Effect
+                // Needs to be here so it takes precedence over the default hover cursor from checkHover
+                if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
+                    const ent = this.app.entitiesById.get(this.app.selectedEntityId);
+                    if (ent && ent.currentGeometry) {
+                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
+                        this.app.highlightVertex(hitIdx !== -1 ? hitIdx : null);
+
+                        if (hitIdx !== -1) {
+                            c.style.cursor = 'pointer';
+                        } else {
+                            // Re-apply checkHover's intended cursor when not over a vertex
+                            c.style.cursor = this.app.hoveredEntityId ? 'cell' : 'crosshair';
+                        }
+                    }
+                }
+
                 // Handled correctly by checkHover in main.js, EXCEPT for transform tool bounding box handling.
                 // Move this outside the 50ms throttle to prevent hover cursor lag over transform handles.
                 // Placed AFTER checkHover so that it takes precedence over the default pointer cursor.
                 if (this.app.activeTool === 'transform' && this.app.selectedEntityId) {
                     const hoverMode = this._getTransformHoverMode(wp);
                     if (hoverMode) {
-                        if (hoverMode.startsWith('resize')) {
+                        if (hoverMode === 'resize-tl' || hoverMode === 'resize-br') {
                             c.style.cursor = 'nwse-resize';
+                        } else if (hoverMode === 'resize-tr' || hoverMode === 'resize-bl') {
+                            c.style.cursor = 'nesw-resize';
                         } else if (hoverMode === 'move') {
                             c.style.cursor = 'move';
                         }
                     } else {
-                        c.style.cursor = 'crosshair';
+                        // Re-apply checkHover's intended cursor when not over a transform handle/box
+                        c.style.cursor = this.app.hoveredEntityId ? 'pointer' : 'crosshair';
                     }
                 }
             }
