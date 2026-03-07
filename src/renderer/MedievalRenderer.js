@@ -135,6 +135,16 @@ export default class MedievalRenderer {
             ctx.quadraticCurveTo(size / 4, size / 4, size / 2, size / 2);
             ctx.quadraticCurveTo(3 * size / 4, 3 * size / 4, size, size / 2);
             ctx.stroke();
+        } else if (type === 'TestHatchA') { // Diagonal right (Reversed scale)
+            ctx.beginPath();
+            ctx.moveTo(-4, size + 4); ctx.lineTo(size + 4, -4); ctx.stroke();
+            ctx.moveTo(size - 4, size + 4); ctx.lineTo(size + 4 + size - 4, -4); ctx.stroke();
+            ctx.moveTo(-4 - size, size + 4); ctx.lineTo(4, -4); ctx.stroke();
+        } else if (type === 'TestHatchB') { // Diagonal right (Fixed scale)
+            ctx.beginPath();
+            ctx.moveTo(-4, size + 4); ctx.lineTo(size + 4, -4); ctx.stroke();
+            ctx.moveTo(size - 4, size + 4); ctx.lineTo(size + 4 + size - 4, -4); ctx.stroke();
+            ctx.moveTo(-4 - size, size + 4); ctx.lineTo(4, -4); ctx.stroke();
         }
 
         const pattern = this.ctx.createPattern(canvas, 'repeat');
@@ -565,7 +575,13 @@ export default class MedievalRenderer {
 
         // Apply Pattern on top of wash
         if (pattern && ent.category !== 'cultural') {
-            pattern.setTransform(this._getPatternTransformMatrix(this.transform));
+            if (ent.hatchStyle === 'TestHatchA') {
+                pattern.setTransform(new DOMMatrix().translate(this.transform.x, this.transform.y).scale(1 / this.transform.k, 1 / this.transform.k));
+            } else if (ent.hatchStyle === 'TestHatchB') {
+                pattern.setTransform(new DOMMatrix().translate(this.transform.x, this.transform.y).scale(1, 1));
+            } else {
+                pattern.setTransform(this._getPatternTransformMatrix(this.transform));
+            }
             ctx.fillStyle = pattern;
             ctx.beginPath();
             this.traceRoughPath(pts, true, ctx);
