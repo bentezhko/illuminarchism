@@ -46,6 +46,11 @@ export default class MedievalRenderer {
         };
     }
 
+    _getPatternTransformMatrix(transform) {
+        const { x, y, k } = transform;
+        return new DOMMatrix().translate(x, y).scale(k, k);
+    }
+
     _isPointEntity(ent) {
         if (!ent || !ent.currentGeometry) return false;
         if (ent.currentGeometry.length === 1) return true;
@@ -221,7 +226,7 @@ export default class MedievalRenderer {
     clear() {
         this.ctx.globalCompositeOperation = 'source-over';
         if (this.noisePattern) {
-            this.noisePattern.setTransform(new DOMMatrix().translate(this.transform.x, this.transform.y).scale(this.transform.k, this.transform.k));
+            this.noisePattern.setTransform(this._getPatternTransformMatrix(this.transform));
         }
         this.ctx.fillStyle = this.noisePattern || '#f3e9d2';
         this.ctx.fillRect(0, 0, this.width, this.height);
@@ -560,7 +565,7 @@ export default class MedievalRenderer {
 
         // Apply Pattern on top of wash
         if (pattern && ent.category !== 'cultural') {
-            pattern.setTransform(new DOMMatrix().translate(this.transform.x, this.transform.y).scale(this.transform.k, this.transform.k));
+            pattern.setTransform(this._getPatternTransformMatrix(this.transform));
             ctx.fillStyle = pattern;
             ctx.beginPath();
             this.traceRoughPath(pts, true, ctx);
@@ -887,7 +892,7 @@ export default class MedievalRenderer {
         this.waterCtx.save();
         this.waterCtx.globalCompositeOperation = 'source-in';
         if (this.waterPattern) {
-            this.waterPattern.setTransform(new DOMMatrix().translate(t.x, t.y).scale(t.k, t.k));
+            this.waterPattern.setTransform(this._getPatternTransformMatrix(t));
         }
         this.waterCtx.fillStyle = this.waterPattern;
         this.waterCtx.fillRect(0, 0, this.width, this.height);
@@ -908,7 +913,7 @@ export default class MedievalRenderer {
         // Draw Background
         ctx.save();
         if (this.noisePattern) {
-            this.noisePattern.setTransform(new DOMMatrix().translate(t.x, t.y).scale(t.k, t.k));
+            this.noisePattern.setTransform(this._getPatternTransformMatrix(t));
         }
         ctx.fillStyle = this.noisePattern || '#f3e9d2';
         ctx.fillRect(0, 0, this.width, this.height);
