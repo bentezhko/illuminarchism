@@ -46,6 +46,11 @@ export default class MedievalRenderer {
         };
     }
 
+    _getPatternTransformMatrix(transform) {
+        const { x, y, k } = transform;
+        return new DOMMatrix().translate(x, y).scale(1 / k, 1 / k);
+    }
+
     _isPointEntity(ent) {
         if (!ent || !ent.currentGeometry) return false;
         if (ent.currentGeometry.length === 1) return true;
@@ -220,6 +225,9 @@ export default class MedievalRenderer {
 
     clear() {
         this.ctx.globalCompositeOperation = 'source-over';
+        if (this.noisePattern) {
+            this.noisePattern.setTransform(this._getPatternTransformMatrix(this.transform));
+        }
         this.ctx.fillStyle = this.noisePattern || '#f3e9d2';
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.labelRegions = []; // Reset label collision registry
@@ -557,6 +565,7 @@ export default class MedievalRenderer {
 
         // Apply Pattern on top of wash
         if (pattern && ent.category !== 'cultural') {
+            pattern.setTransform(this._getPatternTransformMatrix(this.transform));
             ctx.fillStyle = pattern;
             ctx.beginPath();
             this.traceRoughPath(pts, true, ctx);
@@ -882,6 +891,9 @@ export default class MedievalRenderer {
         // Apply Pattern
         this.waterCtx.save();
         this.waterCtx.globalCompositeOperation = 'source-in';
+        if (this.waterPattern) {
+            this.waterPattern.setTransform(this._getPatternTransformMatrix(t));
+        }
         this.waterCtx.fillStyle = this.waterPattern;
         this.waterCtx.fillRect(0, 0, this.width, this.height);
         this.waterCtx.restore();
@@ -889,7 +901,7 @@ export default class MedievalRenderer {
         // Composite back to World Layer
         targetCtx.save();
         targetCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset for direct canvas copy
-        targetCtx.globalAlpha = 0.5;
+        targetCtx.globalAlpha = 1.0;
         targetCtx.drawImage(this.waterLayer, 0, 0);
         targetCtx.restore();
     }
@@ -900,6 +912,9 @@ export default class MedievalRenderer {
 
         // Draw Background
         ctx.save();
+        if (this.noisePattern) {
+            this.noisePattern.setTransform(this._getPatternTransformMatrix(t));
+        }
         ctx.fillStyle = this.noisePattern || '#f3e9d2';
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.restore();
