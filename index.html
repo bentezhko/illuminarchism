@@ -189,6 +189,20 @@
                 <li>Collaborative editing</li>
             </ul>
         </div>
+
+        <div class="ontology-section">
+            <details>
+                <summary class="ontology-title" style="cursor: pointer; display: list-item;">Developer Notes</summary>
+                <ul style="margin: 0.5rem 0; padding-left: 1.2rem; font-size: 0.9rem; max-height: 200px; overflow-y: auto;">
+                    <li><strong>Rendering Strategy:</strong> Ink and Watercolor textures are pre-rendered into offscreen pattern canvases to optimize zoom performance.</li>
+                    <li><strong>Temporal Interpolation:</strong> Keyframe geometries are interpolated linearly between bounding years. Point counts are matched via a resampling algorithm to allow smooth transitioning of polygonal borders.</li>
+                    <li><strong>Spatial Indexing:</strong> The QuadTree implementation handles objects that cross boundaries by keeping them in the parent node rather than duplicating them across children. Exact object inclusion tests are deferred to the UI hover state.</li>
+                    <li><strong>Input Handling:</strong> Mouse interaction events bypass standard throttles when dealing with transform handles (resize/move) to avoid UX lag, while standard entity hit testing is throttled to 50ms.</li>
+                    <li><strong>Ontology Mapping:</strong> Legacy 'category' and 'type' data models are gracefully migrated at runtime into the new 4-domain (Political, Linguistic, Religious, Geographic) structure.</li>
+                    <li><strong>Timeline Trackers:</strong> Timeline drag connections process relative pixel delta calculations rather than absolute year bounds to allow dynamic timescale zooming without breaking linkage math.</li>
+                </ul>
+            </details>
+        </div>
     </div>
 
 

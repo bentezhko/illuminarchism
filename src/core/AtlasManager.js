@@ -83,7 +83,6 @@ export default class AtlasManager {
         // Convert to entities
         this.addEntitiesFromAtlas(atlasData);
 
-        console.log(`✓ Loaded atlas: ${atlasId} (${atlasData.entities.length} entities)`);
         return atlasId;
     }
 
@@ -236,7 +235,6 @@ export default class AtlasManager {
         this.atlases.delete(atlasId);
         this.loadedFiles.delete(atlas.source);
 
-        console.log(`✗ Unloaded atlas: ${atlasId}`);
         return true;
     }
 
