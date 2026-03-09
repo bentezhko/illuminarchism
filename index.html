@@ -47,6 +47,7 @@
                 <button class="btn-text" id="btn-load" title="Upload .atlas JSON">U</button>
                 <button class="btn-text" id="btn-toggle-registry" title="Open Atlas Registry">R</button>
                 <button id="btn-ontology" title="View Taxonomy">?</button>
+                <button id="btn-theme-toggle" class="btn-circle" title="Toggle Dark Mode">☾</button>
                 <input type="file" id="file-input" accept=".json,.atlas">
             </div>
         </header>
@@ -252,7 +253,7 @@
             <div class="menu-row">
                 <input type="text" id="ctx-name-input" class="ctx-input" placeholder="Entity Name" style="width: 100%;">
             </div>
-            <div class="menu-row" style="justify-content: center; font-style: italic; color: #5c4d3c; margin-bottom: 4px;">
+            <div class="menu-row" style="justify-content: center; font-style: italic; color: var(--ink-faded); margin-bottom: 4px;">
                 <span id="ctx-type"></span>
             </div>
             <div class="menu-row" style="justify-content: center;">

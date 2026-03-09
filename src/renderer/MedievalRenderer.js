@@ -30,11 +30,6 @@ export default class MedievalRenderer {
         this._cachedWaterEntities = [];
         this._cachedWorldEntities = [];
 
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        this.createParchmentTexture();
-        this.createWaterTexture();
-
         // Measurement Units (1 League = Base Unit)
         this.scaleUnit = 'leagues';
         this.unitConversions = {
@@ -44,6 +39,25 @@ export default class MedievalRenderer {
             'stadia': 24.0,
             'versts': 4.5
         };
+
+        this.themeColors = {
+            inkPrimary: '#2b2118',
+            parchmentBg: '#f3e9d2'
+        };
+        this.updateThemeColors();
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.createParchmentTexture();
+        this.createWaterTexture();
+    }
+
+    updateThemeColors() {
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+            const style = getComputedStyle(document.body || document.documentElement);
+            this.themeColors.inkPrimary = style.getPropertyValue('--ink-primary').trim() || '#2b2118';
+            this.themeColors.parchmentBg = style.getPropertyValue('--parchment-bg').trim() || '#f3e9d2';
+        }
     }
 
     _getPatternTransformMatrix(transform) {
@@ -152,7 +166,15 @@ export default class MedievalRenderer {
             const imageData = ctx.createImageData(size, size);
             const data = imageData.data;
 
-            const baseColor = { r: 243, g: 233, b: 210 }; // #f3e9d2
+            let baseColor = { r: 243, g: 233, b: 210 };
+            const val = this.themeColors.parchmentBg;
+            if (val.startsWith('#') && val.length === 7) {
+                baseColor = {
+                    r: parseInt(val.slice(1, 3), 16),
+                    g: parseInt(val.slice(3, 5), 16),
+                    b: parseInt(val.slice(5, 7), 16)
+                };
+            }
 
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
@@ -228,7 +250,7 @@ export default class MedievalRenderer {
         if (this.noisePattern) {
             this.noisePattern.setTransform(this._getPatternTransformMatrix(this.transform));
         }
-        this.ctx.fillStyle = this.noisePattern || '#f3e9d2';
+        this.ctx.fillStyle = this.noisePattern || this.themeColors.parchmentBg;
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.labelRegions = []; // Reset label collision registry
     }
@@ -383,11 +405,11 @@ export default class MedievalRenderer {
         const y = 110;
 
         ctx.save();
-        ctx.strokeStyle = '#2b2118';
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.font = 'bold 14px "Cinzel"';
-        ctx.fillStyle = '#2b2118';
+        ctx.fillStyle = this.themeColors.inkPrimary;
         ctx.textAlign = 'center';
 
         // Draw Main Line with slight perturbation for ink effect
@@ -434,7 +456,7 @@ export default class MedievalRenderer {
         const r = 10 / t.k;
 
         ctx.save();
-        ctx.strokeStyle = '#2b2118';
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.lineWidth = 1 / t.k;
         ctx.setLineDash([5 / t.k, 5 / t.k]);
         ctx.beginPath();
@@ -443,7 +465,7 @@ export default class MedievalRenderer {
 
         // Small "move" indicator handles
         const hSize = 4 / t.k;
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = this.themeColors.parchmentBg;
         ctx.setLineDash([]);
         ctx.fillRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
         ctx.strokeRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
@@ -457,15 +479,15 @@ export default class MedievalRenderer {
 
         // Draw Dashed Box
         ctx.save();
-        ctx.strokeStyle = '#2b2118';
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.lineWidth = 1 / t.k;
         ctx.setLineDash([5 / t.k, 5 / t.k]);
         ctx.strokeRect(bbox.x, bbox.y, bbox.w, bbox.h);
 
         // Draw Handles (Corners)
         const handleSize = 6 / t.k;
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = '#2b2118';
+        ctx.fillStyle = this.themeColors.parchmentBg;
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.setLineDash([]);
 
         const corners = [
@@ -724,7 +746,7 @@ export default class MedievalRenderer {
             this.labelRegions.push(bbox);
         }
 
-        this.ctx.fillStyle = isSelected ? '#fff' : '#2b2118';
+        this.ctx.fillStyle = isSelected ? '#fff' : this.themeColors.inkPrimary;
         if (isSelected) this.ctx.shadowBlur = 4;
 
         this.ctx.fillText(ent.name, cx, cy);
