@@ -78,9 +78,107 @@ export default class IlluminarchismApp {
 
         this.initData();
         this.initUI();
+        this.initAnimation();
         this.updateEntities();
         this.renderRegistry();
         this.render();
+    }
+
+    initAnimation() {
+        const titleText = "ILLUMINARCHISM";
+        const titleEl = document.getElementById("animated-title");
+
+        if (!titleEl) return;
+
+        const letters = [];
+        for (let i = 0; i < titleText.length; i++) {
+            const span = document.createElement("span");
+            span.textContent = titleText[i];
+            span.className = "animated-letter";
+            if (i >= 7) {
+                span.classList.add("rubric");
+            }
+            titleEl.appendChild(span);
+            letters.push(span);
+        }
+
+        const animationDuration = 1.5; // seconds per letter
+        const overlap = 0.5; // seconds overlap between fading and drawing
+        const totalDuration = titleText.length * (animationDuration - overlap);
+
+        const styleSheet = document.createElement("style");
+        let cssText = "";
+
+        letters.forEach((letter, index) => {
+            const startPct = (index * (animationDuration - overlap) / totalDuration) * 100;
+            const drawEndPct = startPct + ((animationDuration * 0.3) / totalDuration) * 100;
+            const fadeStartPct = startPct + ((animationDuration * 0.7) / totalDuration) * 100;
+            const endPct = startPct + (animationDuration / totalDuration) * 100;
+
+            // To handle animations that wrap around the end of the timeline
+            let keyframes = "";
+            if (endPct <= 100) {
+                keyframes = `
+                @keyframes animateLetter${index} {
+                    0%, ${Math.max(0, startPct - 0.01)}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }
+                    ${startPct}% { opacity: 1; }
+                    ${drawEndPct}% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }
+                    ${fadeStartPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+                    ${endPct}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+                    ${Math.min(100, endPct + 0.01)}%, 100% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+                }`;
+            } else {
+                // If it wraps, we need to split it
+                const wrappedDrawEnd = drawEndPct % 100;
+                const wrappedFadeStart = fadeStartPct % 100;
+                const wrappedEnd = endPct % 100;
+
+                // When we wrap, the end of the timeline (100%) and the beginning (0%)
+                // fall somewhere between startPct and endPct.
+
+                // For the last letter "M", startPct is ~93%, drawEndPct is ~96%,
+                // fadeStartPct is ~100.0%, and endPct is ~103%.
+                // So at 0%, it should be fading out.
+
+                // Calculate opacity at 0%
+                let opacityAtZero = 0;
+                let clipPathAtZero = "polygon(0 0, 100% 0, 100% 0, 0 0)";
+
+                if (startPct > 100) {
+                    // Start hasn't happened yet in the current wrap logic context
+                    // This is for very long overlap loops
+                    opacityAtZero = 0;
+                } else if (fadeStartPct <= 100) {
+                    // Fading starts before 100, finishes after 0
+                    opacityAtZero = 1 - (100 - fadeStartPct) / (endPct - fadeStartPct);
+                    clipPathAtZero = "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
+                } else if (drawEndPct <= 100) {
+                    // Drawing finished before 100, fading starts after 0
+                    opacityAtZero = 1;
+                    clipPathAtZero = "polygon(0 0, 100% 0, 100% 100%, 0 100%)";
+                } else {
+                    // Drawing finishes after 0
+                    opacityAtZero = 1;
+                    const drawProgress = (100 - startPct) / (drawEndPct - startPct);
+                    clipPathAtZero = `polygon(0 0, 100% 0, 100% ${drawProgress * 100}%, 0 ${drawProgress * 100}%)`;
+                }
+
+                keyframes = `
+                @keyframes animateLetter${index} {
+                    0% { opacity: ${opacityAtZero}; clip-path: ${clipPathAtZero}; }
+                    ${wrappedEnd}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+                    ${Math.min(100, wrappedEnd + 0.01)}%, ${Math.max(0, startPct - 0.01)}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }
+                    ${startPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }
+                    ${drawEndPct > 100 ? '100% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }' : `${drawEndPct}% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }`}
+                    ${fadeStartPct > 100 ? '' : `${fadeStartPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`}
+                    ${endPct > 100 && startPct <= 100 ? '100% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }' : ''}
+                }`;
+            }
+            cssText += keyframes;
+            letter.style.animation = `animateLetter${index} ${totalDuration}s infinite linear`;
+        });
+        styleSheet.textContent = cssText;
+        document.head.appendChild(styleSheet);
     }
 
     _animationLoop = () => {

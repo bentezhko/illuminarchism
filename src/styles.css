@@ -69,7 +69,8 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 80px; /* Fixed height for consistency */
+    height: 100px; /* Fixed height for consistency */
+    position: relative;
 }
 
 .header-center-controls {
@@ -78,6 +79,9 @@ header {
     align-items: center;
     gap: 1rem;
     padding: 0.5rem 1rem;
+    position: relative;
+    z-index: 10;
+    margin-top: 25px; /* shift down to make space */
 }
 
 h1 {
@@ -91,6 +95,34 @@ h1 {
 }
 
 h1 span {
+    color: var(--rubric-red);
+}
+
+.title-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    position: absolute;
+    left: 50%;
+    top: 30px; /* Adjust top placement so it's above the speed slider */
+    transform: translate(-50%, -50%);
+    width: 60px; /* roughly the width of a single letter to keep it centered and small footprint */
+    min-width: 60px;
+    margin: 0;
+    z-index: 5;
+}
+
+.animated-letter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+}
+
+.animated-letter.rubric {
     color: var(--rubric-red);
 }
 
