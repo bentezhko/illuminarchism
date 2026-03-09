@@ -152,7 +152,8 @@ export default class MedievalRenderer {
             const imageData = ctx.createImageData(size, size);
             const data = imageData.data;
 
-            const baseColor = { r: 243, g: 233, b: 210 }; // #f3e9d2
+        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
+            const baseColor = isDarkMode ? { r: 28, g: 24, b: 20 } : { r: 243, g: 233, b: 210 }; // #1c1814 or #f3e9d2
 
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
@@ -193,15 +194,17 @@ export default class MedievalRenderer {
         c.width = size; c.height = size;
         const ctx = c.getContext('2d');
 
+        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
+
         // OPAQUE base color to mask land
-        ctx.fillStyle = 'rgba(150, 180, 200, 1.0)';
+        ctx.fillStyle = isDarkMode ? 'rgba(50, 70, 90, 1.0)' : 'rgba(150, 180, 200, 1.0)';
         ctx.fillRect(0, 0, size, size);
 
         const rows = 4, cols = 4;
         const cellW = size / cols;
         const cellH = size / rows;
 
-        ctx.strokeStyle = '#264e86';
+        ctx.strokeStyle = isDarkMode ? '#5bc9c4' : '#264e86';
         ctx.lineWidth = 1.2;
         ctx.lineCap = 'round';
         ctx.globalAlpha = 0.6;
@@ -228,7 +231,8 @@ export default class MedievalRenderer {
         if (this.noisePattern) {
             this.noisePattern.setTransform(this._getPatternTransformMatrix(this.transform));
         }
-        this.ctx.fillStyle = this.noisePattern || '#f3e9d2';
+        const fallbackColor = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode') ? '#1c1814' : '#f3e9d2';
+        this.ctx.fillStyle = this.noisePattern || fallbackColor;
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.labelRegions = []; // Reset label collision registry
     }
@@ -382,12 +386,15 @@ export default class MedievalRenderer {
         const x = 30;
         const y = 110;
 
+        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
+        const inkColor = isDarkMode ? '#d4c5a3' : '#2b2118';
+
         ctx.save();
-        ctx.strokeStyle = '#2b2118';
+        ctx.strokeStyle = inkColor;
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.font = 'bold 14px "Cinzel"';
-        ctx.fillStyle = '#2b2118';
+        ctx.fillStyle = inkColor;
         ctx.textAlign = 'center';
 
         // Draw Main Line with slight perturbation for ink effect
@@ -433,8 +440,12 @@ export default class MedievalRenderer {
         const t = this.transform;
         const r = 10 / t.k;
 
+        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
+        const inkColor = isDarkMode ? '#d4c5a3' : '#2b2118';
+        const fillC = isDarkMode ? '#1c1814' : '#fff';
+
         ctx.save();
-        ctx.strokeStyle = '#2b2118';
+        ctx.strokeStyle = inkColor;
         ctx.lineWidth = 1 / t.k;
         ctx.setLineDash([5 / t.k, 5 / t.k]);
         ctx.beginPath();
@@ -443,7 +454,7 @@ export default class MedievalRenderer {
 
         // Small "move" indicator handles
         const hSize = 4 / t.k;
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = fillC;
         ctx.setLineDash([]);
         ctx.fillRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
         ctx.strokeRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
@@ -455,17 +466,21 @@ export default class MedievalRenderer {
         const bbox = getBoundingBox(geometry);
         const t = this.transform;
 
+        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
+        const inkColor = isDarkMode ? '#d4c5a3' : '#2b2118';
+        const fillC = isDarkMode ? '#1c1814' : '#fff';
+
         // Draw Dashed Box
         ctx.save();
-        ctx.strokeStyle = '#2b2118';
+        ctx.strokeStyle = inkColor;
         ctx.lineWidth = 1 / t.k;
         ctx.setLineDash([5 / t.k, 5 / t.k]);
         ctx.strokeRect(bbox.x, bbox.y, bbox.w, bbox.h);
 
         // Draw Handles (Corners)
         const handleSize = 6 / t.k;
-        ctx.fillStyle = '#fff';
-        ctx.strokeStyle = '#2b2118';
+        ctx.fillStyle = fillC;
+        ctx.strokeStyle = inkColor;
         ctx.setLineDash([]);
 
         const corners = [
@@ -724,7 +739,10 @@ export default class MedievalRenderer {
             this.labelRegions.push(bbox);
         }
 
-        this.ctx.fillStyle = isSelected ? '#fff' : '#2b2118';
+        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
+        const defaultInk = isDarkMode ? '#d4c5a3' : '#2b2118';
+
+        this.ctx.fillStyle = isSelected ? '#fff' : defaultInk;
         if (isSelected) this.ctx.shadowBlur = 4;
 
         this.ctx.fillText(ent.name, cx, cy);

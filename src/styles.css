@@ -13,6 +13,19 @@
     --border-width: 2px;
 }
 
+body.dark-mode {
+    --parchment-bg: #1c1814;
+    --parchment-dark: #2b241c;
+    --ink-primary: #d4c5a3;
+    --ink-faded: #8c7e6a;
+    --rubric-red: #a84c3d;
+    --gold-leaf: #d4b572;
+    --lapis-lazuli: #4872af;
+    --verdigris: #5bc9c4;
+
+    --ui-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
 * {
     box-sizing: border-box;
     user-select: none;
@@ -307,7 +320,7 @@ body.view-map .tool-timeline {
 .dial-tumbler {
     width: 40px;
     height: 50px;
-    background: linear-gradient(to bottom, #d4c5a3 0%, #f3e9d2 20%, #f3e9d2 80%, #d4c5a3 100%);
+    background: linear-gradient(to bottom, var(--gold-leaf) 0%, var(--parchment-bg) 20%, var(--parchment-bg) 80%, var(--gold-leaf) 100%);
     border: 1px solid var(--ink-faded);
     border-radius: 2px;
     display: flex;
@@ -321,7 +334,7 @@ body.view-map .tool-timeline {
 }
 
 .dial-tumbler:active {
-    background: #e0d0b0;
+    background: var(--parchment-dark);
 }
 
 .dial-label {
@@ -572,9 +585,9 @@ body.view-map .tool-timeline {
     transform: translateX(-50%);
     width: 50px;
     height: 26px;
-    background: #3e2723; /* Dark background as in image */
-    color: #ffcc80; /* Light arrow color */
-    border: 2px solid #ffffff; /* White border */
+    background: var(--ink-primary); /* Dark background as in image */
+    color: var(--gold-leaf); /* Light arrow color */
+    border: 2px solid var(--parchment-bg); /* White border */
     border-bottom: none;
     border-radius: 10px 10px 0 0; /* Rounded top corners */
     font-size: 0.8rem;
@@ -587,7 +600,7 @@ body.view-map .tool-timeline {
 }
 
 #btn-toggle-chronographer:hover {
-    background: #5d4037;
+    background: var(--ink-faded);
 }
 
 .chrono-controls-row {
@@ -845,7 +858,7 @@ body.view-map .tool-timeline {
     height: 40px;
     position: relative;
     border-radius: 20px; /* Pill shape */
-    background: #2b2118;
+    background: var(--ink-primary);
     border: 2px solid var(--gold-leaf);
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.2);
     overflow: hidden;
@@ -914,8 +927,8 @@ body.view-map .tool-timeline {
     left: 0; /* Updated via JS to match hand */
     width: 12px;
     height: 24px;
-    background: linear-gradient(to right, #8a6a24, #c5a059, #8a6a24);
-    border: 1px solid #2b2118;
+    background: linear-gradient(to right, var(--gold-leaf), var(--parchment-bg), var(--gold-leaf));
+    border: 1px solid var(--ink-primary);
     border-radius: 4px;
     transform: translate(-50%, -50%);
     box-shadow: 0 2px 4px rgba(0,0,0,0.5);
@@ -1273,21 +1286,21 @@ body:not(.panel-collapsed) #view-timeline {
 .context-menu {
     position: absolute;
     z-index: 2000;
-    background: #f3e9d2;
-    border: 2px solid #5d4037;
+    background: var(--parchment-bg);
+    border: 2px solid var(--ink-faded);
     border-radius: 4px;
     box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.5);
     min-width: 250px;
     font-family: 'Cinzel', serif;
-    color: #2b2118;
+    color: var(--ink-primary);
 }
 
 .menu-header {
-    background: #5d4037;
-    color: #f3e9d2;
+    background: var(--ink-faded);
+    color: var(--parchment-bg);
     padding: 8px 12px;
     font-weight: bold;
-    border-bottom: 2px solid #3e2723;
+    border-bottom: 2px solid var(--ink-primary);
     font-size: 0.9em;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -1333,40 +1346,40 @@ body:not(.panel-collapsed) #view-timeline {
 
 .menu-row label {
     font-weight: bold;
-    color: #5d4037;
+    color: var(--ink-faded);
 }
 
 .color-preview {
     width: 20px;
     height: 20px;
-    border: 1px solid #5d4037;
+    border: 1px solid var(--ink-faded);
     border-radius: 2px;
     cursor: pointer;
 }
 
 .color-preview:hover {
-    border-color: #8a3324;
+    border-color: var(--rubric-red);
     box-shadow: 0 0 4px rgba(138, 51, 36, 0.5);
 }
 .ctx-input {
     background: transparent;
     border: none;
-    border-bottom: 1px dashed #5d4037;
+    border-bottom: 1px dashed var(--ink-faded);
     font-family: 'IM Fell English', serif;
     font-size: 0.9rem;
-    color: #2b2118;
+    color: var(--ink-primary);
     width: 120px;
     outline: none;
 }
 
 .ctx-input:focus {
-    border-bottom: 1px solid #8a3324;
+    border-bottom: 1px solid var(--rubric-red);
 }
 
 .ctx-input-year {
     width: 65px;
     background: rgba(0, 0, 0, 0.05);
-    border: 1px solid #5d4037;
+    border: 1px solid var(--ink-faded);
     border-radius: 2px;
     font-family: 'Cinzel', serif;
     font-size: 0.8rem;
@@ -1378,7 +1391,7 @@ body:not(.panel-collapsed) #view-timeline {
     width: 40px;
     height: 25px;
     padding: 0;
-    border: 1px solid #5d4037;
+    border: 1px solid var(--ink-faded);
     cursor: pointer;
 }
 

@@ -274,6 +274,25 @@ export default class IlluminarchismApp {
             }
         });
 
+        this.safeAddListener('btn-theme-toggle', 'click', () => {
+            document.body.classList.toggle('dark-mode');
+            const toggleBtn = document.getElementById('btn-theme-toggle');
+            if (document.body.classList.contains('dark-mode')) {
+                toggleBtn.textContent = '☀';
+                toggleBtn.title = 'Toggle Light Mode';
+            } else {
+                toggleBtn.textContent = '☾';
+                toggleBtn.title = 'Toggle Dark Mode';
+            }
+            if (this.renderer) {
+                MedievalRenderer.cachedParchmentCanvas = null; // force texture regen
+                this.renderer.createParchmentTexture();
+                this.renderer.createWaterTexture();
+                this.renderer.invalidateWorldLayer();
+                this.render();
+            }
+        });
+
         // Toggle Chronographer Panel
         this.safeAddListener('btn-toggle-chronographer', 'click', () => {
             const panel = document.getElementById('temporal-controls');
