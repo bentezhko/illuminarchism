@@ -8,6 +8,15 @@ const GRID_CONFIG = {
     COLOR: 'rgba(138, 51, 36, 0.05)'
 };
 
+const ANIMATION_CONFIG = {
+    HOVER_FLASH_PERIOD: 150,
+    HOVER_FLASH_RADIUS_AMP: 2,
+    DESTRUCT_FLASH_PERIOD: 100,
+    DESTRUCT_FLASH_RADIUS_AMP: 3,
+    FLASH_OPACITY_BASE: 0.5,
+    FLASH_OPACITY_AMP: 0.5
+};
+
 export default class MedievalRenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -753,16 +762,33 @@ export default class MedievalRenderer {
         this.ctx.shadowBlur = 0;
     }
 
-    drawDraft(points, cursor, transform, type) {
+    drawDraft(points, cursor, transform, type, options = {}) {
         if (!points || points.length === 0) return;
         const ctx = this.ctx;
+        const { isHoveringFirstDraftPoint, isDestructingLastPoint } = options;
+
         ctx.save();
         ctx.translate(transform.x, transform.y);
         ctx.scale(transform.k, transform.k);
 
-        points.forEach(p => {
-            ctx.beginPath(); ctx.arc(p.x, p.y, 3 / transform.k, 0, Math.PI * 2);
-            ctx.fillStyle = '#8a3324'; ctx.fill();
+        points.forEach((p, index) => {
+            ctx.beginPath();
+            let radius = 3 / transform.k;
+            let fillStyle = '#8a3324';
+
+            if (isHoveringFirstDraftPoint && index === 0) {
+                const flash = (Math.sin(performance.now() / ANIMATION_CONFIG.HOVER_FLASH_PERIOD) + 1) / 2;
+                radius = (3 + flash * ANIMATION_CONFIG.HOVER_FLASH_RADIUS_AMP) / transform.k;
+                fillStyle = `rgba(138, 51, 36, ${ANIMATION_CONFIG.FLASH_OPACITY_BASE + flash * ANIMATION_CONFIG.FLASH_OPACITY_AMP})`;
+            } else if (isDestructingLastPoint && index === points.length - 1) {
+                const flash = (Math.sin(performance.now() / ANIMATION_CONFIG.DESTRUCT_FLASH_PERIOD) + 1) / 2;
+                radius = (3 + flash * ANIMATION_CONFIG.DESTRUCT_FLASH_RADIUS_AMP) / transform.k;
+                fillStyle = `rgba(255, 0, 0, ${ANIMATION_CONFIG.FLASH_OPACITY_BASE + flash * ANIMATION_CONFIG.FLASH_OPACITY_AMP})`;
+            }
+
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = fillStyle;
+            ctx.fill();
         });
 
         if (type === 'city') {
@@ -775,7 +801,12 @@ export default class MedievalRenderer {
             ctx.beginPath();
             ctx.moveTo(points[0].x, points[0].y);
             for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-            if (cursor) ctx.lineTo(cursor.x, cursor.y);
+            if (cursor) {
+                ctx.lineTo(cursor.x, cursor.y);
+                if (isHoveringFirstDraftPoint) {
+                    ctx.lineTo(points[0].x, points[0].y);
+                }
+            }
             ctx.strokeStyle = '#8a3324';
             ctx.lineWidth = 2 / transform.k;
             ctx.setLineDash([5 / transform.k, 5 / transform.k]);

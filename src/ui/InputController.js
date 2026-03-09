@@ -2,6 +2,9 @@ import { CONFIG } from '../config.js';
 import { distance, distanceToSegment, getBoundingBox, getRepresentativePoint } from '../core/math.js';
 import { isRenderedAsPoint } from '../core/Ontology.js';
 
+const RIGHT_CLICK_HOLD_DURATION = 500;
+const QUICK_RIGHT_CLICK_INTERVAL = 300;
+
 export default class InputController {
     constructor(app) {
         this.app = app;
@@ -26,7 +29,7 @@ export default class InputController {
     }
 
     getTransformHandle(wp, bbox, scale) {
-        const handleSize = 10 / scale; // Detection radius slightly larger than visual
+        const handleSize = CONFIG.INTERACTION_RADIUS / scale; // Detection radius slightly larger than visual
         const corners = {
             'resize-tl': { x: bbox.minX, y: bbox.minY },
             'resize-tr': { x: bbox.maxX, y: bbox.minY },
@@ -133,7 +136,7 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
+                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
                         if (hitIdx !== -1) {
                             this.isDragging = true;
                             this.dragVertexIndex = hitIdx;
@@ -158,7 +161,9 @@ export default class InputController {
 
                 // Priority 2: Drawing Tool
                 if (this.app.activeTool === 'draw') {
-                    if (this.app.drawType === 'city') {
+                    if (this.app.isHoveringFirstDraftPoint) {
+                        this.app.commitDraft();
+                    } else if (this.app.drawType === 'city') {
                         this.app.addDraftPoint(wp);
                         this.app.commitDraft();
                     } else {
@@ -189,6 +194,25 @@ export default class InputController {
             if (e.button === 1 && this.app.activeTool === 'draw') {
                 e.preventDefault();
                 this.app.commitDraft();
+                return;
+            }
+
+            // Right Click (button 2)
+            if (e.button === 2 && this.app.activeTool === 'draw' && this.app.draftPoints && this.app.draftPoints.length > 0) {
+                e.preventDefault();
+                this.app.isDestructingLastPoint = true;
+                this.app.rightClickDownTime = Date.now();
+
+                if (!this.app.isSelectionAnimating) {
+                    this.app.isSelectionAnimating = true;
+                    requestAnimationFrame(this.app._animationLoop);
+                }
+
+                this.app.rightClickDestructTimeout = setTimeout(() => {
+                    if (this.app.isDestructingLastPoint) {
+                        this.app.removeLastDraftPoint();
+                    }
+                }, RIGHT_CLICK_HOLD_DURATION);
             }
         });
 
@@ -196,6 +220,7 @@ export default class InputController {
         c.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             if (this.app.currentView !== 'map') return;
+            if (this.app.activeTool === 'draw') return;
 
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
@@ -203,7 +228,7 @@ export default class InputController {
             if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                 const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
-                    const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
+                    const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
                     if (hitIdx !== -1 && ent.currentGeometry.length > 3) {
                         ent.currentGeometry.splice(hitIdx, 1);
                         this.app.finishVertexEdit();
@@ -284,6 +309,28 @@ export default class InputController {
             // Drawing mode cursor update
             if (this.app.activeTool === 'draw') {
                 this.app.updateDraftCursor(wp);
+
+                // Highlight first point for closing polygon
+                if (this.app.draftPoints && this.app.draftPoints.length >= 2) {
+                    const firstPt = this.app.draftPoints[0];
+                    if (distance(wp, firstPt) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k) {
+                        this.app.isHoveringFirstDraftPoint = true;
+                        c.style.cursor = 'pointer';
+
+                        if (!this.app.isSelectionAnimating) {
+                            this.app.isSelectionAnimating = true;
+                            requestAnimationFrame(this.app._animationLoop);
+                        }
+                    } else {
+                        this.app.isHoveringFirstDraftPoint = false;
+                        c.style.cursor = 'crosshair';
+                    }
+                    this.app.render(); // Redraw immediately to show highlight
+                } else {
+                    this.app.isHoveringFirstDraftPoint = false;
+                    c.style.cursor = 'crosshair';
+                }
+
                 return;
             }
 
@@ -308,7 +355,7 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
+                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
                         this.app.highlightVertex(hitIdx !== -1 ? hitIdx : null);
 
                         if (hitIdx !== -1) {
@@ -342,6 +389,25 @@ export default class InputController {
         });
 
         window.addEventListener('mouseup', (e) => {
+            // Check for Right-Click Destruction Release
+            if (e.button === 2 && this.app.activeTool === 'draw') {
+                clearTimeout(this.app.rightClickDestructTimeout);
+
+                const clickDuration = Date.now() - this.app.rightClickDownTime;
+
+                if (clickDuration < RIGHT_CLICK_HOLD_DURATION) {
+                    if (Date.now() - this.app.lastRightClickUpTime < QUICK_RIGHT_CLICK_INTERVAL) {
+                        this.app.removeLastDraftPoint();
+                    } else {
+                        // Just a single quick right click, do nothing but reset highlight
+                        this.app.isDestructingLastPoint = false;
+                        this.app.render();
+                    }
+                }
+
+                this.app.lastRightClickUpTime = Date.now();
+            }
+
             // Check for Click-to-Deselect (if not dragged significantly)
             const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
 
