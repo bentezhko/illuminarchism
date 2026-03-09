@@ -21,14 +21,25 @@
 
     <div id="ui-layer">
         <header class="pointer-events-auto">
-            <h1>Illumin<span>archism</span></h1>
-            <div class="view-switch">
-                <button class="view-btn" id="btn-view-toggle">Timeline</button>
+            <div class="file-controls">
+                <button class="btn-text" id="btn-save" title="Download .atlas JSON">S</button>
+                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">U</button>
+                <button class="btn-text" id="btn-toggle-registry" title="Open Atlas Registry">R</button>
+                <button id="btn-ontology" title="View Taxonomy">?</button>
+                <button id="btn-theme-toggle" class="btn-circle" title="Toggle Dark Mode">☾</button>
+                <input type="file" id="file-input" accept=".json,.atlas">
             </div>
 
-            <div class="header-center-controls">
-                <button id="btn-play" title="Play History">▶</button>
+            <div class="header-center">
+                <h1 class="title-container" id="animated-title"></h1>
+            </div>
+
+            <div class="header-right-controls">
+                <div class="view-switch">
+                    <button class="view-btn" id="btn-view-toggle">Timeline</button>
+                </div>
                 <div id="year-display">1000 AD</div>
+                <button id="btn-play" title="Play History">▶</button>
                 <div class="speed-control-clock" id="speed-control-clock" title="Temporal Velocity">
                     <div class="speed-dial-mechanism">
                         <div class="speed-dial-ring-outer"></div>
@@ -40,15 +51,6 @@
                     </div>
                     <div class="speed-display-text" id="speed-display">1x</div>
                 </div>
-            </div>
-
-            <div class="file-controls">
-                <button class="btn-text" id="btn-save" title="Download .atlas JSON">S</button>
-                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">U</button>
-                <button class="btn-text" id="btn-toggle-registry" title="Open Atlas Registry">R</button>
-                <button id="btn-ontology" title="View Taxonomy">?</button>
-                <button id="btn-theme-toggle" class="btn-circle" title="Toggle Dark Mode">☾</button>
-                <input type="file" id="file-input" accept=".json,.atlas">
             </div>
         </header>
 
