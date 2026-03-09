@@ -8,6 +8,15 @@ const GRID_CONFIG = {
     COLOR: 'rgba(138, 51, 36, 0.05)'
 };
 
+const ANIMATION_CONFIG = {
+    HOVER_FLASH_PERIOD: 150,
+    HOVER_FLASH_RADIUS_AMP: 2,
+    DESTRUCT_FLASH_PERIOD: 100,
+    DESTRUCT_FLASH_RADIUS_AMP: 3,
+    FLASH_OPACITY_BASE: 0.5,
+    FLASH_OPACITY_AMP: 0.5
+};
+
 export default class MedievalRenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -768,13 +777,13 @@ export default class MedievalRenderer {
             let fillStyle = '#8a3324';
 
             if (isHoveringFirstDraftPoint && index === 0) {
-                const flash = (Math.sin(performance.now() / 150) + 1) / 2;
-                radius = (3 + flash * 2) / transform.k;
-                fillStyle = `rgba(138, 51, 36, ${0.5 + flash * 0.5})`;
+                const flash = (Math.sin(performance.now() / ANIMATION_CONFIG.HOVER_FLASH_PERIOD) + 1) / 2;
+                radius = (3 + flash * ANIMATION_CONFIG.HOVER_FLASH_RADIUS_AMP) / transform.k;
+                fillStyle = `rgba(138, 51, 36, ${ANIMATION_CONFIG.FLASH_OPACITY_BASE + flash * ANIMATION_CONFIG.FLASH_OPACITY_AMP})`;
             } else if (isDestructingLastPoint && index === points.length - 1) {
-                const flash = (Math.sin(performance.now() / 100) + 1) / 2;
-                radius = (3 + flash * 3) / transform.k;
-                fillStyle = `rgba(255, 0, 0, ${0.5 + flash * 0.5})`;
+                const flash = (Math.sin(performance.now() / ANIMATION_CONFIG.DESTRUCT_FLASH_PERIOD) + 1) / 2;
+                radius = (3 + flash * ANIMATION_CONFIG.DESTRUCT_FLASH_RADIUS_AMP) / transform.k;
+                fillStyle = `rgba(255, 0, 0, ${ANIMATION_CONFIG.FLASH_OPACITY_BASE + flash * ANIMATION_CONFIG.FLASH_OPACITY_AMP})`;
             }
 
             ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
