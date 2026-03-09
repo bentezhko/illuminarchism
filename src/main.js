@@ -73,6 +73,12 @@ export default class IlluminarchismApp {
         this.newAreaCounter = 1;
         this.isSelectionAnimating = false;
 
+        // New drawing state variables for edge cases
+        this.isHoveringFirstDraftPoint = false;
+        this.isDestructingLastPoint = false;
+        this.rightClickDownTime = 0;
+        this.lastRightClickUpTime = 0;
+
         // Initial setup for toolbar sliding based on view
         document.body.classList.add('view-map');
 
@@ -204,7 +210,7 @@ export default class IlluminarchismApp {
     }
 
     _animationLoop = () => {
-        if (this.selectedEntityId) {
+        if (this.selectedEntityId || this.isHoveringFirstDraftPoint || this.isDestructingLastPoint) {
             this.render();
             requestAnimationFrame(this._animationLoop);
         } else {
@@ -862,7 +868,17 @@ export default class IlluminarchismApp {
         this.render();
     }
 
+    removeLastDraftPoint() {
+        if (this.draftPoints && this.draftPoints.length > 0) {
+            this.draftPoints.pop();
+            this.isDestructingLastPoint = false;
+            this.render();
+        }
+    }
+
     cancelDraft() {
+        this.isHoveringFirstDraftPoint = false;
+        this.isDestructingLastPoint = false;
         if (this.drawTool) {
             this.drawTool.cancel();
         } else {
@@ -1205,7 +1221,10 @@ export default class IlluminarchismApp {
         if (this.activeTool === 'draw' && this.draftPoints.length > 0) {
             if (typeof this.renderer.drawDraft === 'function') {
                 try {
-                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType);
+                    this.renderer.drawDraft(this.draftPoints, this.draftCursor, this.renderer.transform, this.drawType, {
+                        isHoveringFirstDraftPoint: this.isHoveringFirstDraftPoint,
+                        isDestructingLastPoint: this.isDestructingLastPoint
+                    });
                 } catch (e) {
                     console.warn('Draft rendering failed:', e);
                 }

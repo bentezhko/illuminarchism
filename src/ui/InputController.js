@@ -158,7 +158,9 @@ export default class InputController {
 
                 // Priority 2: Drawing Tool
                 if (this.app.activeTool === 'draw') {
-                    if (this.app.drawType === 'city') {
+                    if (this.app.isHoveringFirstDraftPoint) {
+                        this.app.commitDraft();
+                    } else if (this.app.drawType === 'city') {
                         this.app.addDraftPoint(wp);
                         this.app.commitDraft();
                     } else {
@@ -189,6 +191,25 @@ export default class InputController {
             if (e.button === 1 && this.app.activeTool === 'draw') {
                 e.preventDefault();
                 this.app.commitDraft();
+                return;
+            }
+
+            // Right Click (button 2)
+            if (e.button === 2 && this.app.activeTool === 'draw' && this.app.draftPoints && this.app.draftPoints.length > 0) {
+                e.preventDefault();
+                this.app.isDestructingLastPoint = true;
+                this.app.rightClickDownTime = Date.now();
+
+                if (!this.app.isSelectionAnimating) {
+                    this.app.isSelectionAnimating = true;
+                    requestAnimationFrame(this.app._animationLoop);
+                }
+
+                this.app.rightClickDestructTimeout = setTimeout(() => {
+                    if (this.app.isDestructingLastPoint) {
+                        this.app.removeLastDraftPoint();
+                    }
+                }, 500);
             }
         });
 
@@ -196,6 +217,7 @@ export default class InputController {
         c.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             if (this.app.currentView !== 'map') return;
+            if (this.app.activeTool === 'draw') return;
 
             const wp = this.renderer.toWorld(e.offsetX, e.offsetY);
 
@@ -284,6 +306,28 @@ export default class InputController {
             // Drawing mode cursor update
             if (this.app.activeTool === 'draw') {
                 this.app.updateDraftCursor(wp);
+
+                // Highlight first point for closing polygon
+                if (this.app.draftPoints && this.app.draftPoints.length >= 2) {
+                    const firstPt = this.app.draftPoints[0];
+                    if (distance(wp, firstPt) < 10 / this.renderer.transform.k) {
+                        this.app.isHoveringFirstDraftPoint = true;
+                        c.style.cursor = 'pointer';
+
+                        if (!this.app.isSelectionAnimating) {
+                            this.app.isSelectionAnimating = true;
+                            requestAnimationFrame(this.app._animationLoop);
+                        }
+                    } else {
+                        this.app.isHoveringFirstDraftPoint = false;
+                        c.style.cursor = 'crosshair';
+                    }
+                    this.app.render(); // Redraw immediately to show highlight
+                } else {
+                    this.app.isHoveringFirstDraftPoint = false;
+                    c.style.cursor = 'crosshair';
+                }
+
                 return;
             }
 
@@ -342,6 +386,25 @@ export default class InputController {
         });
 
         window.addEventListener('mouseup', (e) => {
+            // Check for Right-Click Destruction Release
+            if (e.button === 2 && this.app.activeTool === 'draw') {
+                clearTimeout(this.app.rightClickDestructTimeout);
+
+                const clickDuration = Date.now() - this.app.rightClickDownTime;
+
+                if (clickDuration < 500) {
+                    if (Date.now() - this.app.lastRightClickUpTime < 300) {
+                        this.app.removeLastDraftPoint();
+                    } else {
+                        // Just a single quick right click, do nothing but reset highlight
+                        this.app.isDestructingLastPoint = false;
+                        this.app.render();
+                    }
+                }
+
+                this.app.lastRightClickUpTime = Date.now();
+            }
+
             // Check for Click-to-Deselect (if not dragged significantly)
             const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
 
