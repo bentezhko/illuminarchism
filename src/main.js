@@ -86,6 +86,12 @@ export default class IlluminarchismApp {
 
     initAnimation() {
         const titleText = "ILLUMINARCHISM";
+        const rubricStartIndex = "ILLUMIN".length;
+        const animationDurationSeconds = 1.5;
+        const overlapSeconds = 0.5;
+        const drawPhaseRatio = 0.3; // percentage of duration spent drawing the letter
+        const fadePhaseRatio = 0.7; // percentage of duration spent holding before fade out starts
+
         const titleEl = document.getElementById("animated-title");
 
         if (!titleEl) return;
@@ -95,25 +101,23 @@ export default class IlluminarchismApp {
             const span = document.createElement("span");
             span.textContent = titleText[i];
             span.className = "animated-letter";
-            if (i >= 7) {
+            if (i >= rubricStartIndex) {
                 span.classList.add("rubric");
             }
             titleEl.appendChild(span);
             letters.push(span);
         }
 
-        const animationDuration = 1.5; // seconds per letter
-        const overlap = 0.5; // seconds overlap between fading and drawing
-        const totalDuration = titleText.length * (animationDuration - overlap);
+        const totalDuration = titleText.length * (animationDurationSeconds - overlapSeconds);
 
         const styleSheet = document.createElement("style");
         let cssText = "";
 
         letters.forEach((letter, index) => {
-            const startPct = (index * (animationDuration - overlap) / totalDuration) * 100;
-            const drawEndPct = startPct + ((animationDuration * 0.3) / totalDuration) * 100;
-            const fadeStartPct = startPct + ((animationDuration * 0.7) / totalDuration) * 100;
-            const endPct = startPct + (animationDuration / totalDuration) * 100;
+            const startPct = (index * (animationDurationSeconds - overlapSeconds) / totalDuration) * 100;
+            const drawEndPct = startPct + ((animationDurationSeconds * drawPhaseRatio) / totalDuration) * 100;
+            const fadeStartPct = startPct + ((animationDurationSeconds * fadePhaseRatio) / totalDuration) * 100;
+            const endPct = startPct + (animationDurationSeconds / totalDuration) * 100;
 
             // To handle animations that wrap around the end of the timeline
             let keyframes = "";
