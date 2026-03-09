@@ -157,6 +157,123 @@ h1 {
     box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
+/* Scroll Dropdown Menu */
+.scroll-dropdown {
+    position: relative;
+    display: inline-block;
+    width: 150px; /* Force width explicitly */
+}
+
+.scroll-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    z-index: 2000;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.scroll-dropdown:hover .scroll-menu,
+.scroll-menu.open {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.scroll-roller {
+    width: 100%;
+    height: 24px;
+    background: linear-gradient(to right, var(--gold-leaf), var(--parchment-bg), var(--gold-leaf));
+    border: 1px solid var(--ink-primary);
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    position: relative;
+    z-index: 2;
+}
+
+button.scroll-roller {
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: var(--ink-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: filter 0.2s;
+}
+
+button.scroll-roller:hover {
+    filter: brightness(1.1);
+}
+
+button.scroll-roller.active {
+    box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.scroll-roller::after, .scroll-roller::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 6px;
+    height: 16px;
+    background: var(--ink-faded);
+    border: 1px solid var(--ink-primary);
+    border-radius: 2px;
+    transform: translateY(-50%);
+}
+
+.scroll-roller::before {
+    left: -4px;
+}
+
+.scroll-roller::after {
+    right: -4px;
+}
+
+.scroll-content {
+    background: var(--parchment-bg);
+    border-left: 2px solid var(--ink-primary);
+    border-right: 2px solid var(--ink-primary);
+    box-shadow: var(--ui-shadow);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+
+.scroll-dropdown:hover .scroll-menu .scroll-content,
+.scroll-menu.open .scroll-content {
+    max-height: 200px;
+}
+
+.scroll-item {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--ink-faded);
+    padding: 0.5rem 1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 0.9rem;
+    color: var(--ink-primary);
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.scroll-item:last-child {
+    border-bottom: none;
+}
+
+.scroll-item:hover {
+    background: var(--gold-leaf);
+    color: white;
+}
+
 /* Circular Header Buttons (Ontology, Registry, Theme Toggle) */
 #btn-ontology,
 #btn-toggle-registry,

@@ -22,8 +22,18 @@
     <div id="ui-layer">
         <header class="pointer-events-auto">
             <div class="file-controls">
-                <button class="btn-text" id="btn-save" title="Download .atlas JSON">S</button>
-                <button class="btn-text" id="btn-load" title="Upload .atlas JSON">U</button>
+                <div class="scroll-dropdown">
+                    <button class="scroll-roller" id="btn-file-menu" title="File Options"></button>
+                    <div class="scroll-menu" id="file-scroll-menu">
+                        <div class="scroll-content">
+                            <button class="scroll-item" id="btn-save" title="Download .atlas JSON">Download</button>
+                            <button class="scroll-item" id="btn-load" title="Upload .atlas JSON">Upload</button>
+                            <button class="scroll-item" title="Test Option 1">Test 1</button>
+                            <button class="scroll-item" title="Test Option 2">Test 2</button>
+                        </div>
+                        <div class="scroll-roller bottom"></div>
+                    </div>
+                </div>
                 <button class="btn-text" id="btn-toggle-registry" title="Open Atlas Registry">R</button>
                 <button id="btn-ontology" title="View Taxonomy">?</button>
                 <button id="btn-theme-toggle" class="btn-circle" title="Toggle Dark Mode">☾</button>

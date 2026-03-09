@@ -491,10 +491,39 @@ export default class IlluminarchismApp {
         this.safeAddListener('info-end-input', 'change', () => this.updateSelectedMetadata());
 
         // Save/Load
-        this.safeAddListener('btn-save', 'click', () => this.exporter.downloadAtlas());
+        this.btnFileMenu = document.getElementById('btn-file-menu');
+        this.fileScrollMenu = document.getElementById('file-scroll-menu');
+
+        const closeFileMenu = () => {
+            if (this.fileScrollMenu) this.fileScrollMenu.classList.remove('open');
+            if (this.btnFileMenu) this.btnFileMenu.classList.remove('active');
+        };
+
+        this.safeAddListener('btn-save', 'click', () => {
+            this.exporter.downloadAtlas();
+            closeFileMenu();
+        });
 
         const fileInput = document.getElementById('file-input');
-        this.safeAddListener('btn-load', 'click', () => { if (fileInput) fileInput.click(); });
+        this.safeAddListener('btn-load', 'click', () => {
+            if (fileInput) fileInput.click();
+            closeFileMenu();
+        });
+
+        this.safeAddListener('btn-file-menu', 'click', (e) => {
+            e.stopPropagation();
+            this.fileScrollMenu.classList.toggle('open');
+            this.btnFileMenu.classList.toggle('active');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (this.fileScrollMenu && this.btnFileMenu) {
+                if (!this.fileScrollMenu.contains(e.target) && e.target !== this.btnFileMenu) {
+                    closeFileMenu();
+                }
+            }
+        });
 
         if (fileInput) {
             fileInput.addEventListener('change', (e) => this.loader.loadFromJSON(e));
