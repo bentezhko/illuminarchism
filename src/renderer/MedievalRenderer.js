@@ -152,8 +152,22 @@ export default class MedievalRenderer {
             const imageData = ctx.createImageData(size, size);
             const data = imageData.data;
 
-        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
-            const baseColor = isDarkMode ? { r: 28, g: 24, b: 20 } : { r: 243, g: 233, b: 210 }; // #1c1814 or #f3e9d2
+        // Helper to extract RGB from CSS Custom Properties
+        const getRGBColor = (varName, fallback) => {
+            if (typeof document === 'undefined' || typeof getComputedStyle === 'undefined') return fallback;
+            const style = getComputedStyle(document.documentElement);
+            const val = style.getPropertyValue(varName).trim();
+            if (val.startsWith('#') && val.length === 7) {
+                return {
+                    r: parseInt(val.slice(1, 3), 16),
+                    g: parseInt(val.slice(3, 5), 16),
+                    b: parseInt(val.slice(5, 7), 16)
+                };
+            }
+            return fallback;
+        };
+
+        const baseColor = getRGBColor('--parchment-bg', { r: 243, g: 233, b: 210 }); // Uses --parchment-bg from CSS
 
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
@@ -194,17 +208,29 @@ export default class MedievalRenderer {
         c.width = size; c.height = size;
         const ctx = c.getContext('2d');
 
-        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
+        let fillStyle = 'rgba(150, 180, 200, 1.0)';
+        let strokeStyle = '#264e86';
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+            const style = getComputedStyle(document.documentElement);
+            const waterColor = style.getPropertyValue('--lapis-lazuli').trim();
+            if (waterColor) {
+                 strokeStyle = waterColor;
+                 // Calculate a lighter background variant based on the stroke for opaque background
+                 // Fallback to simplistic dark mode logic if the var is set for dark mode
+                 const isDarkMode = document.body && document.body.classList.contains('dark-mode');
+                 fillStyle = isDarkMode ? 'rgba(50, 70, 90, 1.0)' : 'rgba(150, 180, 200, 1.0)';
+            }
+        }
 
         // OPAQUE base color to mask land
-        ctx.fillStyle = isDarkMode ? 'rgba(50, 70, 90, 1.0)' : 'rgba(150, 180, 200, 1.0)';
+        ctx.fillStyle = fillStyle;
         ctx.fillRect(0, 0, size, size);
 
         const rows = 4, cols = 4;
         const cellW = size / cols;
         const cellH = size / rows;
 
-        ctx.strokeStyle = isDarkMode ? '#5bc9c4' : '#264e86';
+        ctx.strokeStyle = strokeStyle;
         ctx.lineWidth = 1.2;
         ctx.lineCap = 'round';
         ctx.globalAlpha = 0.6;
@@ -231,7 +257,12 @@ export default class MedievalRenderer {
         if (this.noisePattern) {
             this.noisePattern.setTransform(this._getPatternTransformMatrix(this.transform));
         }
-        const fallbackColor = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode') ? '#1c1814' : '#f3e9d2';
+        // Default to getting root background color from CSS
+        let fallbackColor = '#f3e9d2';
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+            const style = getComputedStyle(document.documentElement);
+            fallbackColor = style.getPropertyValue('--parchment-bg').trim() || fallbackColor;
+        }
         this.ctx.fillStyle = this.noisePattern || fallbackColor;
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.labelRegions = []; // Reset label collision registry
@@ -386,8 +417,11 @@ export default class MedievalRenderer {
         const x = 30;
         const y = 110;
 
-        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
-        const inkColor = isDarkMode ? '#d4c5a3' : '#2b2118';
+        let inkColor = '#2b2118';
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+             const style = getComputedStyle(document.documentElement);
+             inkColor = style.getPropertyValue('--ink-primary').trim() || inkColor;
+        }
 
         ctx.save();
         ctx.strokeStyle = inkColor;
@@ -440,9 +474,13 @@ export default class MedievalRenderer {
         const t = this.transform;
         const r = 10 / t.k;
 
-        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
-        const inkColor = isDarkMode ? '#d4c5a3' : '#2b2118';
-        const fillC = isDarkMode ? '#1c1814' : '#fff';
+        let inkColor = '#2b2118';
+        let fillC = '#fff';
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+             const style = getComputedStyle(document.documentElement);
+             inkColor = style.getPropertyValue('--ink-primary').trim() || inkColor;
+             fillC = style.getPropertyValue('--parchment-bg').trim() || fillC;
+        }
 
         ctx.save();
         ctx.strokeStyle = inkColor;
@@ -466,9 +504,13 @@ export default class MedievalRenderer {
         const bbox = getBoundingBox(geometry);
         const t = this.transform;
 
-        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
-        const inkColor = isDarkMode ? '#d4c5a3' : '#2b2118';
-        const fillC = isDarkMode ? '#1c1814' : '#fff';
+        let inkColor = '#2b2118';
+        let fillC = '#fff';
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+             const style = getComputedStyle(document.documentElement);
+             inkColor = style.getPropertyValue('--ink-primary').trim() || inkColor;
+             fillC = style.getPropertyValue('--parchment-bg').trim() || fillC;
+        }
 
         // Draw Dashed Box
         ctx.save();
@@ -739,8 +781,11 @@ export default class MedievalRenderer {
             this.labelRegions.push(bbox);
         }
 
-        const isDarkMode = typeof document !== 'undefined' && document.body && document.body.classList.contains('dark-mode');
-        const defaultInk = isDarkMode ? '#d4c5a3' : '#2b2118';
+        let defaultInk = '#2b2118';
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+             const style = getComputedStyle(document.documentElement);
+             defaultInk = style.getPropertyValue('--ink-primary').trim() || defaultInk;
+        }
 
         this.ctx.fillStyle = isSelected ? '#fff' : defaultInk;
         if (isSelected) this.ctx.shadowBlur = 4;
