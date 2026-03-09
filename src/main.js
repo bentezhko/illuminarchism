@@ -78,6 +78,7 @@ export default class IlluminarchismApp {
         this.isDestructingLastPoint = false;
         this.rightClickDownTime = 0;
         this.lastRightClickUpTime = 0;
+        this.rightClickDestructTimeout = null;
 
         // Initial setup for toolbar sliding based on view
         document.body.classList.add('view-map');
