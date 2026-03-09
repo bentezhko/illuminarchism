@@ -2,6 +2,9 @@ import { CONFIG } from '../config.js';
 import { distance, distanceToSegment, getBoundingBox, getRepresentativePoint } from '../core/math.js';
 import { isRenderedAsPoint } from '../core/Ontology.js';
 
+const RIGHT_CLICK_HOLD_DURATION = 500;
+const QUICK_RIGHT_CLICK_INTERVAL = 300;
+
 export default class InputController {
     constructor(app) {
         this.app = app;
@@ -209,7 +212,7 @@ export default class InputController {
                     if (this.app.isDestructingLastPoint) {
                         this.app.removeLastDraftPoint();
                     }
-                }, 500);
+                }, RIGHT_CLICK_HOLD_DURATION);
             }
         });
 
@@ -392,8 +395,8 @@ export default class InputController {
 
                 const clickDuration = Date.now() - this.app.rightClickDownTime;
 
-                if (clickDuration < 500) {
-                    if (Date.now() - this.app.lastRightClickUpTime < 300) {
+                if (clickDuration < RIGHT_CLICK_HOLD_DURATION) {
+                    if (Date.now() - this.app.lastRightClickUpTime < QUICK_RIGHT_CLICK_INTERVAL) {
                         this.app.removeLastDraftPoint();
                     } else {
                         // Just a single quick right click, do nothing but reset highlight
