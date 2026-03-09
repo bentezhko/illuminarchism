@@ -29,7 +29,7 @@ export default class InputController {
     }
 
     getTransformHandle(wp, bbox, scale) {
-        const handleSize = 10 / scale; // Detection radius slightly larger than visual
+        const handleSize = CONFIG.INTERACTION_RADIUS / scale; // Detection radius slightly larger than visual
         const corners = {
             'resize-tl': { x: bbox.minX, y: bbox.minY },
             'resize-tr': { x: bbox.maxX, y: bbox.minY },
@@ -136,7 +136,7 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
+                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
                         if (hitIdx !== -1) {
                             this.isDragging = true;
                             this.dragVertexIndex = hitIdx;
@@ -228,7 +228,7 @@ export default class InputController {
             if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                 const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
-                    const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
+                    const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
                     if (hitIdx !== -1 && ent.currentGeometry.length > 3) {
                         ent.currentGeometry.splice(hitIdx, 1);
                         this.app.finishVertexEdit();
@@ -313,7 +313,7 @@ export default class InputController {
                 // Highlight first point for closing polygon
                 if (this.app.draftPoints && this.app.draftPoints.length >= 2) {
                     const firstPt = this.app.draftPoints[0];
-                    if (distance(wp, firstPt) < 10 / this.renderer.transform.k) {
+                    if (distance(wp, firstPt) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k) {
                         this.app.isHoveringFirstDraftPoint = true;
                         c.style.cursor = 'pointer';
 
@@ -355,7 +355,7 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < 10 / this.renderer.transform.k);
+                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
                         this.app.highlightVertex(hitIdx !== -1 ? hitIdx : null);
 
                         if (hitIdx !== -1) {
