@@ -125,9 +125,10 @@ h1 span {
     box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* Ontology Button & Registry Button (Shared Style) */
+/* Circular Header Buttons (Ontology, Registry, Theme Toggle) */
 #btn-ontology,
-#btn-toggle-registry {
+#btn-toggle-registry,
+#btn-theme-toggle {
     width: 30px;
     height: 30px;
     min-width: 30px; /* Force minimum width to avoid flex shrink/grow issues */
@@ -585,9 +586,9 @@ body.view-map .tool-timeline {
     transform: translateX(-50%);
     width: 50px;
     height: 26px;
-    background: var(--ink-primary); /* Dark background as in image */
-    color: var(--gold-leaf); /* Light arrow color */
-    border: 2px solid var(--parchment-bg); /* White border */
+    background: var(--parchment-bg);
+    color: var(--ink-primary);
+    border: 2px solid var(--ink-primary);
     border-bottom: none;
     border-radius: 10px 10px 0 0; /* Rounded top corners */
     font-size: 0.8rem;
@@ -600,7 +601,7 @@ body.view-map .tool-timeline {
 }
 
 #btn-toggle-chronographer:hover {
-    background: var(--ink-faded);
+    background: var(--parchment-light);
 }
 
 .chrono-controls-row {
@@ -1583,6 +1584,7 @@ body:not(.panel-collapsed) #view-timeline {
     width: 20px;
     height: 60px;
     background: var(--parchment-bg);
+    color: var(--ink-primary);
     border: 2px solid var(--ink-primary);
     border-right: none;
     display: flex;
@@ -1596,8 +1598,7 @@ body:not(.panel-collapsed) #view-timeline {
 }
 
 #btn-toggle-layers:hover {
-    background: var(--gold-leaf);
-    color: white;
+    background: var(--parchment-light);
 }
 
 /* Layer Context Menu */

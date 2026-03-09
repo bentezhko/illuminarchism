@@ -30,11 +30,6 @@ export default class MedievalRenderer {
         this._cachedWaterEntities = [];
         this._cachedWorldEntities = [];
 
-        this.resize();
-        window.addEventListener('resize', () => this.resize());
-        this.createParchmentTexture();
-        this.createWaterTexture();
-
         // Measurement Units (1 League = Base Unit)
         this.scaleUnit = 'leagues';
         this.unitConversions = {
@@ -44,6 +39,25 @@ export default class MedievalRenderer {
             'stadia': 24.0,
             'versts': 4.5
         };
+
+        this.themeColors = {
+            inkPrimary: '#2b2118',
+            parchmentBg: '#f3e9d2'
+        };
+        this.updateThemeColors();
+
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.createParchmentTexture();
+        this.createWaterTexture();
+    }
+
+    updateThemeColors() {
+        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
+            const style = getComputedStyle(document.body || document.documentElement);
+            this.themeColors.inkPrimary = style.getPropertyValue('--ink-primary').trim() || '#2b2118';
+            this.themeColors.parchmentBg = style.getPropertyValue('--parchment-bg').trim() || '#f3e9d2';
+        }
     }
 
     _getPatternTransformMatrix(transform) {
@@ -152,22 +166,15 @@ export default class MedievalRenderer {
             const imageData = ctx.createImageData(size, size);
             const data = imageData.data;
 
-        // Helper to extract RGB from CSS Custom Properties
-        const getRGBColor = (varName, fallback) => {
-            if (typeof document === 'undefined' || typeof getComputedStyle === 'undefined') return fallback;
-            const style = getComputedStyle(document.documentElement);
-            const val = style.getPropertyValue(varName).trim();
+            let baseColor = { r: 243, g: 233, b: 210 };
+            const val = this.themeColors.parchmentBg;
             if (val.startsWith('#') && val.length === 7) {
-                return {
+                baseColor = {
                     r: parseInt(val.slice(1, 3), 16),
                     g: parseInt(val.slice(3, 5), 16),
                     b: parseInt(val.slice(5, 7), 16)
                 };
             }
-            return fallback;
-        };
-
-        const baseColor = getRGBColor('--parchment-bg', { r: 243, g: 233, b: 210 }); // Uses --parchment-bg from CSS
 
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
@@ -208,29 +215,15 @@ export default class MedievalRenderer {
         c.width = size; c.height = size;
         const ctx = c.getContext('2d');
 
-        let fillStyle = 'rgba(150, 180, 200, 1.0)';
-        let strokeStyle = '#264e86';
-        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
-            const style = getComputedStyle(document.documentElement);
-            const waterColor = style.getPropertyValue('--lapis-lazuli').trim();
-            if (waterColor) {
-                 strokeStyle = waterColor;
-                 // Calculate a lighter background variant based on the stroke for opaque background
-                 // Fallback to simplistic dark mode logic if the var is set for dark mode
-                 const isDarkMode = document.body && document.body.classList.contains('dark-mode');
-                 fillStyle = isDarkMode ? 'rgba(50, 70, 90, 1.0)' : 'rgba(150, 180, 200, 1.0)';
-            }
-        }
-
         // OPAQUE base color to mask land
-        ctx.fillStyle = fillStyle;
+        ctx.fillStyle = 'rgba(150, 180, 200, 1.0)';
         ctx.fillRect(0, 0, size, size);
 
         const rows = 4, cols = 4;
         const cellW = size / cols;
         const cellH = size / rows;
 
-        ctx.strokeStyle = strokeStyle;
+        ctx.strokeStyle = '#264e86';
         ctx.lineWidth = 1.2;
         ctx.lineCap = 'round';
         ctx.globalAlpha = 0.6;
@@ -257,13 +250,7 @@ export default class MedievalRenderer {
         if (this.noisePattern) {
             this.noisePattern.setTransform(this._getPatternTransformMatrix(this.transform));
         }
-        // Default to getting root background color from CSS
-        let fallbackColor = '#f3e9d2';
-        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
-            const style = getComputedStyle(document.documentElement);
-            fallbackColor = style.getPropertyValue('--parchment-bg').trim() || fallbackColor;
-        }
-        this.ctx.fillStyle = this.noisePattern || fallbackColor;
+        this.ctx.fillStyle = this.noisePattern || this.themeColors.parchmentBg;
         this.ctx.fillRect(0, 0, this.width, this.height);
         this.labelRegions = []; // Reset label collision registry
     }
@@ -417,18 +404,12 @@ export default class MedievalRenderer {
         const x = 30;
         const y = 110;
 
-        let inkColor = '#2b2118';
-        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
-             const style = getComputedStyle(document.documentElement);
-             inkColor = style.getPropertyValue('--ink-primary').trim() || inkColor;
-        }
-
         ctx.save();
-        ctx.strokeStyle = inkColor;
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.font = 'bold 14px "Cinzel"';
-        ctx.fillStyle = inkColor;
+        ctx.fillStyle = this.themeColors.inkPrimary;
         ctx.textAlign = 'center';
 
         // Draw Main Line with slight perturbation for ink effect
@@ -474,16 +455,8 @@ export default class MedievalRenderer {
         const t = this.transform;
         const r = 10 / t.k;
 
-        let inkColor = '#2b2118';
-        let fillC = '#fff';
-        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
-             const style = getComputedStyle(document.documentElement);
-             inkColor = style.getPropertyValue('--ink-primary').trim() || inkColor;
-             fillC = style.getPropertyValue('--parchment-bg').trim() || fillC;
-        }
-
         ctx.save();
-        ctx.strokeStyle = inkColor;
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.lineWidth = 1 / t.k;
         ctx.setLineDash([5 / t.k, 5 / t.k]);
         ctx.beginPath();
@@ -492,7 +465,7 @@ export default class MedievalRenderer {
 
         // Small "move" indicator handles
         const hSize = 4 / t.k;
-        ctx.fillStyle = fillC;
+        ctx.fillStyle = this.themeColors.parchmentBg;
         ctx.setLineDash([]);
         ctx.fillRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
         ctx.strokeRect(pt.x - hSize / 2, pt.y - hSize / 2, hSize, hSize);
@@ -504,25 +477,17 @@ export default class MedievalRenderer {
         const bbox = getBoundingBox(geometry);
         const t = this.transform;
 
-        let inkColor = '#2b2118';
-        let fillC = '#fff';
-        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
-             const style = getComputedStyle(document.documentElement);
-             inkColor = style.getPropertyValue('--ink-primary').trim() || inkColor;
-             fillC = style.getPropertyValue('--parchment-bg').trim() || fillC;
-        }
-
         // Draw Dashed Box
         ctx.save();
-        ctx.strokeStyle = inkColor;
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.lineWidth = 1 / t.k;
         ctx.setLineDash([5 / t.k, 5 / t.k]);
         ctx.strokeRect(bbox.x, bbox.y, bbox.w, bbox.h);
 
         // Draw Handles (Corners)
         const handleSize = 6 / t.k;
-        ctx.fillStyle = fillC;
-        ctx.strokeStyle = inkColor;
+        ctx.fillStyle = this.themeColors.parchmentBg;
+        ctx.strokeStyle = this.themeColors.inkPrimary;
         ctx.setLineDash([]);
 
         const corners = [
@@ -781,13 +746,7 @@ export default class MedievalRenderer {
             this.labelRegions.push(bbox);
         }
 
-        let defaultInk = '#2b2118';
-        if (typeof document !== 'undefined' && typeof getComputedStyle !== 'undefined') {
-             const style = getComputedStyle(document.documentElement);
-             defaultInk = style.getPropertyValue('--ink-primary').trim() || defaultInk;
-        }
-
-        this.ctx.fillStyle = isSelected ? '#fff' : defaultInk;
+        this.ctx.fillStyle = isSelected ? '#fff' : this.themeColors.inkPrimary;
         if (isSelected) this.ctx.shadowBlur = 4;
 
         this.ctx.fillText(ent.name, cx, cy);

@@ -285,6 +285,7 @@ export default class IlluminarchismApp {
                 toggleBtn.title = 'Toggle Dark Mode';
             }
             if (this.renderer) {
+                this.renderer.updateThemeColors();
                 MedievalRenderer.cachedParchmentCanvas = null; // force texture regen
                 this.renderer.createParchmentTexture();
                 this.renderer.createWaterTexture();
