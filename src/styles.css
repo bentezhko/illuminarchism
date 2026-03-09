@@ -68,20 +68,19 @@ header {
     border-bottom: 1px solid var(--gold-leaf);
     display: flex;
     justify-content: space-between;
-    align-items: flex-start; /* Align to top to give space for title below */
-    height: 110px; /* Fixed height for consistency */
+    align-items: center;
+    height: 80px; /* Fixed height for consistency */
     position: relative;
 }
 
 .header-center-controls {
     display: grid;
-    grid-template-columns: 40px 140px 120px; /* Increased speed column width */
+    grid-template-columns: 60px 40px 140px 120px; /* Added 60px column for the title */
     align-items: center;
     gap: 1rem;
     padding: 0.5rem 1rem;
     position: relative;
     z-index: 10;
-    margin-top: 50px; /* shift down to make space for the title */
 }
 
 h1 {
@@ -94,23 +93,16 @@ h1 {
     letter-spacing: 2px;
 }
 
-h1 span {
-    color: var(--rubric-red);
-}
-
 .title-container {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 50px;
-    position: absolute;
-    left: 50%;
-    top: 25px; /* Adjust top placement so it's clearly above the speed slider */
-    transform: translate(-50%, -50%);
+    height: 100%;
+    position: relative;
     width: 60px; /* roughly the width of a single letter to keep it centered and small footprint */
     min-width: 60px;
     margin: 0;
-    z-index: 15; /* Ensure title is above controls if any slight overlap occurs */
+    z-index: 5;
 }
 
 .animated-letter {

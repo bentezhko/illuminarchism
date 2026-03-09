@@ -133,6 +133,8 @@ export default class IlluminarchismApp {
                 }`;
             } else {
                 // If it wraps, we need to split it
+                const wrappedDrawEnd = drawEndPct % 100;
+                const wrappedFadeStart = fadeStartPct % 100;
                 const wrappedEnd = endPct % 100;
 
                 // When we wrap, the end of the timeline (100%) and the beginning (0%)
@@ -174,11 +176,14 @@ export default class IlluminarchismApp {
 
                 if (drawEndPct > 100) {
                     frames.push(`100% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`);
+                    frames.push(`${wrappedDrawEnd}% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }`);
                 } else {
                     frames.push(`${drawEndPct}% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }`);
                 }
 
-                if (fadeStartPct <= 100) {
+                if (fadeStartPct > 100) {
+                    frames.push(`${wrappedFadeStart}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`);
+                } else {
                     frames.push(`${fadeStartPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`);
                 }
 
