@@ -163,15 +163,30 @@ export default class IlluminarchismApp {
                     clipPathAtZero = `polygon(0 0, 100% 0, 100% ${drawProgress * 100}%, 0 ${drawProgress * 100}%)`;
                 }
 
+                const frames = [
+                    `0% { opacity: ${opacityAtZero}; clip-path: ${clipPathAtZero}; }`,
+                    `${wrappedEnd}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`,
+                    `${Math.min(100, wrappedEnd + 0.01)}%, ${Math.max(0, startPct - 0.01)}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }`,
+                    `${startPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }`
+                ];
+
+                if (drawEndPct > 100) {
+                    frames.push(`100% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`);
+                } else {
+                    frames.push(`${drawEndPct}% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }`);
+                }
+
+                if (fadeStartPct <= 100) {
+                    frames.push(`${fadeStartPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`);
+                }
+
+                if (endPct > 100 && startPct <= 100) {
+                    frames.push(`100% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`);
+                }
+
                 keyframes = `
                 @keyframes animateLetter${index} {
-                    0% { opacity: ${opacityAtZero}; clip-path: ${clipPathAtZero}; }
-                    ${wrappedEnd}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
-                    ${Math.min(100, wrappedEnd + 0.01)}%, ${Math.max(0, startPct - 0.01)}% { opacity: 0; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }
-                    ${startPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 0, 0 0); }
-                    ${drawEndPct > 100 ? '100% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }' : `${drawEndPct}% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }`}
-                    ${fadeStartPct > 100 ? '' : `${fadeStartPct}% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }`}
-                    ${endPct > 100 && startPct <= 100 ? '100% { opacity: 1; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }' : ''}
+                    ${frames.join('\n                    ')}
                 }`;
             }
             cssText += keyframes;
