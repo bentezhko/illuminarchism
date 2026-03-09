@@ -133,8 +133,6 @@ export default class IlluminarchismApp {
                 }`;
             } else {
                 // If it wraps, we need to split it
-                const wrappedDrawEnd = drawEndPct % 100;
-                const wrappedFadeStart = fadeStartPct % 100;
                 const wrappedEnd = endPct % 100;
 
                 // When we wrap, the end of the timeline (100%) and the beginning (0%)
