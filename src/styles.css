@@ -176,6 +176,7 @@ h1 {
     transition: opacity 0.3s, transform 0.3s;
 }
 
+.scroll-dropdown:hover .scroll-menu,
 .scroll-menu.open {
     pointer-events: auto;
     opacity: 1;
@@ -246,6 +247,7 @@ button.scroll-roller.active {
     flex-direction: column;
 }
 
+.scroll-dropdown:hover .scroll-menu .scroll-content,
 .scroll-menu.open .scroll-content {
     max-height: 200px;
 }
