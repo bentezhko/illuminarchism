@@ -491,21 +491,24 @@ export default class IlluminarchismApp {
         this.safeAddListener('info-end-input', 'change', () => this.updateSelectedMetadata());
 
         // Save/Load
+        this.btnFileMenu = document.getElementById('btn-file-menu');
+        this.fileScrollMenu = document.getElementById('file-scroll-menu');
+
+        const closeFileMenu = () => {
+            if (this.fileScrollMenu) this.fileScrollMenu.classList.remove('open');
+            if (this.btnFileMenu) this.btnFileMenu.classList.remove('active');
+        };
+
         this.safeAddListener('btn-save', 'click', () => {
             this.exporter.downloadAtlas();
-            this.fileScrollMenu.classList.remove('open');
-            this.btnFileMenu.classList.remove('active');
+            closeFileMenu();
         });
 
         const fileInput = document.getElementById('file-input');
         this.safeAddListener('btn-load', 'click', () => {
             if (fileInput) fileInput.click();
-            this.fileScrollMenu.classList.remove('open');
-            this.btnFileMenu.classList.remove('active');
+            closeFileMenu();
         });
-
-        this.btnFileMenu = document.getElementById('btn-file-menu');
-        this.fileScrollMenu = document.getElementById('file-scroll-menu');
 
         this.safeAddListener('btn-file-menu', 'click', (e) => {
             e.stopPropagation();
@@ -517,8 +520,7 @@ export default class IlluminarchismApp {
         document.addEventListener('click', (e) => {
             if (this.fileScrollMenu && this.btnFileMenu) {
                 if (!this.fileScrollMenu.contains(e.target) && e.target !== this.btnFileMenu) {
-                    this.fileScrollMenu.classList.remove('open');
-                    this.btnFileMenu.classList.remove('active');
+                    closeFileMenu();
                 }
             }
         });
