@@ -192,8 +192,8 @@
 
         <div class="ontology-section">
             <details>
-                <summary class="ontology-title" style="cursor: pointer; display: list-item;">Developer Notes</summary>
-                <ul style="margin: 0.5rem 0; padding-left: 1.2rem; font-size: 0.9rem; max-height: 200px; overflow-y: auto;">
+                <summary class="ontology-title ontology-details-summary">Developer Notes</summary>
+                <ul class="developer-notes-list">
                     <li><strong>Rendering Strategy:</strong> Ink and Watercolor textures are pre-rendered into offscreen pattern canvases to optimize zoom performance.</li>
                     <li><strong>Temporal Interpolation:</strong> Keyframe geometries are interpolated linearly between bounding years. Point counts are matched via a resampling algorithm to allow smooth transitioning of polygonal borders.</li>
                     <li><strong>Spatial Indexing:</strong> The QuadTree implementation handles objects that cross boundaries by keeping them in the parent node rather than duplicating them across children. Exact object inclusion tests are deferred to the UI hover state.</li>

@@ -189,6 +189,19 @@ h1 span {
     color: var(--lapis-lazuli);
 }
 
+.ontology-details-summary {
+    cursor: pointer;
+    display: list-item; /* For the disclosure triangle */
+}
+
+.developer-notes-list {
+    margin: 0.5rem 0;
+    padding-left: 1.2rem;
+    font-size: 0.9rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
 /* Toolbar */
 #toolbar {
     position: absolute;
