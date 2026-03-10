@@ -253,7 +253,7 @@ button.scroll-roller.active {
 
 .scroll-dropdown:hover > .scroll-menu > .scroll-content,
 .scroll-menu.open > .scroll-content {
-    max-height: 400px;
+    max-height: 80vh;
     overflow: visible;
     transition: max-height 0.4s ease-in-out, overflow 0s linear 0s;
 }
@@ -290,14 +290,9 @@ button.scroll-roller.active {
 }
 
 .scroll-item-has-submenu:hover > .scroll-submenu > .scroll-content {
-    max-height: 400px;
+    max-height: 80vh;
     overflow: visible;
     transition: max-height 0.4s ease-in-out, overflow 0s linear 0s;
-}
-
-/* Let the entity list scroll if it gets too long, but keep standard max-height transitions */
-.scroll-submenu-entities {
-    overflow-y: auto !important;
 }
 
 .scroll-item {

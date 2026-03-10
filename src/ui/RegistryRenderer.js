@@ -28,10 +28,6 @@ export default class RegistryRenderer {
         const settingsMenu = document.createElement('div');
         settingsMenu.className = 'scroll-submenu scroll-menu';
 
-        const settingsRollerTop = document.createElement('div');
-        settingsRollerTop.className = 'scroll-roller';
-        settingsMenu.appendChild(settingsRollerTop);
-
         const settingsContent = document.createElement('div');
         settingsContent.className = 'scroll-content';
 
@@ -65,10 +61,6 @@ export default class RegistryRenderer {
 
         settingsMenu.appendChild(settingsContent);
 
-        const settingsRollerBot = document.createElement('div');
-        settingsRollerBot.className = 'scroll-roller bottom';
-        settingsMenu.appendChild(settingsRollerBot);
-
         settingsDiv.appendChild(settingsMenu);
         container.appendChild(settingsDiv);
         // -----------------------------
@@ -99,12 +91,8 @@ export default class RegistryRenderer {
             const domainMenu = document.createElement('div');
             domainMenu.className = 'scroll-submenu scroll-menu';
 
-            const domRollerTop = document.createElement('div');
-            domRollerTop.className = 'scroll-roller';
-            domainMenu.appendChild(domRollerTop);
-
             const domainContent = document.createElement('div');
-            domainContent.className = 'scroll-content scroll-submenu-entities';
+            domainContent.className = 'scroll-content';
 
             if (domainDesc) {
                 const descDiv = document.createElement('div');
@@ -141,12 +129,8 @@ export default class RegistryRenderer {
                     const typeMenu = document.createElement('div');
                     typeMenu.className = 'scroll-submenu scroll-menu';
 
-                    const typRollerTop = document.createElement('div');
-                    typRollerTop.className = 'scroll-roller';
-                    typeMenu.appendChild(typRollerTop);
-
                     const typeContent = document.createElement('div');
-                    typeContent.className = 'scroll-content scroll-submenu-entities';
+                    typeContent.className = 'scroll-content';
 
                     // Add description text
                     if (typologyObj.description) {
@@ -188,10 +172,6 @@ export default class RegistryRenderer {
 
                     typeMenu.appendChild(typeContent);
 
-                    const typRollerBot = document.createElement('div');
-                    typRollerBot.className = 'scroll-roller bottom';
-                    typeMenu.appendChild(typRollerBot);
-
                     typeItem.appendChild(typeMenu);
                     domainContent.appendChild(typeItem);
                 });
@@ -215,12 +195,8 @@ export default class RegistryRenderer {
                         const subMenu = document.createElement('div');
                         subMenu.className = 'scroll-submenu scroll-menu';
 
-                        const subRollerTop = document.createElement('div');
-                        subRollerTop.className = 'scroll-roller';
-                        subMenu.appendChild(subRollerTop);
-
                         const subContent = document.createElement('div');
-                        subContent.className = 'scroll-content scroll-submenu-entities';
+                        subContent.className = 'scroll-content';
 
                         if (subDef.description) {
                             const subDescDiv = document.createElement('div');
@@ -244,10 +220,6 @@ export default class RegistryRenderer {
 
                         subMenu.appendChild(subContent);
 
-                        const subRollerBot = document.createElement('div');
-                        subRollerBot.className = 'scroll-roller bottom';
-                        subMenu.appendChild(subRollerBot);
-
                         subItem.appendChild(subMenu);
                     }
 
@@ -256,10 +228,6 @@ export default class RegistryRenderer {
             }
 
             domainMenu.appendChild(domainContent);
-
-            const domRollerBot = document.createElement('div');
-            domRollerBot.className = 'scroll-roller bottom';
-            domainMenu.appendChild(domRollerBot);
 
             domainItem.appendChild(domainMenu);
             container.appendChild(domainItem);
