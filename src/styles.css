@@ -301,11 +301,16 @@ button.scroll-roller.active {
     border-bottom: 1px dashed var(--ink-faded);
     padding: 0.5rem 1rem;
     font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--ink-primary);
     text-align: left;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
+}
+
+/* Base level gets slightly larger text, nested levels are smaller */
+#registry-content > .scroll-item {
+    font-size: 0.9rem;
 }
 
 .scroll-item:last-child {

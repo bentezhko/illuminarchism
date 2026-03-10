@@ -19,52 +19,6 @@ export default class RegistryRenderer {
         if (!container) return;
         container.innerHTML = '';
 
-        // --- MEASUREMENT SETTINGS ---
-        const settingsDiv = document.createElement('div');
-        settingsDiv.className = 'scroll-item scroll-item-has-submenu';
-        settingsDiv.style.borderBottom = '1px solid var(--ink-faded)';
-        settingsDiv.textContent = 'Scale Measurement';
-
-        const settingsMenu = document.createElement('div');
-        settingsMenu.className = 'scroll-submenu scroll-menu';
-
-        const settingsContent = document.createElement('div');
-        settingsContent.className = 'scroll-content';
-
-        const units = [
-            { val: 'leagues', label: 'Leagues (Base)' },
-            { val: 'miles', label: 'Miles (3x)' },
-            { val: 'km', label: 'Kilometers (4.8x)' },
-            { val: 'stadia', label: 'Stadia (24x)' },
-            { val: 'versts', label: 'Versts (4.5x)' }
-        ];
-
-        units.forEach(u => {
-            const btn = document.createElement('button');
-            btn.className = 'scroll-item';
-            btn.textContent = u.label;
-            if (this.app.renderer && this.app.renderer.scaleUnit === u.val) {
-                btn.style.color = 'var(--rubric-red)';
-                btn.style.fontWeight = 'bold';
-            }
-            btn.onclick = (e) => {
-                e.stopPropagation(); // keep menu open or let it close depending on css hover
-                if (this.app.renderer) {
-                    this.app.renderer.scaleUnit = u.val;
-                    this.app.renderer.invalidateWorldLayer();
-                    this.app.render();
-                    this.render(); // re-render registry to update selection
-                }
-            };
-            settingsContent.appendChild(btn);
-        });
-
-        settingsMenu.appendChild(settingsContent);
-
-        settingsDiv.appendChild(settingsMenu);
-        container.appendChild(settingsDiv);
-        // -----------------------------
-
         // Iterate OFFICIAL ONTOLOGY to build the reference tree
         const domainIds = Object.keys(this.app.ontologyTaxonomy);
 
@@ -107,13 +61,6 @@ export default class RegistryRenderer {
             }
 
             if (domainData.types) {
-                const typesHeader = document.createElement('div');
-                typesHeader.className = 'scroll-item';
-                typesHeader.style.fontWeight = 'bold';
-                typesHeader.style.background = 'rgba(0,0,0,0.05)';
-                typesHeader.textContent = 'Typologies (Forms)';
-                domainContent.appendChild(typesHeader);
-
                 domainData.types.forEach(typeDef => {
                     const typeId = typeDef.value;
                     const typeLabel = typeDef.label;
@@ -125,14 +72,14 @@ export default class RegistryRenderer {
                     typeItem.className = 'scroll-item scroll-item-has-submenu';
                     typeItem.textContent = `${typeLabel}`;
 
-                    // Submenu for Typology Description
+                    // Submenu for Ranks/Subtypes
                     const typeMenu = document.createElement('div');
                     typeMenu.className = 'scroll-submenu scroll-menu';
 
                     const typeContent = document.createElement('div');
                     typeContent.className = 'scroll-content';
 
-                    // Add description text
+                    // Add description text for the Form/Typology
                     if (typologyObj.description) {
                         const typDescDiv = document.createElement('div');
                         typDescDiv.className = 'scroll-item';
@@ -140,6 +87,7 @@ export default class RegistryRenderer {
                         typDescDiv.style.color = 'var(--ink-primary)';
                         typDescDiv.style.whiteSpace = 'normal';
                         typDescDiv.style.paddingBottom = '0.5rem';
+                        typDescDiv.style.borderBottom = '1px dashed var(--ink-faded)';
                         typDescDiv.textContent = typologyObj.description;
                         typeContent.appendChild(typDescDiv);
                     }
@@ -170,60 +118,60 @@ export default class RegistryRenderer {
                         typeContent.appendChild(exDiv);
                     }
 
-                    typeMenu.appendChild(typeContent);
+                    // --- ADD RANKS (SUBTYPES) HERE ---
+                    const subtypesData = domainSubtypesMap[domainId];
+                    if (subtypesData) {
+                        const subtypesHeader = document.createElement('div');
+                        subtypesHeader.className = 'scroll-item';
+                        subtypesHeader.style.fontWeight = 'bold';
+                        subtypesHeader.style.background = 'rgba(0,0,0,0.05)';
+                        subtypesHeader.style.marginTop = '0.5rem';
+                        subtypesHeader.textContent = 'Associated Ranks';
+                        typeContent.appendChild(subtypesHeader);
 
-                    typeItem.appendChild(typeMenu);
-                    domainContent.appendChild(typeItem);
-                });
-            }
+                        Object.values(subtypesData).forEach(subDef => {
+                            const subItem = document.createElement('div');
+                            subItem.className = 'scroll-item scroll-item-has-submenu';
+                            subItem.textContent = `${subDef.label} (${subDef.abbr})`;
 
-            const subtypesData = domainSubtypesMap[domainId];
-            if (subtypesData) {
-                const subtypesHeader = document.createElement('div');
-                subtypesHeader.className = 'scroll-item';
-                subtypesHeader.style.fontWeight = 'bold';
-                subtypesHeader.style.background = 'rgba(0,0,0,0.05)';
-                subtypesHeader.textContent = 'Subtypes (Ranks)';
-                domainContent.appendChild(subtypesHeader);
+                            if (subDef.description || subDef.examples) {
+                                const subMenu = document.createElement('div');
+                                subMenu.className = 'scroll-submenu scroll-menu';
 
-                Object.values(subtypesData).forEach(subDef => {
-                    const subItem = document.createElement('div');
-                    subItem.className = 'scroll-item scroll-item-has-submenu';
-                    subItem.textContent = `${subDef.label} (${subDef.abbr})`;
+                                const subContent = document.createElement('div');
+                                subContent.className = 'scroll-content';
 
-                    if (subDef.description || subDef.examples) {
-                        const subMenu = document.createElement('div');
-                        subMenu.className = 'scroll-submenu scroll-menu';
+                                if (subDef.description) {
+                                    const subDescDiv = document.createElement('div');
+                                    subDescDiv.className = 'scroll-item';
+                                    subDescDiv.style.fontStyle = 'italic';
+                                    subDescDiv.style.color = 'var(--ink-primary)';
+                                    subDescDiv.style.whiteSpace = 'normal';
+                                    subDescDiv.style.paddingBottom = '0.5rem';
+                                    subDescDiv.textContent = subDef.description;
+                                    subContent.appendChild(subDescDiv);
+                                }
 
-                        const subContent = document.createElement('div');
-                        subContent.className = 'scroll-content';
+                                if (subDef.examples) {
+                                    const subExDiv = document.createElement('div');
+                                    subExDiv.className = 'scroll-item';
+                                    subExDiv.style.fontSize = '0.8em';
+                                    subExDiv.style.whiteSpace = 'normal';
+                                    subExDiv.innerHTML = `<strong>Ex:</strong> ${subDef.examples}`;
+                                    subContent.appendChild(subExDiv);
+                                }
 
-                        if (subDef.description) {
-                            const subDescDiv = document.createElement('div');
-                            subDescDiv.className = 'scroll-item';
-                            subDescDiv.style.fontStyle = 'italic';
-                            subDescDiv.style.color = 'var(--ink-primary)';
-                            subDescDiv.style.whiteSpace = 'normal';
-                            subDescDiv.style.paddingBottom = '0.5rem';
-                            subDescDiv.textContent = subDef.description;
-                            subContent.appendChild(subDescDiv);
-                        }
+                                subMenu.appendChild(subContent);
+                                subItem.appendChild(subMenu);
+                            }
 
-                        if (subDef.examples) {
-                            const subExDiv = document.createElement('div');
-                            subExDiv.className = 'scroll-item';
-                            subExDiv.style.fontSize = '0.8em';
-                            subExDiv.style.whiteSpace = 'normal';
-                            subExDiv.innerHTML = `<strong>Ex:</strong> ${subDef.examples}`;
-                            subContent.appendChild(subExDiv);
-                        }
-
-                        subMenu.appendChild(subContent);
-
-                        subItem.appendChild(subMenu);
+                            typeContent.appendChild(subItem);
+                        });
                     }
 
-                    domainContent.appendChild(subItem);
+                    typeMenu.appendChild(typeContent);
+                    typeItem.appendChild(typeMenu);
+                    domainContent.appendChild(typeItem);
                 });
             }
 

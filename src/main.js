@@ -467,6 +467,34 @@ export default class IlluminarchismApp {
             if (modal) modal.classList.remove('visible');
         });
 
+        // Scale Measurement Unit Buttons in Modal
+        document.querySelectorAll('.scale-unit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const unit = e.target.dataset.unit;
+                if (this.renderer) {
+                    this.renderer.scaleUnit = unit;
+                    this.renderer.invalidateWorldLayer();
+                    this.render();
+                    if (this.registry) this.registry.render();
+                }
+
+                // Update UI active state
+                document.querySelectorAll('.scale-unit-btn').forEach(b => {
+                    b.style.color = '';
+                    b.style.fontWeight = '';
+                });
+                e.target.style.color = 'var(--rubric-red)';
+                e.target.style.fontWeight = 'bold';
+            });
+        });
+
+        // Initialize active scale unit button on load
+        const initScaleBtn = document.querySelector(`.scale-unit-btn[data-unit="leagues"]`);
+        if (initScaleBtn) {
+             initScaleBtn.style.color = 'var(--rubric-red)';
+             initScaleBtn.style.fontWeight = 'bold';
+        }
+
         // Ontology Button — toggles modal open/closed
         this.safeAddListener('btn-ontology', 'click', () => {
             const modal = document.getElementById('ontology-modal');
