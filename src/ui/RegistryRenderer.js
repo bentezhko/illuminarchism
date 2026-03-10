@@ -7,6 +7,7 @@ export default class RegistryRenderer {
         this.containerId = containerId;
     }
 
+
     render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
@@ -14,26 +15,19 @@ export default class RegistryRenderer {
 
         // --- MEASUREMENT SETTINGS ---
         const settingsDiv = document.createElement('div');
-        settingsDiv.className = 'registry-category';
+        settingsDiv.className = 'scroll-item scroll-item-has-submenu';
         settingsDiv.style.borderBottom = '1px solid var(--ink-faded)';
-        settingsDiv.style.marginBottom = '1rem';
-        settingsDiv.style.paddingBottom = '0.5rem';
+        settingsDiv.textContent = 'Scale Measurement ▶';
 
-        const settingsTitle = document.createElement('div');
-        settingsTitle.className = 'registry-cat-title';
-        settingsTitle.textContent = 'Scale Measurement';
-        settingsTitle.style.fontWeight = 'bold';
-        settingsTitle.style.color = 'var(--rubric-red)';
-        settingsDiv.appendChild(settingsTitle);
+        const settingsMenu = document.createElement('div');
+        settingsMenu.className = 'scroll-submenu scroll-menu';
 
-        const unitSelect = document.createElement('select');
-        unitSelect.style.width = '100%';
-        unitSelect.style.marginTop = '0.5rem';
-        unitSelect.style.padding = '4px';
-        unitSelect.style.fontFamily = 'Cinzel, serif';
-        unitSelect.style.background = 'var(--parchment-bg)';
-        unitSelect.style.border = '1px solid var(--ink-faded)';
-        unitSelect.style.color = 'var(--ink-primary)';
+        const settingsRollerTop = document.createElement('div');
+        settingsRollerTop.className = 'scroll-roller';
+        settingsMenu.appendChild(settingsRollerTop);
+
+        const settingsContent = document.createElement('div');
+        settingsContent.className = 'scroll-content';
 
         const units = [
             { val: 'leagues', label: 'Leagues (Base)' },
@@ -44,20 +38,32 @@ export default class RegistryRenderer {
         ];
 
         units.forEach(u => {
-            const opt = document.createElement('option');
-            opt.value = u.val;
-            opt.textContent = u.label;
-            if (this.app.renderer.scaleUnit === u.val) opt.selected = true;
-            unitSelect.appendChild(opt);
+            const btn = document.createElement('button');
+            btn.className = 'scroll-item';
+            btn.textContent = u.label;
+            if (this.app.renderer && this.app.renderer.scaleUnit === u.val) {
+                btn.style.color = 'var(--rubric-red)';
+                btn.style.fontWeight = 'bold';
+            }
+            btn.onclick = (e) => {
+                e.stopPropagation(); // keep menu open or let it close depending on css hover
+                if (this.app.renderer) {
+                    this.app.renderer.scaleUnit = u.val;
+                    this.app.renderer.invalidateWorldLayer();
+                    this.app.render();
+                    this.render(); // re-render registry to update selection
+                }
+            };
+            settingsContent.appendChild(btn);
         });
 
-        unitSelect.addEventListener('change', (e) => {
-            this.app.renderer.scaleUnit = e.target.value;
-            this.app.renderer.invalidateWorldLayer();
-            this.app.render();
-        });
+        settingsMenu.appendChild(settingsContent);
 
-        settingsDiv.appendChild(unitSelect);
+        const settingsRollerBot = document.createElement('div');
+        settingsRollerBot.className = 'scroll-roller bottom';
+        settingsMenu.appendChild(settingsRollerBot);
+
+        settingsDiv.appendChild(settingsMenu);
         container.appendChild(settingsDiv);
         // -----------------------------
 
@@ -80,158 +86,73 @@ export default class RegistryRenderer {
 
             const domainLabel = domainData.domain.name;
             const domainAbbr = domainData.domain.abbr;
-            const domainDescription = domainData.domain.description || null;
+            const domainDesc = domainData.domain.description || '';
 
-            const domainDiv = document.createElement('div');
-            domainDiv.className = 'registry-category';
-
-            // Domain Header
-            const domainTitle = document.createElement('div');
-            domainTitle.className = 'registry-cat-title';
-            domainTitle.textContent = `\u25b6 ${domainLabel} (${domainAbbr})`;
-            domainTitle.onclick = () => {
-                const content = domainTitle.nextElementSibling;
-                content.classList.toggle('open');
-                domainTitle.textContent = content.classList.contains('open')
-                    ? `\u25bc ${domainLabel} (${domainAbbr})`
-                    : `\u25b6 ${domainLabel} (${domainAbbr})`;
-            };
-            domainDiv.appendChild(domainTitle);
-
-            // Domain Content
-            const domainContent = document.createElement('div');
-            domainContent.className = 'registry-list';
-
-            // Domain wiki description — shown at top of expanded domain section
-            if (domainDescription) {
-                const domainDescDiv = document.createElement('div');
-                domainDescDiv.style.fontSize = '0.75rem';
-                domainDescDiv.style.color = 'var(--ink-faded)';
-                domainDescDiv.style.fontStyle = 'italic';
-                domainDescDiv.style.padding = '0.3rem 0.4rem 0.5rem';
-                domainDescDiv.style.borderBottom = '1px solid var(--ink-faded)';
-                domainDescDiv.style.marginBottom = '0.4rem';
-                domainDescDiv.style.lineHeight = '1.4';
-                domainDescDiv.textContent = domainDescription;
-                domainContent.appendChild(domainDescDiv);
+            const domainItem = document.createElement('div');
+            domainItem.className = 'scroll-item scroll-item-has-submenu';
+            domainItem.textContent = `${domainLabel} (${domainAbbr}) ▶`;
+            if (domainDesc) {
+                domainItem.title = domainDesc;
             }
 
-            // Iterate Typologies defined in Ontology
+            const domainMenu = document.createElement('div');
+            domainMenu.className = 'scroll-submenu scroll-menu';
+
+            const domRollerTop = document.createElement('div');
+            domRollerTop.className = 'scroll-roller';
+            domainMenu.appendChild(domRollerTop);
+
+            const domainContent = document.createElement('div');
+            domainContent.className = 'scroll-content';
+
             if (domainData.types) {
                 domainData.types.forEach(typeDef => {
                     const typeId = typeDef.value;
                     const typeLabel = typeDef.label;
+
+                    // Retrieve full typology metadata from Ontology
+                    const typologyObj = getTypology(domainId, typeId) || {};
+                    let tooltipParts = [];
+                    if (typologyObj.description) tooltipParts.push(`Description: ${typologyObj.description}`);
+                    if (typologyObj.historicalValidity) tooltipParts.push(`Historical Validity: ${typologyObj.historicalValidity}`);
+                    if (typologyObj.population) tooltipParts.push(`Population: ${typologyObj.population.min} - ${typologyObj.population.max}`);
+
                     const existingEnts = (entityMap[domainId] && entityMap[domainId][typeId])
                         ? entityMap[domainId][typeId] : [];
                     const count = existingEnts.length;
 
-                    // Pull full typology object from Ontology for wiki content
-                    const fullTypology = getTypology(domainId, typeId);
-
-                    // Typology Header
-                    const typeDiv = document.createElement('div');
-                    typeDiv.className = 'registry-typology';
-                    typeDiv.style.marginLeft = '0.5rem';
-                    typeDiv.style.borderLeft = '1px solid var(--ink-faded)';
-                    typeDiv.style.paddingLeft = '0.5rem';
-
-                    const typeTitle = document.createElement('div');
-                    typeTitle.className = 'registry-type-title';
-                    typeTitle.style.cursor = 'pointer';
-                    typeTitle.style.fontStyle = 'italic';
-                    typeTitle.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)';
-                    typeTitle.style.fontSize = '0.85rem';
-                    typeTitle.textContent = `\u25b6 ${typeLabel} (${count})`;
-
-                    typeTitle.onclick = (e) => {
-                        e.stopPropagation();
-                        const typeList = typeTitle.nextElementSibling;
-                        typeList.classList.toggle('open');
-                        typeTitle.textContent = typeList.classList.contains('open')
-                            ? `\u25bc ${typeLabel} (${count})`
-                            : `\u25b6 ${typeLabel} (${count})`;
-                    };
-                    typeDiv.appendChild(typeTitle);
-
-                    // Typology Content
-                    const typeList = document.createElement('div');
-                    typeList.className = 'registry-list';
-                    typeList.style.marginLeft = '0.5rem';
-
-                    // --- Typology wiki block ---
-                    if (fullTypology) {
-                        // Description
-                        if (fullTypology.description) {
-                            const typeDescDiv = document.createElement('div');
-                            typeDescDiv.style.fontSize = '0.72rem';
-                            typeDescDiv.style.color = 'var(--ink-faded)';
-                            typeDescDiv.style.fontStyle = 'italic';
-                            typeDescDiv.style.padding = '0.25rem 0.3rem 0.15rem';
-                            typeDescDiv.style.lineHeight = '1.35';
-                            typeDescDiv.textContent = fullTypology.description;
-                            typeList.appendChild(typeDescDiv);
-                        }
-
-                        // Metadata line: boundary type, historical validity, population, examples
-                        const metaItems = [];
-                        if (fullTypology.boundaryType) {
-                            metaItems.push(`Boundary\u00a0type: ${fullTypology.boundaryType}`);
-                        }
-                        if (fullTypology.historicalValidity) {
-                            metaItems.push(fullTypology.historicalValidity);
-                        }
-                        if (fullTypology.population) {
-                            metaItems.push(`Pop.\u00a0${fullTypology.population.min}\u2013${fullTypology.population.max}`);
-                        }
-                        if (fullTypology.examples) {
-                            metaItems.push(`e.g.\u00a0${fullTypology.examples}`);
-                        }
-
-                        if (metaItems.length > 0) {
-                            const metaDiv = document.createElement('div');
-                            metaDiv.style.fontSize = '0.65rem';
-                            metaDiv.style.color = 'var(--rubric-red)';
-                            metaDiv.style.padding = '0.05rem 0.3rem 0.3rem';
-                            metaDiv.style.fontVariant = 'small-caps';
-                            metaDiv.style.lineHeight = '1.4';
-                            metaDiv.textContent = metaItems.join(' \u00b7 ');
-                            typeList.appendChild(metaDiv);
-                        }
-
-                        // Divider before entity instances
-                        if (count > 0) {
-                            const divider = document.createElement('div');
-                            divider.style.borderTop = '1px solid var(--ink-faded)';
-                            divider.style.margin = '0.2rem 0.3rem 0.25rem';
-                            divider.style.opacity = '0.4';
-                            typeList.appendChild(divider);
-                        }
+                    const typeItem = document.createElement('div');
+                    typeItem.className = 'scroll-item scroll-item-has-submenu';
+                    typeItem.style.color = count > 0 ? 'var(--ink-primary)' : 'var(--ink-faded)';
+                    typeItem.textContent = `${typeLabel} (${count}) ${count > 0 ? '▶' : ''}`;
+                    if (tooltipParts.length > 0) {
+                        typeItem.title = tooltipParts.join('\n');
                     }
 
-                    // --- Entity instances (name + go-to only) ---
                     if (count > 0) {
+                        const typeMenu = document.createElement('div');
+                        typeMenu.className = 'scroll-submenu scroll-menu';
+
+                        const typRollerTop = document.createElement('div');
+                        typRollerTop.className = 'scroll-roller';
+                        typeMenu.appendChild(typRollerTop);
+
+                        const typeContent = document.createElement('div');
+                        typeContent.className = 'scroll-content scroll-submenu-entities';
+
                         existingEnts.forEach(ent => {
-                            const item = document.createElement('div');
-                            item.className = 'registry-item';
-                            if (ent.id === this.app.selectedEntityId) item.classList.add('selected');
+                            const entBtn = document.createElement('button');
+                            entBtn.className = 'scroll-item';
+                            entBtn.textContent = ent.name;
+                            if (ent.id === this.app.selectedEntityId) {
+                                entBtn.style.color = 'var(--rubric-red)';
+                                entBtn.style.fontWeight = 'bold';
+                            }
 
-                            item.onclick = () => {
-                                this.app.selectEntity(ent.id, true);
-                            };
-
-                            const nameSpan = document.createElement('span');
-                            nameSpan.textContent = ent.name;
-                            item.appendChild(nameSpan);
-
-                            const goTo = document.createElement('span');
-                            goTo.innerHTML = '&#8982;';
-                            goTo.title = 'Go to location';
-                            goTo.style.fontSize = '0.8rem';
-                            goTo.style.cursor = 'pointer';
-
-                            goTo.onclick = (e) => {
+                            entBtn.onclick = (e) => {
                                 e.stopPropagation();
-                                this.app.selectEntity(ent.id, false);
+                                this.app.selectEntity(ent.id, true);
+                                // Optional: center view on entity
                                 if (ent.currentGeometry && ent.currentGeometry.length > 0) {
                                     let c = { x: 0, y: 0 };
                                     if (ent.type === 'city' || ent.typology === 'city') {
@@ -246,26 +167,31 @@ export default class RegistryRenderer {
                                     }
                                 }
                             };
-                            item.appendChild(goTo);
-                            typeList.appendChild(item);
+                            typeContent.appendChild(entBtn);
                         });
-                    } else {
-                        const emptyMsg = document.createElement('div');
-                        emptyMsg.style.fontStyle = 'italic';
-                        emptyMsg.style.fontSize = '0.7rem';
-                        emptyMsg.style.color = 'var(--ink-faded)';
-                        emptyMsg.style.padding = '0.2rem 0.5rem';
-                        emptyMsg.textContent = '(No entities)';
-                        typeList.appendChild(emptyMsg);
+
+                        typeMenu.appendChild(typeContent);
+
+                        const typRollerBot = document.createElement('div');
+                        typRollerBot.className = 'scroll-roller bottom';
+                        typeMenu.appendChild(typRollerBot);
+
+                        typeItem.appendChild(typeMenu);
                     }
 
-                    typeDiv.appendChild(typeList);
-                    domainContent.appendChild(typeDiv);
+                    domainContent.appendChild(typeItem);
                 });
             }
 
-            domainDiv.appendChild(domainContent);
-            container.appendChild(domainDiv);
+            domainMenu.appendChild(domainContent);
+
+            const domRollerBot = document.createElement('div');
+            domRollerBot.className = 'scroll-roller bottom';
+            domainMenu.appendChild(domRollerBot);
+
+            domainItem.appendChild(domainMenu);
+            container.appendChild(domainItem);
         });
     }
+
 }

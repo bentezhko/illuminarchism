@@ -34,7 +34,15 @@
                         <div class="scroll-roller bottom"></div>
                     </div>
                 </div>
-                <button class="btn-text" id="btn-toggle-registry" title="Open Atlas Registry">R</button>
+                <div class="scroll-dropdown" id="registry-dropdown" style="margin-left: 0.5rem;">
+                    <button class="scroll-roller" id="btn-registry-menu" title="Atlas Registry">Registry</button>
+                    <div class="scroll-menu" id="registry-scroll-menu">
+                        <div class="scroll-content" id="registry-content">
+                            <!-- Registry categories injected here -->
+                        </div>
+                        <div class="scroll-roller bottom"></div>
+                    </div>
+                </div>
                 <button id="btn-ontology" title="View Taxonomy">?</button>
                 <button id="btn-theme-toggle" class="btn-circle" title="Toggle Dark Mode">☾</button>
                 <input type="file" id="file-input" accept=".json,.atlas">
@@ -146,16 +154,6 @@
     <!-- Use strict display:none to hide timeline initially -->
     <div id="view-timeline" class="pointer-events-auto" style="display:none;">
         <!-- Timeline API content injected here -->
-    </div>
-
-    <!-- The Illuminated Registry (Sidebar) -->
-    <div id="atlas-registry" class="pointer-events-auto">
-        <div class="registry-header">
-            <span>Atlas Registry</span>
-            <span style="font-size:0.8rem; cursor:pointer;"
-                onclick="document.getElementById('atlas-registry').classList.remove('open')">X</span>
-        </div>
-        <div id="registry-content"></div>
     </div>
 
     <!-- Ontology InfoCard -->

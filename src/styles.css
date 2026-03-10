@@ -37,7 +37,7 @@ html {
     padding: 0;
     width: 100%;
     height: 100%;
-    overflow: hidden;
+
     background-color: var(--parchment-bg);
     font-family: 'IM Fell English', serif;
     color: var(--ink-primary);
@@ -176,7 +176,7 @@ h1 {
     transition: opacity 0.3s, transform 0.3s;
 }
 
-.scroll-dropdown:hover .scroll-menu,
+.scroll-dropdown:hover > .scroll-menu,
 .scroll-menu.open {
     pointer-events: auto;
     opacity: 1;
@@ -236,21 +236,62 @@ button.scroll-roller.active {
 }
 
 .scroll-content {
+    overflow: hidden;
     background: var(--parchment-bg);
     border-left: 2px solid var(--ink-primary);
     border-right: 2px solid var(--ink-primary);
     box-shadow: var(--ui-shadow);
     max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease-in-out;
+
+    transition: max-height 0.4s ease-in-out, overflow 0s linear 0.4s;
     display: flex;
     flex-direction: column;
 }
 
-.scroll-dropdown:hover .scroll-menu .scroll-content,
-.scroll-menu.open .scroll-content {
-    max-height: 200px;
+
+.scroll-dropdown:hover > .scroll-menu > .scroll-content,
+.scroll-menu.open > .scroll-content {
+    max-height: 400px;
+    overflow: visible;
+    transition: max-height 0.4s ease-in-out, overflow 0s linear 0s;
 }
+
+/* Base styles for submenus */
+.scroll-item-has-submenu {
+    position: relative;
+    overflow: visible;
+}
+
+.scroll-submenu {
+    position: absolute;
+    top: -10px;
+    left: 100%;
+    margin-left: 2px;
+    width: 200px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-10px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index: 2001;
+}
+
+.scroll-item-has-submenu:hover > .scroll-submenu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.scroll-item-has-submenu:hover > .scroll-submenu > .scroll-content {
+    max-height: 400px;
+    overflow: visible;
+    transition: max-height 0.4s ease-in-out, overflow 0s linear 0s;
+}
+
+/* Let the entity list scroll if it gets too long, but keep standard max-height transitions */
+.scroll-submenu-entities {
+    overflow-y: auto !important;
+}
+
 
 .scroll-item {
     background: transparent;
@@ -401,7 +442,7 @@ button.scroll-roller.active {
     color: var(--ink-primary);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     position: relative;
-    overflow: hidden;
+
 }
 
 body.view-timeline .tool-map {
@@ -520,102 +561,31 @@ body.view-map .tool-timeline {
 }
 
 
-/* Atlas Registry (Sidebar) */
-#atlas-registry {
-    position: absolute;
-    right: 0;
-    top: 70px;
-    bottom: 0;
-    width: 300px;
-    background: rgba(243, 233, 210, 0.98);
-    border-left: 2px solid var(--gold-leaf);
-    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.1);
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    overflow-y: auto;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    pointer-events: auto;
-    z-index: 20;
-    /* Ensure clicks work */
-}
 
-#atlas-registry.open {
-    transform: translateX(0);
-}
 
-.registry-header {
-    font-family: 'Cinzel', serif;
-    font-size: 1.2rem;
-    font-weight: bold;
-    color: var(--rubric-red);
-    border-bottom: 2px solid var(--ink-primary);
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-    display: flex;
-    justify-content: space-between;
-}
 
-.registry-category {
-    margin-bottom: 1rem;
-}
 
-.registry-cat-title {
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    background: rgba(0, 0, 0, 0.05);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-}
 
-.registry-cat-title:hover {
-    background: var(--parchment-dark);
-}
 
-.registry-list {
-    margin-left: 1rem;
-    margin-top: 0.5rem;
-    display: none;
-}
 
-.registry-list.open {
-    display: block;
-}
 
-.registry-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.2rem 0.5rem;
-    cursor: pointer;
-    font-size: 0.9rem;
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
-}
 
-.registry-item:hover {
-    background: rgba(255, 255, 255, 0.5);
-    color: var(--rubric-red);
-}
 
-.registry-typology {
-    margin-bottom: 0.2rem;
-}
 
-.registry-type-title {
-    transition: color 0.2s;
-}
 
-.registry-type-title:hover {
-    color: var(--gold-leaf) !important;
-}
 
-.registry-list .registry-list {
-    border-left: 1px dashed var(--ink-faded);
-    margin-top: 0.2rem;
-}
+
+
+
+
+
+
+
+
+
+
+
+
 
 .toggle-vis {
     margin-right: 0.5rem;
@@ -878,7 +848,7 @@ body.view-map .tool-timeline {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    overflow: hidden;
+
 }
 
 .ui-tick {
@@ -1011,7 +981,7 @@ body.view-map .tool-timeline {
     background: var(--ink-primary);
     border: 2px solid var(--gold-leaf);
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.2);
-    overflow: hidden;
+
 }
 
 /* Decorative Background / Bezel */
@@ -1210,7 +1180,7 @@ body.view-map .tool-timeline {
     background: var(--parchment-dark);
     border: 1px solid var(--ink-faded);
     border-radius: 4px;
-    overflow: hidden;
+
     flex-shrink: 0;
 }
 
@@ -1343,7 +1313,7 @@ body:not(.panel-collapsed) #view-timeline {
     text-align: right;
     padding-right: 10px;
     white-space: nowrap;
-    overflow: hidden;
+
     text-overflow: ellipsis;
 }
 
@@ -1723,7 +1693,7 @@ body:not(.panel-collapsed) #view-timeline {
 
 .icon-btn:hover { opacity: 1; }
 
-.spacer { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spacer { flex: 1; white-space: nowrap;  text-overflow: ellipsis; }
 
 .drag-handle { cursor: grab; margin-right: 5px; opacity: 0.5; }
 

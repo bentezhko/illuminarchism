@@ -461,20 +461,7 @@ export default class IlluminarchismApp {
         this.safeAddListener('dial-rank', 'mouseenter', () => { this.dial.setHover('rank'); });
         this.safeAddListener('dial-rank', 'mouseleave', () => { this.dial.setHover(null); });
 
-        // Registry Toggle
-        this.safeAddListener('btn-toggle-registry', 'click', () => {
-            const registry = document.getElementById('atlas-registry');
-            if (registry) {
-                // If registry is being opened, close the outliner
-                if (!registry.classList.contains('open') && this.layerManager && this.layerManager.isOpen) {
-                    this.layerManager.toggle();
-                }
-                registry.classList.toggle('open');
-                this.renderRegistry(); // Refresh
-            }
-        });
-
-        // Info Panel Close Button
+                // Info Panel Close Button
         this.safeAddListener('modal-close', 'click', () => {
             const modal = document.getElementById('ontology-modal');
             if (modal) modal.classList.remove('visible');

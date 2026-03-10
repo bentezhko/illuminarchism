@@ -466,7 +466,7 @@ export default class InputController {
             'toolbar',
             'info-panel',
             'ontology-modal',
-            'atlas-registry'
+            'registry-dropdown'
         ].map(id => document.getElementById(id)).filter(Boolean);
 
         document.addEventListener('dblclick', (e) => {
