@@ -1,5 +1,11 @@
 import { getCentroid } from '../core/math.js';
-import { getTypology } from '../core/Ontology.js';
+import {
+    getTypology,
+    POLITICAL_SUBTYPES,
+    LINGUISTIC_SUBTYPES,
+    RELIGIOUS_SUBTYPES,
+    GEOGRAPHIC_SUBTYPES
+} from '../core/Ontology.js';
 
 export default class RegistryRenderer {
     constructor(app, containerId = 'registry-content') {
@@ -17,7 +23,7 @@ export default class RegistryRenderer {
         const settingsDiv = document.createElement('div');
         settingsDiv.className = 'scroll-item scroll-item-has-submenu';
         settingsDiv.style.borderBottom = '1px solid var(--ink-faded)';
-        settingsDiv.textContent = 'Scale Measurement ▶';
+        settingsDiv.textContent = 'Scale Measurement';
 
         const settingsMenu = document.createElement('div');
         settingsMenu.className = 'scroll-submenu scroll-menu';
@@ -70,6 +76,14 @@ export default class RegistryRenderer {
         // Iterate OFFICIAL ONTOLOGY to build the reference tree
         const domainIds = Object.keys(this.app.ontologyTaxonomy);
 
+        const domainSubtypesMap = {
+            'political': POLITICAL_SUBTYPES,
+            'linguistic': LINGUISTIC_SUBTYPES,
+            'religious': RELIGIOUS_SUBTYPES,
+            'geographic': GEOGRAPHIC_SUBTYPES,
+            'cultural': POLITICAL_SUBTYPES // Cultural maps to political types mostly
+        };
+
         domainIds.forEach(domainId => {
             const domainData = this.app.ontologyTaxonomy[domainId];
             if (!domainData) return;
@@ -80,7 +94,7 @@ export default class RegistryRenderer {
 
             const domainItem = document.createElement('div');
             domainItem.className = 'scroll-item scroll-item-has-submenu';
-            domainItem.textContent = `${domainLabel} (${domainAbbr}) ▶`;
+            domainItem.textContent = `${domainLabel} (${domainAbbr})`;
 
             const domainMenu = document.createElement('div');
             domainMenu.className = 'scroll-submenu scroll-menu';
@@ -105,6 +119,13 @@ export default class RegistryRenderer {
             }
 
             if (domainData.types) {
+                const typesHeader = document.createElement('div');
+                typesHeader.className = 'scroll-item';
+                typesHeader.style.fontWeight = 'bold';
+                typesHeader.style.background = 'rgba(0,0,0,0.05)';
+                typesHeader.textContent = 'Typologies (Forms)';
+                domainContent.appendChild(typesHeader);
+
                 domainData.types.forEach(typeDef => {
                     const typeId = typeDef.value;
                     const typeLabel = typeDef.label;
@@ -114,7 +135,7 @@ export default class RegistryRenderer {
 
                     const typeItem = document.createElement('div');
                     typeItem.className = 'scroll-item scroll-item-has-submenu';
-                    typeItem.textContent = `${typeLabel} ▶`;
+                    typeItem.textContent = `${typeLabel}`;
 
                     // Submenu for Typology Description
                     const typeMenu = document.createElement('div');
@@ -173,6 +194,64 @@ export default class RegistryRenderer {
 
                     typeItem.appendChild(typeMenu);
                     domainContent.appendChild(typeItem);
+                });
+            }
+
+            const subtypesData = domainSubtypesMap[domainId];
+            if (subtypesData) {
+                const subtypesHeader = document.createElement('div');
+                subtypesHeader.className = 'scroll-item';
+                subtypesHeader.style.fontWeight = 'bold';
+                subtypesHeader.style.background = 'rgba(0,0,0,0.05)';
+                subtypesHeader.textContent = 'Subtypes (Ranks)';
+                domainContent.appendChild(subtypesHeader);
+
+                Object.values(subtypesData).forEach(subDef => {
+                    const subItem = document.createElement('div');
+                    subItem.className = 'scroll-item scroll-item-has-submenu';
+                    subItem.textContent = `${subDef.label} (${subDef.abbr})`;
+
+                    if (subDef.description || subDef.examples) {
+                        const subMenu = document.createElement('div');
+                        subMenu.className = 'scroll-submenu scroll-menu';
+
+                        const subRollerTop = document.createElement('div');
+                        subRollerTop.className = 'scroll-roller';
+                        subMenu.appendChild(subRollerTop);
+
+                        const subContent = document.createElement('div');
+                        subContent.className = 'scroll-content scroll-submenu-entities';
+
+                        if (subDef.description) {
+                            const subDescDiv = document.createElement('div');
+                            subDescDiv.className = 'scroll-item';
+                            subDescDiv.style.fontStyle = 'italic';
+                            subDescDiv.style.color = 'var(--ink-primary)';
+                            subDescDiv.style.whiteSpace = 'normal';
+                            subDescDiv.style.paddingBottom = '0.5rem';
+                            subDescDiv.textContent = subDef.description;
+                            subContent.appendChild(subDescDiv);
+                        }
+
+                        if (subDef.examples) {
+                            const subExDiv = document.createElement('div');
+                            subExDiv.className = 'scroll-item';
+                            subExDiv.style.fontSize = '0.8em';
+                            subExDiv.style.whiteSpace = 'normal';
+                            subExDiv.innerHTML = `<strong>Ex:</strong> ${subDef.examples}`;
+                            subContent.appendChild(subExDiv);
+                        }
+
+                        subMenu.appendChild(subContent);
+
+                        const subRollerBot = document.createElement('div');
+                        subRollerBot.className = 'scroll-roller bottom';
+                        subMenu.appendChild(subRollerBot);
+
+                        subItem.appendChild(subMenu);
+                    }
+
+                    domainContent.appendChild(subItem);
                 });
             }
 
