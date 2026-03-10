@@ -48,18 +48,6 @@ export default class RegistryRenderer {
             const domainContent = document.createElement('div');
             domainContent.className = 'scroll-content';
 
-            if (domainDesc) {
-                const descDiv = document.createElement('div');
-                descDiv.className = 'scroll-item';
-                descDiv.style.fontStyle = 'italic';
-                descDiv.style.color = 'var(--ink-faded)';
-                descDiv.style.borderBottom = '1px solid var(--ink-faded)';
-                descDiv.style.whiteSpace = 'normal';
-                descDiv.style.paddingBottom = '0.5rem';
-                descDiv.textContent = domainDesc;
-                domainContent.appendChild(descDiv);
-            }
-
             if (domainData.types) {
                 domainData.types.forEach(typeDef => {
                     const typeId = typeDef.value;
@@ -79,56 +67,9 @@ export default class RegistryRenderer {
                     const typeContent = document.createElement('div');
                     typeContent.className = 'scroll-content';
 
-                    // Add description text for the Form/Typology
-                    if (typologyObj.description) {
-                        const typDescDiv = document.createElement('div');
-                        typDescDiv.className = 'scroll-item';
-                        typDescDiv.style.fontStyle = 'italic';
-                        typDescDiv.style.color = 'var(--ink-primary)';
-                        typDescDiv.style.whiteSpace = 'normal';
-                        typDescDiv.style.paddingBottom = '0.5rem';
-                        typDescDiv.style.borderBottom = '1px dashed var(--ink-faded)';
-                        typDescDiv.textContent = typologyObj.description;
-                        typeContent.appendChild(typDescDiv);
-                    }
-
-                    // Add other metadata if available
-                    if (typologyObj.historicalValidity) {
-                        const validDiv = document.createElement('div');
-                        validDiv.className = 'scroll-item';
-                        validDiv.style.fontSize = '0.8em';
-                        validDiv.style.whiteSpace = 'normal';
-                        validDiv.innerHTML = `<strong>Era:</strong> ${typologyObj.historicalValidity}`;
-                        typeContent.appendChild(validDiv);
-                    }
-                    if (typologyObj.population) {
-                        const popDiv = document.createElement('div');
-                        popDiv.className = 'scroll-item';
-                        popDiv.style.fontSize = '0.8em';
-                        popDiv.style.whiteSpace = 'normal';
-                        popDiv.innerHTML = `<strong>Pop:</strong> ${typologyObj.population.min} - ${typologyObj.population.max}`;
-                        typeContent.appendChild(popDiv);
-                    }
-                    if (typologyObj.examples) {
-                        const exDiv = document.createElement('div');
-                        exDiv.className = 'scroll-item';
-                        exDiv.style.fontSize = '0.8em';
-                        exDiv.style.whiteSpace = 'normal';
-                        exDiv.innerHTML = `<strong>Ex:</strong> ${typologyObj.examples}`;
-                        typeContent.appendChild(exDiv);
-                    }
-
                     // --- ADD RANKS (SUBTYPES) HERE ---
                     const subtypesData = domainSubtypesMap[domainId];
                     if (subtypesData) {
-                        const subtypesHeader = document.createElement('div');
-                        subtypesHeader.className = 'scroll-item';
-                        subtypesHeader.style.fontWeight = 'bold';
-                        subtypesHeader.style.background = 'rgba(0,0,0,0.05)';
-                        subtypesHeader.style.marginTop = '0.5rem';
-                        subtypesHeader.textContent = 'Associated Ranks';
-                        typeContent.appendChild(subtypesHeader);
-
                         Object.values(subtypesData).forEach(subDef => {
                             const subItem = document.createElement('div');
                             subItem.className = 'scroll-item scroll-item-has-submenu';
