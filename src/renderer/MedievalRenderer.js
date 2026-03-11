@@ -18,6 +18,8 @@ const ANIMATION_CONFIG = {
 };
 
 export default class MedievalRenderer {
+    static FALLBACK_HIGHLIGHT_RGB = '255, 215, 0';
+
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
@@ -842,14 +844,14 @@ export default class MedievalRenderer {
     }
 
     getInvertedColor(hex, alpha) {
-        if (!hex || !hex.startsWith('#')) return `rgba(255, 215, 0, ${alpha})`;
+        if (!hex || !hex.startsWith('#')) return `rgba(${MedievalRenderer.FALLBACK_HIGHLIGHT_RGB},${alpha})`;
         let h = hex.slice(1);
         if (h.length === 3) h = h.split('').map(c => c + c).join('');
-        if (h.length !== 6) return `rgba(255, 215, 0, ${alpha})`;
+        if (h.length !== 6) return `rgba(${MedievalRenderer.FALLBACK_HIGHLIGHT_RGB},${alpha})`;
         const r = 255 - parseInt(h.slice(0, 2), 16);
         const g = 255 - parseInt(h.slice(2, 4), 16);
         const b = 255 - parseInt(h.slice(4, 6), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        return `rgba(${r},${g},${b},${alpha})`;
     }
 
     drawCoastlineRipples(landEntities, targetCtx = null) {
