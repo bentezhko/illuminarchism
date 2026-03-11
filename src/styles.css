@@ -899,7 +899,14 @@ body.view-map .tool-timeline {
 /* --- CUSTOM TIMELINE TRACK --- */
 #timeline-ui-track {
     position: relative;
-    width: 100%;
+    /*
+       To align with the timeline view track:
+       Left margin = 200px (timeline-label width) + 32px (view-timeline padding-left) - 16px (temporal-controls padding-left) = 216px
+       Right margin = 32px (view-timeline padding-right) - 16px (temporal-controls padding-right) = 16px
+    */
+    margin-left: 216px;
+    margin-right: 16px;
+    width: calc(100% - 232px);
     height: 100%;
     cursor: grab;
 }
@@ -1005,7 +1012,7 @@ body.view-map .tool-timeline {
     top: 0;
     bottom: 0;
     width: 2px;
-    background: var(--ink-primary);
+    background: var(--rubric-red);
     cursor: pointer;
     z-index: 40;
     pointer-events: none; /* Let clicks pass to track unless on head? */
@@ -1019,7 +1026,7 @@ body.view-map .tool-timeline {
     transform: translateX(-50%);
     border-width: 6px 6px 0;
     border-style: solid;
-    border-color: var(--ink-primary) transparent transparent transparent;
+    border-color: var(--rubric-red) transparent transparent transparent;
 }
 
 .keyframe-notch {
