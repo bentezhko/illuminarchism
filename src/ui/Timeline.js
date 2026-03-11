@@ -635,23 +635,9 @@ export default class Timeline {
         defs.appendChild(marker);
         svgLayer.appendChild(defs);
 
-        const header = document.createElement('div');
-        header.className = 'timeline-header';
-
-        container.appendChild(header);
-
-        // Draw ticks
         const epochStart = this.epochStartYear;
         const epochEnd = this.epochEndYear;
         const totalYears = epochEnd - epochStart;
-
-        for (let i = 0; i <= 10; i++) {
-            const tick = document.createElement('div');
-            tick.className = 'timeline-ruler-tick';
-            tick.style.left = `${i * 10}%`;
-            tick.textContent = Math.round(epochStart + (totalYears * (i / 10)));
-            header.appendChild(tick);
-        }
 
         // Group by Domain
         const grouped = {};
@@ -801,17 +787,12 @@ export default class Timeline {
         }
 
         // Draw current year vertical line on the SVG layer
-        // Offset by 190px (label width) + 10px (label padding) = 200px from left
+        // Offset by 16px (1rem padding) from left
         const currentPercent = ((this.app.currentYear - epochStart) / totalYears) * 100;
         const currentYearLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        // Calculate the actual X position dynamically relative to track width using percentage
-        // X = left offset (200px) + (width - 200px) * percent
-        // But since we are appending to svg which covers the whole view-timeline
-        // it's easier to use a rect with % if we want it to adapt to window resize without redraws.
-        // Wait, SVG elements can use % coordinates!
-        currentYearLine.setAttribute('x1', `calc(200px + (100% - 200px) * ${currentPercent / 100})`);
+        currentYearLine.setAttribute('x1', `calc(1rem + (100% - 2rem) * ${currentPercent / 100})`);
         currentYearLine.setAttribute('y1', '0');
-        currentYearLine.setAttribute('x2', `calc(200px + (100% - 200px) * ${currentPercent / 100})`);
+        currentYearLine.setAttribute('x2', `calc(1rem + (100% - 2rem) * ${currentPercent / 100})`);
         currentYearLine.setAttribute('y2', '100%');
         currentYearLine.setAttribute('stroke', 'var(--rubric-red)');
         currentYearLine.setAttribute('stroke-width', '2');
