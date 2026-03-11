@@ -267,7 +267,6 @@ export default class MedievalRenderer {
     draw(entities, hoveredId, selectedId, activeTool, vertexHighlightIndex, layers = null) {
         if (this.width === 0 || this.height === 0) return;
 
-        // FIXED: Safety check for entities input
         if (!entities || !Array.isArray(entities)) {
             entities = [];
         }
@@ -287,7 +286,6 @@ export default class MedievalRenderer {
         this.clear();
         const ctx = this.ctx;
 
-        // FIXED: Grid should be drawn relative to world transform
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
