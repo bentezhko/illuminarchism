@@ -207,6 +207,10 @@ button.scroll-roller {
     transition: filter 0.2s;
 }
 
+button.registry-roller {
+    background: linear-gradient(to right, var(--gold-leaf), var(--parchment-dark), var(--gold-leaf));
+}
+
 button.scroll-roller:hover {
     filter: brightness(1.1);
 }
@@ -242,14 +246,53 @@ button.scroll-roller.active {
     box-shadow: var(--ui-shadow);
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.4s ease-in-out;
+    transition: max-height 0.4s ease-in-out, overflow 0s linear 0.4s;
     display: flex;
     flex-direction: column;
 }
 
-.scroll-dropdown:hover .scroll-menu .scroll-content,
-.scroll-menu.open .scroll-content {
-    max-height: 200px;
+.scroll-dropdown:hover > .scroll-menu > .scroll-content,
+.scroll-menu.open > .scroll-content {
+    max-height: 80vh;
+    overflow: visible;
+    transition: max-height 0.4s ease-in-out, overflow 0s linear 0s;
+}
+
+/* Base styles for submenus */
+.scroll-item-has-submenu {
+    position: relative;
+    overflow: visible;
+}
+
+.scroll-submenu {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    margin-left: 0;
+    width: max-content;
+    min-width: 200px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 1000;
+}
+
+.scroll-submenu > .scroll-content {
+    border-left: none;
+    border-right: none;
+}
+
+.scroll-item-has-submenu:hover > .scroll-submenu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+
+.scroll-item-has-submenu:hover > .scroll-submenu > .scroll-content {
+    max-height: 80vh;
+    overflow: visible;
+    transition: max-height 0.4s ease-in-out, overflow 0s linear 0s;
 }
 
 .scroll-item {
@@ -258,11 +301,16 @@ button.scroll-roller.active {
     border-bottom: 1px dashed var(--ink-faded);
     padding: 0.5rem 1rem;
     font-family: 'Cinzel', serif;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--ink-primary);
     text-align: left;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
+}
+
+/* Base level gets slightly larger text, nested levels are smaller */
+#registry-content > .scroll-item {
+    font-size: 0.9rem;
 }
 
 .scroll-item:last-child {

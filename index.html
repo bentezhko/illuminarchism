@@ -31,10 +31,16 @@
                             <button class="scroll-item" title="Test Option 1">Test 1</button>
                             <button class="scroll-item" title="Test Option 2">Test 2</button>
                         </div>
-                        <div class="scroll-roller bottom"></div>
                     </div>
                 </div>
-                <button class="btn-text" id="btn-toggle-registry" title="Open Atlas Registry">R</button>
+                <div class="scroll-dropdown" id="registry-dropdown">
+                    <button class="scroll-roller registry-roller" id="btn-registry-menu" title="Atlas Registry"></button>
+                    <div class="scroll-menu" id="registry-scroll-menu">
+                        <div class="scroll-content" id="registry-content">
+                            <!-- Registry categories injected here -->
+                        </div>
+                    </div>
+                </div>
                 <button id="btn-ontology" title="View Taxonomy">?</button>
                 <button id="btn-theme-toggle" class="btn-circle" title="Toggle Dark Mode">☾</button>
                 <input type="file" id="file-input" accept=".json,.atlas">
@@ -148,20 +154,21 @@
         <!-- Timeline API content injected here -->
     </div>
 
-    <!-- The Illuminated Registry (Sidebar) -->
-    <div id="atlas-registry" class="pointer-events-auto">
-        <div class="registry-header">
-            <span>Atlas Registry</span>
-            <span style="font-size:0.8rem; cursor:pointer;"
-                onclick="document.getElementById('atlas-registry').classList.remove('open')">X</span>
-        </div>
-        <div id="registry-content"></div>
-    </div>
-
     <!-- Ontology InfoCard -->
     <div id="ontology-modal" class="pointer-events-auto">
         <span id="modal-close">X</span>
         <h2 style="border-bottom: 2px solid var(--rubric-red); padding-bottom:0.5rem;">Help & Information</h2>
+
+        <div class="ontology-section" style="margin-top: 1rem; border: 1px solid var(--ink-faded); padding: 0.5rem;">
+            <div class="ontology-title">Scale Measurement</div>
+            <div style="margin: 0.5rem 0; font-size: 0.9rem; display: flex; flex-wrap: wrap; gap: 0.5rem;" id="scale-unit-container">
+                <button class="btn-text scale-unit-btn" data-unit="leagues">Leagues (Base)</button>
+                <button class="btn-text scale-unit-btn" data-unit="miles">Miles (3x)</button>
+                <button class="btn-text scale-unit-btn" data-unit="km">Kilometers (4.8x)</button>
+                <button class="btn-text scale-unit-btn" data-unit="stadia">Stadia (24x)</button>
+                <button class="btn-text scale-unit-btn" data-unit="versts">Versts (4.5x)</button>
+            </div>
+        </div>
 
         <div class="ontology-section">
             <div class="ontology-title">Keyboard Shortcuts</div>
@@ -191,6 +198,7 @@
         <div class="ontology-section">
             <div class="ontology-title" style="color:var(--rubric-red);">Next Steps</div>
             <ul style="margin: 0.5rem 0; padding-left: 1.2rem; font-size: 0.9rem;">
+                <li><strong>Fix Registry:</strong> Some ranks are replicated across forms; need to de-duplicate or handle correctly.</li>
                 <li>Expand Ontology System to include a Biological domain.</li>
                 <li>Import GeoJSON/KML files</li>
                 <li>Export to SVG/GeoJSON</li>

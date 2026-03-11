@@ -461,24 +461,39 @@ export default class IlluminarchismApp {
         this.safeAddListener('dial-rank', 'mouseenter', () => { this.dial.setHover('rank'); });
         this.safeAddListener('dial-rank', 'mouseleave', () => { this.dial.setHover(null); });
 
-        // Registry Toggle
-        this.safeAddListener('btn-toggle-registry', 'click', () => {
-            const registry = document.getElementById('atlas-registry');
-            if (registry) {
-                // If registry is being opened, close the outliner
-                if (!registry.classList.contains('open') && this.layerManager && this.layerManager.isOpen) {
-                    this.layerManager.toggle();
-                }
-                registry.classList.toggle('open');
-                this.renderRegistry(); // Refresh
-            }
-        });
-
-        // Info Panel Close Button
+                // Info Panel Close Button
         this.safeAddListener('modal-close', 'click', () => {
             const modal = document.getElementById('ontology-modal');
             if (modal) modal.classList.remove('visible');
         });
+
+        // Scale Measurement Unit Buttons in Modal
+        document.querySelectorAll('.scale-unit-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const unit = e.target.dataset.unit;
+                if (this.renderer) {
+                    this.renderer.scaleUnit = unit;
+                    this.renderer.invalidateWorldLayer();
+                    this.render();
+                    if (this.registry) this.registry.render();
+                }
+
+                // Update UI active state
+                document.querySelectorAll('.scale-unit-btn').forEach(b => {
+                    b.style.color = '';
+                    b.style.fontWeight = '';
+                });
+                e.target.style.color = 'var(--rubric-red)';
+                e.target.style.fontWeight = 'bold';
+            });
+        });
+
+        // Initialize active scale unit button on load
+        const initScaleBtn = document.querySelector(`.scale-unit-btn[data-unit="leagues"]`);
+        if (initScaleBtn) {
+             initScaleBtn.style.color = 'var(--rubric-red)';
+             initScaleBtn.style.fontWeight = 'bold';
+        }
 
         // Ontology Button — toggles modal open/closed
         this.safeAddListener('btn-ontology', 'click', () => {
