@@ -1264,7 +1264,7 @@ body.view-map .tool-timeline {
 }
 
 .view-btn {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0;
     cursor: pointer;
     font-family: 'Cinzel', serif;
     background: transparent;
@@ -1274,6 +1274,9 @@ body.view-map .tool-timeline {
     white-space: nowrap;
     width: 100px;
     text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .view-btn:hover {
