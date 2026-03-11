@@ -800,28 +800,6 @@ export default class Timeline {
             container.appendChild(groupDiv);
         }
 
-        // Red Line
-        const currentPercent = ((this.app.currentYear - epochStart) / totalYears) * 100;
-        const lineContainer = document.createElement('div');
-        lineContainer.style.position = 'absolute';
-        lineContainer.style.top = '70px';
-        lineContainer.style.bottom = '20px';
-        lineContainer.style.left = '232px';
-        lineContainer.style.right = '32px';
-        lineContainer.style.pointerEvents = 'none';
-        lineContainer.style.zIndex = '10';
-
-        const redLine = document.createElement('div');
-        redLine.style.position = 'absolute';
-        redLine.style.left = `${currentPercent}%`;
-        redLine.style.top = '0';
-        redLine.style.bottom = '0';
-        redLine.style.width = '2px';
-        redLine.style.backgroundColor = 'var(--rubric-red)';
-
-        lineContainer.appendChild(redLine);
-        container.appendChild(lineContainer);
-
         this.renderConnections(svgLayer);
         svgLayer.style.height = `${container.scrollHeight}px`;
         container.appendChild(svgLayer);
