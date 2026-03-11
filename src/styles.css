@@ -829,7 +829,7 @@ body.view-map .tool-timeline {
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--rubric-red);
-    width: 100%; /* Fill grid cell */
+    width: 8rem; /* Fixed width to prevent pushing */
     text-align: center;
     border-left: 1px solid transparent; /* Invisible borders */
     border-right: 1px solid transparent;
@@ -1142,6 +1142,7 @@ body.view-map .tool-timeline {
     color: var(--rubric-red);
     text-align: center;
     margin-top: 2px;
+    width: 3rem;
 }
 
 #map-canvas {
@@ -1263,7 +1264,7 @@ body.view-map .tool-timeline {
 }
 
 .view-btn {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0;
     cursor: pointer;
     font-family: 'Cinzel', serif;
     background: transparent;
@@ -1271,6 +1272,11 @@ body.view-map .tool-timeline {
     color: var(--ink-primary);
     transition: all 0.2s;
     white-space: nowrap;
+    width: 8rem;
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .view-btn:hover {
