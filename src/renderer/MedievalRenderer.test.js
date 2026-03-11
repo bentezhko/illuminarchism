@@ -198,6 +198,34 @@ describe('MedievalRenderer', () => {
         expect(Number.isFinite(args[1])).toBe(true);
     });
 
+    describe('getInvertedColor', () => {
+        it('should correctly invert 6-digit hex colors', () => {
+            expect(renderer.getInvertedColor('#ff0000', 0.8)).toBe('rgba(0,255,255,0.8)');
+            expect(renderer.getInvertedColor('#00ff00', 0.8)).toBe('rgba(255,0,255,0.8)');
+            expect(renderer.getInvertedColor('#0000ff', 0.8)).toBe('rgba(255,255,0,0.8)');
+            expect(renderer.getInvertedColor('#ffffff', 0.8)).toBe('rgba(0,0,0,0.8)');
+            expect(renderer.getInvertedColor('#000000', 0.8)).toBe('rgba(255,255,255,0.8)');
+        });
+
+        it('should correctly invert 3-digit hex colors', () => {
+            expect(renderer.getInvertedColor('#f00', 0.8)).toBe('rgba(0,255,255,0.8)');
+            expect(renderer.getInvertedColor('#0f0', 0.8)).toBe('rgba(255,0,255,0.8)');
+            expect(renderer.getInvertedColor('#00f', 0.8)).toBe('rgba(255,255,0,0.8)');
+            expect(renderer.getInvertedColor('#fff', 0.8)).toBe('rgba(0,0,0,0.8)');
+            expect(renderer.getInvertedColor('#000', 0.8)).toBe('rgba(255,255,255,0.8)');
+        });
+
+        it('should return the fallback color for invalid or missing inputs', () => {
+            const fallbackRGB = MedievalRenderer.FALLBACK_HIGHLIGHT_RGB;
+            const expectedFallback = `rgba(${fallbackRGB},0.8)`;
+            expect(renderer.getInvertedColor('', 0.8)).toBe(expectedFallback);
+            expect(renderer.getInvertedColor(null, 0.8)).toBe(expectedFallback);
+            expect(renderer.getInvertedColor(undefined, 0.8)).toBe(expectedFallback);
+            expect(renderer.getInvertedColor('invalid', 0.8)).toBe(expectedFallback);
+            expect(renderer.getInvertedColor('#ff', 0.8)).toBe(expectedFallback);
+        });
+    });
+
     it('resize should not block the main thread with texture generation', () => {
         // Measure execution time of resize() to ensure it's fast
         const start = performance.now();
