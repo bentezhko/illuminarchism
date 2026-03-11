@@ -616,7 +616,7 @@ export default class Timeline {
         svgLayer.style.width = '100%';
         svgLayer.style.height = '100%';
         svgLayer.style.pointerEvents = 'none';
-        svgLayer.style.zIndex = '100';
+        svgLayer.style.zIndex = '50';
 
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
@@ -635,23 +635,9 @@ export default class Timeline {
         defs.appendChild(marker);
         svgLayer.appendChild(defs);
 
-        const header = document.createElement('div');
-        header.className = 'timeline-header';
-
-        container.appendChild(header);
-
-        // Draw ticks
         const epochStart = this.epochStartYear;
         const epochEnd = this.epochEndYear;
         const totalYears = epochEnd - epochStart;
-
-        for (let i = 0; i <= 10; i++) {
-            const tick = document.createElement('div');
-            tick.className = 'timeline-ruler-tick';
-            tick.style.left = `${i * 10}%`;
-            tick.textContent = Math.round(epochStart + (totalYears * (i / 10)));
-            header.appendChild(tick);
-        }
 
         // Group by Domain
         const grouped = {};
@@ -800,27 +786,18 @@ export default class Timeline {
             container.appendChild(groupDiv);
         }
 
-        // Red Line
+        // Draw current year vertical line on the SVG layer
+        // Offset by 16px (1rem padding) from left
         const currentPercent = ((this.app.currentYear - epochStart) / totalYears) * 100;
-        const lineContainer = document.createElement('div');
-        lineContainer.style.position = 'absolute';
-        lineContainer.style.top = '70px';
-        lineContainer.style.bottom = '20px';
-        lineContainer.style.left = '232px';
-        lineContainer.style.right = '32px';
-        lineContainer.style.pointerEvents = 'none';
-        lineContainer.style.zIndex = '10';
-
-        const redLine = document.createElement('div');
-        redLine.style.position = 'absolute';
-        redLine.style.left = `${currentPercent}%`;
-        redLine.style.top = '0';
-        redLine.style.bottom = '0';
-        redLine.style.width = '2px';
-        redLine.style.backgroundColor = 'var(--rubric-red)';
-
-        lineContainer.appendChild(redLine);
-        container.appendChild(lineContainer);
+        const currentYearLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        currentYearLine.setAttribute('x1', `calc(1rem + (100% - 2rem) * ${currentPercent / 100})`);
+        currentYearLine.setAttribute('y1', '0');
+        currentYearLine.setAttribute('x2', `calc(1rem + (100% - 2rem) * ${currentPercent / 100})`);
+        currentYearLine.setAttribute('y2', '100%');
+        currentYearLine.setAttribute('stroke', 'var(--rubric-red)');
+        currentYearLine.setAttribute('stroke-width', '2');
+        currentYearLine.setAttribute('opacity', '0.7');
+        svgLayer.appendChild(currentYearLine);
 
         this.renderConnections(svgLayer);
         svgLayer.style.height = `${container.scrollHeight}px`;
