@@ -267,7 +267,7 @@ export default class MedievalRenderer {
     draw(entities, hoveredId, selectedId, activeTool, vertexHighlightIndex, layers = null) {
         if (this.width === 0 || this.height === 0) return;
 
-        if (!entities || !Array.isArray(entities)) {
+        if (!Array.isArray(entities)) {
             entities = [];
         }
 
