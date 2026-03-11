@@ -1022,18 +1022,6 @@ body.view-map .tool-timeline {
     border-color: var(--rubric-red) transparent transparent transparent;
 }
 
-body.view-timeline #ui-playhead::after {
-    content: '';
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    width: 2px;
-    height: 100vh;
-    background: var(--rubric-red);
-    pointer-events: none;
-    opacity: 0.7;
-}
-
 .keyframe-notch {
     position: absolute;
     width: 4px;

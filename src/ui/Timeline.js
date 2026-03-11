@@ -616,7 +616,7 @@ export default class Timeline {
         svgLayer.style.width = '100%';
         svgLayer.style.height = '100%';
         svgLayer.style.pointerEvents = 'none';
-        svgLayer.style.zIndex = '100';
+        svgLayer.style.zIndex = '50';
 
         const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
         const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
@@ -799,6 +799,24 @@ export default class Timeline {
             groupDiv.appendChild(groupContent);
             container.appendChild(groupDiv);
         }
+
+        // Draw current year vertical line on the SVG layer
+        // Offset by 190px (label width) + 10px (label padding) = 200px from left
+        const currentPercent = ((this.app.currentYear - epochStart) / totalYears) * 100;
+        const currentYearLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        // Calculate the actual X position dynamically relative to track width using percentage
+        // X = left offset (200px) + (width - 200px) * percent
+        // But since we are appending to svg which covers the whole view-timeline
+        // it's easier to use a rect with % if we want it to adapt to window resize without redraws.
+        // Wait, SVG elements can use % coordinates!
+        currentYearLine.setAttribute('x1', `calc(200px + (100% - 200px) * ${currentPercent / 100})`);
+        currentYearLine.setAttribute('y1', '0');
+        currentYearLine.setAttribute('x2', `calc(200px + (100% - 200px) * ${currentPercent / 100})`);
+        currentYearLine.setAttribute('y2', '100%');
+        currentYearLine.setAttribute('stroke', 'var(--rubric-red)');
+        currentYearLine.setAttribute('stroke-width', '2');
+        currentYearLine.setAttribute('opacity', '0.7');
+        svgLayer.appendChild(currentYearLine);
 
         this.renderConnections(svgLayer);
         svgLayer.style.height = `${container.scrollHeight}px`;
