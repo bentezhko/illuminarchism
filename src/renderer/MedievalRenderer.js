@@ -607,11 +607,11 @@ export default class MedievalRenderer {
         if (isSelected) {
             // Animated highlight drawn UNDER the main border
             ctx.save();
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)'; // Bright gold
+            ctx.strokeStyle = this.getInvertedColor(ent.color, 0.8);
             ctx.lineWidth = (ctx.lineWidth || (1.5 / this.transform.k)) * 4; // Thicker than main border
             ctx.lineCap = 'round';
             ctx.setLineDash([15 / this.transform.k, 15 / this.transform.k]);
-            ctx.lineDashOffset = -(performance.now() / 40) % (30 / this.transform.k);
+            ctx.lineDashOffset = -((performance.now() / 40) / this.transform.k) % (30 / this.transform.k);
             ctx.stroke();
             ctx.restore();
         }
@@ -636,11 +636,11 @@ export default class MedievalRenderer {
         if (isSelected) {
             // Animated highlight underneath
             ctx.save();
-            ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+            ctx.strokeStyle = this.getInvertedColor(ent.color, 0.8);
             ctx.lineWidth = (4 / this.transform.k) * 2;
             ctx.lineCap = 'round';
             ctx.setLineDash([15 / this.transform.k, 15 / this.transform.k]);
-            ctx.lineDashOffset = -(performance.now() / 40) % (30 / this.transform.k);
+            ctx.lineDashOffset = -((performance.now() / 40) / this.transform.k) % (30 / this.transform.k);
             ctx.stroke();
             ctx.restore();
         }
@@ -682,10 +682,10 @@ export default class MedievalRenderer {
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(pt.x, pt.y, size * 1.5, 0, Math.PI * 2);
-                ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+                ctx.strokeStyle = this.getInvertedColor(ent.color, 0.8);
                 ctx.lineWidth = 3 / this.transform.k;
                 ctx.setLineDash([8 / this.transform.k, 8 / this.transform.k]);
-                ctx.lineDashOffset = -(performance.now() / 40) % (16 / this.transform.k);
+                ctx.lineDashOffset = -((performance.now() / 40) / this.transform.k) % (16 / this.transform.k);
                 ctx.stroke();
                 ctx.restore();
             }
@@ -839,6 +839,17 @@ export default class MedievalRenderer {
     hexToRgba(hex, a) {
         const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
         return `rgba(${r},${g},${b},${a})`;
+    }
+
+    getInvertedColor(hex, alpha) {
+        if (!hex || !hex.startsWith('#')) return `rgba(255, 215, 0, ${alpha})`;
+        let h = hex.slice(1);
+        if (h.length === 3) h = h.split('').map(c => c + c).join('');
+        if (h.length !== 6) return `rgba(255, 215, 0, ${alpha})`;
+        const r = 255 - parseInt(h.slice(0, 2), 16);
+        const g = 255 - parseInt(h.slice(2, 4), 16);
+        const b = 255 - parseInt(h.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     drawCoastlineRipples(landEntities, targetCtx = null) {
