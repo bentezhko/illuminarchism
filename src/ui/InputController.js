@@ -1,5 +1,5 @@
 import { CONFIG } from '../config.js';
-import { distance, distanceToSegment, getBoundingBox, getRepresentativePoint } from '../core/math.js';
+import { distance, distSq, distanceToSegment, getBoundingBox, getRepresentativePoint } from '../core/math.js';
 import { isRenderedAsPoint } from '../core/Ontology.js';
 
 const RIGHT_CLICK_HOLD_DURATION = 500;
@@ -136,7 +136,9 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
+                        const threshold = CONFIG.INTERACTION_RADIUS / this.renderer.transform.k;
+                        const thresholdSq = threshold * threshold;
+                        const hitIdx = ent.currentGeometry.findIndex(pt => distSq(pt, wp) < thresholdSq);
                         if (hitIdx !== -1) {
                             this.isDragging = true;
                             this.dragVertexIndex = hitIdx;
@@ -228,7 +230,9 @@ export default class InputController {
             if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                 const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
-                    const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
+                    const threshold = CONFIG.INTERACTION_RADIUS / this.renderer.transform.k;
+                    const thresholdSq = threshold * threshold;
+                    const hitIdx = ent.currentGeometry.findIndex(pt => distSq(pt, wp) < thresholdSq);
                     if (hitIdx !== -1 && ent.currentGeometry.length > 3) {
                         ent.currentGeometry.splice(hitIdx, 1);
                         this.app.finishVertexEdit();
@@ -355,7 +359,9 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distance(pt, wp) < CONFIG.INTERACTION_RADIUS / this.renderer.transform.k);
+                        const threshold = CONFIG.INTERACTION_RADIUS / this.renderer.transform.k;
+                        const thresholdSq = threshold * threshold;
+                        const hitIdx = ent.currentGeometry.findIndex(pt => distSq(pt, wp) < thresholdSq);
                         this.app.highlightVertex(hitIdx !== -1 ? hitIdx : null);
 
                         if (hitIdx !== -1) {
