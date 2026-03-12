@@ -566,15 +566,18 @@ export default class IlluminarchismApp {
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
+                        const IMAGE_WIDTH_RATIO = 0.5;
+                        const IMAGE_OPACITY = 0.5;
+
                         // Calculate where to place the image
                         const t = this.renderer.transform;
                         // Place image centered in the current view
                         const centerX = (this.renderer.width / 2 - t.x) / t.k;
                         const centerY = (this.renderer.height / 2 - t.y) / t.k;
 
-                        // Default size (scale it so it fits reasonably in the current view, e.g. 50% of the view width)
+                        // Default size (scale it so it fits reasonably in the current view)
                         const viewWidthInWorld = this.renderer.width / t.k;
-                        const targetWidth = viewWidthInWorld * 0.5;
+                        const targetWidth = viewWidthInWorld * IMAGE_WIDTH_RATIO;
                         const scale = targetWidth / img.width;
                         const targetHeight = img.height * scale;
 
@@ -584,14 +587,20 @@ export default class IlluminarchismApp {
                             y: centerY - targetHeight / 2,
                             width: targetWidth,
                             height: targetHeight,
-                            opacity: 0.5 // Default opacity for tracing
+                            opacity: IMAGE_OPACITY
                         };
 
                         this.renderer.invalidateWorldLayer();
                         this.render();
                         this.showMessage("Image overlay loaded for tracing.");
                     };
+                    img.onerror = () => {
+                        this.showMessage("Failed to load image. Please use a valid PNG or JPEG file.", 5000);
+                    };
                     img.src = event.target.result;
+                };
+                reader.onerror = () => {
+                    this.showMessage("Error reading the selected file.", 5000);
                 };
                 reader.readAsDataURL(file);
 
