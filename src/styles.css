@@ -1762,7 +1762,7 @@ body:not(.panel-collapsed) #view-timeline {
 #btn-toggle-layers {
     position: absolute;
     left: -20px;
-    top: 50%;
+    top: 10px;
     width: 20px;
     height: 60px;
     background: var(--parchment-bg);
@@ -1776,7 +1776,6 @@ body:not(.panel-collapsed) #view-timeline {
     border-radius: 5px 0 0 5px;
     font-size: 0.8em;
     z-index: 901;
-    transform: translateY(-50%);
 }
 
 #btn-toggle-layers:hover {

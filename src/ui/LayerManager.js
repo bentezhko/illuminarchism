@@ -19,20 +19,17 @@ export default class LayerManager {
         // Toggle Button (attached to container)
         const toggleBtn = document.createElement('div');
         toggleBtn.id = 'btn-toggle-layers';
-        toggleBtn.textContent = '▶';
-        toggleBtn.onclick = () => this.toggle();
+        toggleBtn.textContent = '◀';
         this.container.appendChild(toggleBtn);
 
-        // Header
-        const header = document.createElement('div');
-        header.className = 'layer-header';
-        header.innerHTML = '<span>Outliner</span> <span class="icon-btn" title="New Group" id="btn-add-group">+</span>';
-        this.container.appendChild(header);
+        // Hover events to toggle Outliner
+        this.container.addEventListener('mouseenter', () => {
+            if (!this.isOpen) this.open();
+        });
 
-        document.getElementById('btn-add-group').onclick = (e) => {
-            e.stopPropagation();
-            this.addGroup();
-        };
+        this.container.addEventListener('mouseleave', () => {
+            if (this.isOpen) this.close();
+        });
 
         // Tree View
         this.treeView = document.createElement('div');
@@ -48,22 +45,29 @@ export default class LayerManager {
         document.addEventListener('click', () => this.hideContextMenu());
 
         this.render();
+
+        // Start closed initially
+        this.isOpen = false;
+        this.container.classList.add('closed');
     }
 
-    toggle() {
-        this.isOpen = !this.isOpen;
-
-        if (this.isOpen) {
-            const registry = document.getElementById('atlas-registry');
-            if (registry && registry.classList.contains('open')) {
-                registry.classList.remove('open');
-                if (this.app) this.app.renderRegistry();
-            }
+    open() {
+        this.isOpen = true;
+        const registry = document.getElementById('atlas-registry');
+        if (registry && registry.classList.contains('open')) {
+            registry.classList.remove('open');
+            if (this.app) this.app.renderRegistry();
         }
-
-        this.container.classList.toggle('closed', !this.isOpen);
+        this.container.classList.remove('closed');
         const btn = document.getElementById('btn-toggle-layers');
-        if (btn) btn.textContent = this.isOpen ? '▶' : '◀';
+        if (btn) btn.textContent = '▶';
+    }
+
+    close() {
+        this.isOpen = false;
+        this.container.classList.add('closed');
+        const btn = document.getElementById('btn-toggle-layers');
+        if (btn) btn.textContent = '◀';
     }
 
     render() {
