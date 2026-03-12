@@ -3,9 +3,13 @@ export default class LayerManager {
         this.app = app;
         this.container = null;
         this.treeView = null;
-        this.isOpen = true;
         this.dragSource = null;
         this.dragType = null; // 'group' | 'entity'
+
+        // States: 'closed', 'agitated', 'extended'
+        this.uiState = 'closed';
+        // Pinned States: 'unpinned', 'pinned-extended', 'pinned-closed'
+        this.pinnedState = 'unpinned';
 
         this.init();
     }
@@ -19,20 +23,40 @@ export default class LayerManager {
         // Toggle Button (attached to container)
         const toggleBtn = document.createElement('div');
         toggleBtn.id = 'btn-toggle-layers';
-        toggleBtn.textContent = '▶';
-        toggleBtn.onclick = () => this.toggle();
+        toggleBtn.textContent = '📌';
+        toggleBtn.title = 'Pin Panel';
         this.container.appendChild(toggleBtn);
+        this.toggleBtn = toggleBtn;
 
-        // Header
-        const header = document.createElement('div');
-        header.className = 'layer-header';
-        header.innerHTML = '<span>Outliner</span> <span class="icon-btn" title="New Group" id="btn-add-group">+</span>';
-        this.container.appendChild(header);
+        // Hover interaction logic
+        document.addEventListener('mousemove', (e) => {
+            if (this.pinnedState !== 'unpinned') return;
 
-        document.getElementById('btn-add-group').onclick = (e) => {
-            e.stopPropagation();
-            this.addGroup();
-        };
+            const triggerWidth = window.innerWidth * 0.05;
+            const isNearRightEdge = e.clientX >= window.innerWidth - triggerWidth;
+            const isOverContainer = this.container.contains(e.target);
+
+            if (isOverContainer) {
+                this.setUiState('extended');
+            } else if (isNearRightEdge) {
+                this.setUiState('agitated');
+            } else {
+                this.setUiState('closed');
+            }
+        });
+
+        // Pin Toggle Click
+        this.toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent bubling
+            if (this.pinnedState === 'unpinned') {
+                this.pinnedState = 'pinned-extended';
+            } else if (this.pinnedState === 'pinned-extended') {
+                this.pinnedState = 'pinned-closed';
+            } else {
+                this.pinnedState = 'unpinned';
+            }
+            this.updateUIClasses();
+        });
 
         // Tree View
         this.treeView = document.createElement('div');
@@ -48,22 +72,45 @@ export default class LayerManager {
         document.addEventListener('click', () => this.hideContextMenu());
 
         this.render();
+
+        this.updateUIClasses();
     }
 
-    toggle() {
-        this.isOpen = !this.isOpen;
+    setUiState(newState) {
+        if (this.uiState !== newState) {
+            this.uiState = newState;
+            this.updateUIClasses();
+        }
+    }
 
-        if (this.isOpen) {
+    updateUIClasses() {
+        this.container.classList.remove('closed', 'agitated', 'extended');
+
+        let effectiveState = this.uiState;
+        if (this.pinnedState === 'pinned-extended') {
+            effectiveState = 'extended';
+        } else if (this.pinnedState === 'pinned-closed') {
+            effectiveState = 'closed';
+        }
+
+        this.container.classList.add(effectiveState);
+
+        if (this.pinnedState !== 'unpinned') {
+            this.toggleBtn.style.color = 'var(--ink-red)'; // Visual indicator for pinned
+            this.toggleBtn.textContent = '📍'; // Pinned down symbol
+        } else {
+            this.toggleBtn.style.color = 'var(--ink-primary)';
+            this.toggleBtn.textContent = '📌'; // Ready to pin symbol
+        }
+
+        // Handle registry closing if extended
+        if (effectiveState === 'extended') {
             const registry = document.getElementById('atlas-registry');
             if (registry && registry.classList.contains('open')) {
                 registry.classList.remove('open');
-                if (this.app) this.app.renderRegistry();
+                if (this.app && this.app.renderRegistry) this.app.renderRegistry();
             }
         }
-
-        this.container.classList.toggle('closed', !this.isOpen);
-        const btn = document.getElementById('btn-toggle-layers');
-        if (btn) btn.textContent = this.isOpen ? '▶' : '◀';
     }
 
     render() {
