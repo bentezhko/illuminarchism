@@ -1679,6 +1679,14 @@ body:not(.panel-collapsed) #view-timeline {
     transform: translateX(100%);
 }
 
+#layer-manager.agitated {
+    transform: translateX(calc(100% - 20px)); /* Reveal slightly */
+}
+
+#layer-manager.extended {
+    transform: translateX(0);
+}
+
 .layer-header {
     padding: 10px;
     background: rgba(43, 33, 24, 0.05);

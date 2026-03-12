@@ -3,9 +3,13 @@ export default class LayerManager {
         this.app = app;
         this.container = null;
         this.treeView = null;
-        this.isOpen = true;
         this.dragSource = null;
         this.dragType = null; // 'group' | 'entity'
+
+        // States: 'closed', 'agitated', 'extended'
+        this.uiState = 'closed';
+        // Pinned States: 'unpinned', 'pinned-extended', 'pinned-closed'
+        this.pinnedState = 'unpinned';
 
         this.init();
     }
@@ -19,16 +23,39 @@ export default class LayerManager {
         // Toggle Button (attached to container)
         const toggleBtn = document.createElement('div');
         toggleBtn.id = 'btn-toggle-layers';
-        toggleBtn.textContent = '◀';
+        toggleBtn.textContent = '📌';
+        toggleBtn.title = 'Pin Panel';
         this.container.appendChild(toggleBtn);
+        this.toggleBtn = toggleBtn;
 
-        // Hover events to toggle Outliner
-        this.container.addEventListener('mouseenter', () => {
-            if (!this.isOpen) this.open();
+        // Hover interaction logic
+        document.addEventListener('mousemove', (e) => {
+            if (this.pinnedState !== 'unpinned') return;
+
+            const triggerWidth = window.innerWidth * 0.05;
+            const isNearRightEdge = e.clientX >= window.innerWidth - triggerWidth;
+            const isOverContainer = this.container.contains(e.target);
+
+            if (isOverContainer) {
+                this.setUiState('extended');
+            } else if (isNearRightEdge) {
+                this.setUiState('agitated');
+            } else {
+                this.setUiState('closed');
+            }
         });
 
-        this.container.addEventListener('mouseleave', () => {
-            if (this.isOpen) this.close();
+        // Pin Toggle Click
+        this.toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent bubling
+            if (this.pinnedState === 'unpinned') {
+                this.pinnedState = 'pinned-extended';
+            } else if (this.pinnedState === 'pinned-extended') {
+                this.pinnedState = 'pinned-closed';
+            } else {
+                this.pinnedState = 'unpinned';
+            }
+            this.updateUIClasses();
         });
 
         // Tree View
@@ -46,28 +73,44 @@ export default class LayerManager {
 
         this.render();
 
-        // Start closed initially
-        this.isOpen = false;
-        this.container.classList.add('closed');
+        this.updateUIClasses();
     }
 
-    open() {
-        this.isOpen = true;
-        const registry = document.getElementById('atlas-registry');
-        if (registry && registry.classList.contains('open')) {
-            registry.classList.remove('open');
-            if (this.app) this.app.renderRegistry();
+    setUiState(newState) {
+        if (this.uiState !== newState) {
+            this.uiState = newState;
+            this.updateUIClasses();
         }
-        this.container.classList.remove('closed');
-        const btn = document.getElementById('btn-toggle-layers');
-        if (btn) btn.textContent = '▶';
     }
 
-    close() {
-        this.isOpen = false;
-        this.container.classList.add('closed');
-        const btn = document.getElementById('btn-toggle-layers');
-        if (btn) btn.textContent = '◀';
+    updateUIClasses() {
+        this.container.classList.remove('closed', 'agitated', 'extended');
+
+        let effectiveState = this.uiState;
+        if (this.pinnedState === 'pinned-extended') {
+            effectiveState = 'extended';
+        } else if (this.pinnedState === 'pinned-closed') {
+            effectiveState = 'closed';
+        }
+
+        this.container.classList.add(effectiveState);
+
+        if (this.pinnedState !== 'unpinned') {
+            this.toggleBtn.style.color = 'var(--ink-red)'; // Visual indicator for pinned
+            this.toggleBtn.textContent = '📍'; // Pinned down symbol
+        } else {
+            this.toggleBtn.style.color = 'var(--ink-primary)';
+            this.toggleBtn.textContent = '📌'; // Ready to pin symbol
+        }
+
+        // Handle registry closing if extended
+        if (effectiveState === 'extended') {
+            const registry = document.getElementById('atlas-registry');
+            if (registry && registry.classList.contains('open')) {
+                registry.classList.remove('open');
+                if (this.app && this.app.renderRegistry) this.app.renderRegistry();
+            }
+        }
     }
 
     render() {
