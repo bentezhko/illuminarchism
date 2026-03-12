@@ -37,6 +37,7 @@ export default class MedievalRenderer {
         this.noisePattern = null;
         this.waterPattern = null;
         this.patternCache = {};
+        this.backgroundImage = null;
 
         this._cachedWaterEntities = [];
         this._cachedWorldEntities = [];
@@ -982,6 +983,22 @@ export default class MedievalRenderer {
         ctx.fillStyle = this.noisePattern || '#f3e9d2';
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.restore();
+
+        // Draw Background Image for Tracing
+        if (this.backgroundImage && this.backgroundImage.img) {
+            ctx.save();
+            ctx.translate(t.x, t.y);
+            ctx.scale(t.k, t.k);
+            ctx.globalAlpha = this.backgroundImage.opacity !== undefined ? this.backgroundImage.opacity : 0.5;
+            ctx.drawImage(
+                this.backgroundImage.img,
+                this.backgroundImage.x,
+                this.backgroundImage.y,
+                this.backgroundImage.width,
+                this.backgroundImage.height
+            );
+            ctx.restore();
+        }
 
         // 0. Optimize Layer Lookup
         const layerMap = layers ? new Map(layers.map(l => [l.id, l])) : new Map();
