@@ -11,9 +11,9 @@ global.document = {
         const el = {
             tagName: tag.toUpperCase(),
             style: {},
+            children: [],
             classList: { add: () => {}, remove: () => {} },
             appendChild: (child) => {
-                if (!el.children) el.children = [];
                 el.children.push(child);
             },
             set textContent(val) { this._textContent = val; },
@@ -24,7 +24,11 @@ global.document = {
         };
         capturedElements.push(el);
         return el;
-    }
+    },
+    createTextNode: (text) => ({
+        nodeType: 3,
+        textContent: text
+    })
 };
 
 // Mock Ontology
@@ -46,7 +50,7 @@ mock.module('../core/Ontology.js', () => {
 
 import RegistryRenderer from "./RegistryRenderer.js";
 
-test("RegistryRenderer vulnerability check: unescaped examples", () => {
+test("RegistryRenderer vulnerability check: createTextNode for examples", () => {
     const appMock = {
         ontologyTaxonomy: {
             'political': {
@@ -63,8 +67,8 @@ test("RegistryRenderer vulnerability check: unescaped examples", () => {
     const exDiv = capturedElements.find(el => el._innerHTML && el._innerHTML.includes('Ex:'));
 
     expect(exDiv).toBeDefined();
-    // If vulnerable, it will contain the raw tag
-    // If fixed, it should be escaped
-    expect(exDiv.innerHTML).not.toContain("<img src=x onerror=alert(1)>");
-    expect(exDiv.innerHTML).toContain("&lt;img src=x onerror=alert(1)&gt;");
+    // It should have a text node child with the raw string
+    const textNode = exDiv.children.find(child => child.nodeType === 3);
+    expect(textNode).toBeDefined();
+    expect(textNode.textContent).toBe('<img src=x onerror=alert(1)>');
 });
