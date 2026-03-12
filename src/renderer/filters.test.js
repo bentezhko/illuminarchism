@@ -39,7 +39,7 @@ describe('filters.js', () => {
 
     describe('fbm', () => {
         it('should stay within the range [-1, 1]', () => {
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 100; i++) {
                 const x = Math.random() * 1000;
                 const y = Math.random() * 1000;
                 const val = fbm(x, y, 4);
@@ -58,16 +58,14 @@ describe('filters.js', () => {
     describe('perturbPoint', () => {
         it('should return an object with x and y numeric properties', () => {
             const point = perturbPoint(10, 10);
-            expect(typeof point.x).toBe('number');
-            expect(typeof point.y).toBe('number');
+            expect(point).toEqual({ x: expect.any(Number), y: expect.any(Number) });
         });
 
         it('should return identical point when magnitude is 0', () => {
             const x = 15;
             const y = 25;
             const point = perturbPoint(x, y, 10, 0);
-            expect(point.x).toBe(x);
-            expect(point.y).toBe(y);
+            expect(point).toEqual({ x, y });
         });
 
         it('should displace point when magnitude is non-zero', () => {
