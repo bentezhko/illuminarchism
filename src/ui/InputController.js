@@ -70,6 +70,12 @@ export default class InputController {
         return null;
     }
 
+    _findHitVertex(geometry, worldPoint) {
+        const threshold = CONFIG.INTERACTION_RADIUS / this.renderer.transform.k;
+        const thresholdSq = threshold * threshold;
+        return geometry.findIndex(pt => distSq(pt, worldPoint) < thresholdSq);
+    }
+
     // NEW Helper for Safe Event Binding
     safeAddListener(id, event, handler) {
         const el = document.getElementById(id);
@@ -136,9 +142,7 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const threshold = CONFIG.INTERACTION_RADIUS / this.renderer.transform.k;
-                        const thresholdSq = threshold * threshold;
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distSq(pt, wp) < thresholdSq);
+                        const hitIdx = this._findHitVertex(ent.currentGeometry, wp);
                         if (hitIdx !== -1) {
                             this.isDragging = true;
                             this.dragVertexIndex = hitIdx;
@@ -230,9 +234,7 @@ export default class InputController {
             if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
                 const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                 if (ent && ent.currentGeometry) {
-                    const threshold = CONFIG.INTERACTION_RADIUS / this.renderer.transform.k;
-                    const thresholdSq = threshold * threshold;
-                    const hitIdx = ent.currentGeometry.findIndex(pt => distSq(pt, wp) < thresholdSq);
+                    const hitIdx = this._findHitVertex(ent.currentGeometry, wp);
                     if (hitIdx !== -1 && ent.currentGeometry.length > 3) {
                         ent.currentGeometry.splice(hitIdx, 1);
                         this.app.finishVertexEdit();
@@ -359,9 +361,7 @@ export default class InputController {
                 if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
-                        const threshold = CONFIG.INTERACTION_RADIUS / this.renderer.transform.k;
-                        const thresholdSq = threshold * threshold;
-                        const hitIdx = ent.currentGeometry.findIndex(pt => distSq(pt, wp) < thresholdSq);
+                        const hitIdx = this._findHitVertex(ent.currentGeometry, wp);
                         this.app.highlightVertex(hitIdx !== -1 ? hitIdx : null);
 
                         if (hitIdx !== -1) {
