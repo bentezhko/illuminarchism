@@ -186,9 +186,9 @@ describe("AtlasExporter.entityToJSON", () => {
                 ]
             },
             properties: {
-                description: undefined,
-                color: undefined,
-                parentId: undefined
+                description: null,
+                color: null,
+                parentId: null
             }
         });
     });

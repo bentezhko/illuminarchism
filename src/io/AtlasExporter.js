@@ -37,9 +37,9 @@ export default class AtlasExporter {
             type: entity.type,
             geometry: this.convertToGeoJSON(geometry, entity.type),
             properties: {
-                description: entity.description,
-                color: entity.color,
-                parentId: entity.parentId
+                description: entity.description ?? null,
+                color: entity.color ?? null,
+                parentId: entity.parentId ?? null
             }
         };
     }
