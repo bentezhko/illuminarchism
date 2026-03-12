@@ -532,6 +532,12 @@ export default class IlluminarchismApp {
             closeFileMenu();
         });
 
+        const imageInput = document.getElementById('image-input');
+        this.safeAddListener('btn-load-image', 'click', () => {
+            if (imageInput) imageInput.click();
+            closeFileMenu();
+        });
+
         this.safeAddListener('btn-file-menu', 'click', (e) => {
             e.stopPropagation();
             this.fileScrollMenu.classList.toggle('open');
@@ -549,6 +555,58 @@ export default class IlluminarchismApp {
 
         if (fileInput) {
             fileInput.addEventListener('change', (e) => this.loader.loadFromJSON(e));
+        }
+
+        if (imageInput) {
+            imageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const IMAGE_WIDTH_RATIO = 0.5;
+                        const IMAGE_OPACITY = 0.5;
+
+                        // Calculate where to place the image
+                        const t = this.renderer.transform;
+                        // Place image centered in the current view
+                        const centerX = (this.renderer.width / 2 - t.x) / t.k;
+                        const centerY = (this.renderer.height / 2 - t.y) / t.k;
+
+                        // Default size (scale it so it fits reasonably in the current view)
+                        const viewWidthInWorld = this.renderer.width / t.k;
+                        const targetWidth = viewWidthInWorld * IMAGE_WIDTH_RATIO;
+                        const scale = targetWidth / img.width;
+                        const targetHeight = img.height * scale;
+
+                        this.renderer.backgroundImage = {
+                            img: img,
+                            x: centerX - targetWidth / 2,
+                            y: centerY - targetHeight / 2,
+                            width: targetWidth,
+                            height: targetHeight,
+                            opacity: IMAGE_OPACITY
+                        };
+
+                        this.renderer.invalidateWorldLayer();
+                        this.render();
+                        this.showMessage("Image overlay loaded for tracing.");
+                    };
+                    img.onerror = () => {
+                        this.showMessage("Failed to load image. Please use a valid PNG or JPEG file.", 5000);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.onerror = () => {
+                    this.showMessage("Error reading the selected file.", 5000);
+                };
+                reader.readAsDataURL(file);
+
+                // Clear input so same file can be uploaded again if needed
+                e.target.value = '';
+            });
         }
 
 
