@@ -98,6 +98,102 @@ describe("AtlasExporter.convertToGeoJSON", () => {
     });
 });
 
+describe("AtlasExporter.entityToJSON", () => {
+    test("converts entity with valid geometry to legacy format", () => {
+        const mockEntity = {
+            id: "e-1",
+            name: "Roman Empire",
+            type: "polity",
+            description: "An ancient empire",
+            color: "#ff0000",
+            parentId: "e-0",
+            getGeometryAtYear: (year) => {
+                if (year === 100) {
+                    return [{x: 0, y: 0}, {x: 10, y: 0}, {x: 10, y: 10}];
+                }
+                return null;
+            }
+        };
+
+        const result = AtlasExporter.entityToJSON(mockEntity, 100);
+
+        expect(result).toEqual({
+            id: "e-1",
+            name: "Roman Empire",
+            type: "polity",
+            geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                    [0, 0],
+                    [10, 0],
+                    [10, 10],
+                    [0, 0]
+                ]]
+            },
+            properties: {
+                description: "An ancient empire",
+                color: "#ff0000",
+                parentId: "e-0"
+            }
+        });
+    });
+
+    test("handles entity with no geometry at specified year", () => {
+        const mockEntity = {
+            id: "e-2",
+            name: "Lost City",
+            type: "city",
+            description: "No longer exists",
+            color: "#00ff00",
+            parentId: null,
+            getGeometryAtYear: (year) => null
+        };
+
+        const result = AtlasExporter.entityToJSON(mockEntity, 500);
+
+        expect(result).toEqual({
+            id: "e-2",
+            name: "Lost City",
+            type: "city",
+            geometry: null,
+            properties: {
+                description: "No longer exists",
+                color: "#00ff00",
+                parentId: null
+            }
+        });
+    });
+
+    test("handles missing optional properties", () => {
+        const mockEntity = {
+            id: "e-3",
+            name: "Unnamed River",
+            type: "river",
+            getGeometryAtYear: (year) => [{x: 5, y: 5}, {x: 10, y: 10}]
+        };
+
+        const result = AtlasExporter.entityToJSON(mockEntity, 1000);
+
+        expect(result).toEqual({
+            id: "e-3",
+            name: "Unnamed River",
+            type: "river",
+            geometry: {
+                type: 'LineString',
+                coordinates: [
+                    [5, 5],
+                    [10, 10]
+                ]
+            },
+            properties: {
+                description: null,
+                color: null,
+                parentId: null
+            }
+        });
+    });
+});
+
 describe("AtlasExporter.generateId", () => {
     test("returns a string", () => {
         const id = AtlasExporter.generateId();
