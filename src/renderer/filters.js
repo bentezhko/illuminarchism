@@ -32,7 +32,7 @@ function grad(hash, x, y, z) {
 }
 
 // 2D Perlin Noise
-export function noise2D(x, y) {
+function noise2D(x, y) {
     const X = Math.floor(x) & 255;
     const Y = Math.floor(y) & 255;
     x -= Math.floor(x);
