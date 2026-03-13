@@ -557,6 +557,21 @@ export const POINT_RENDERING_ZOOM_THRESHOLD = 1.0;
 export const POINT_RENDERING_TYPOLOGIES = ['city', 'sacred-site'];
 
 // ============================================================================
+// LOOKUP INDEXES (For O(1) Performance)
+// ============================================================================
+
+const DOMAIN_BY_ID = Object.fromEntries(
+    Object.values(DOMAINS).map(d => [d.id, d])
+);
+
+const TYPOLOGIES_BY_DOMAIN = Object.fromEntries(
+    Object.values(DOMAINS).map(d => [
+        d.id,
+        Object.fromEntries(Object.values(getTypologiesForDomain(d.id)).map(t => [t.id, t]))
+    ])
+);
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -590,15 +605,15 @@ export function getTypologiesForDomain(domainId) {
  * Get domain object by ID
  */
 export function getDomain(domainId) {
-    return Object.values(DOMAINS).find(d => d.id === domainId);
+    return DOMAIN_BY_ID[domainId];
 }
 
 /**
  * Get typology object by domain and typology ID
  */
 export function getTypology(domainId, typologyId) {
-    const typologies = getTypologiesForDomain(domainId);
-    return Object.values(typologies).find(t => t.id === typologyId);
+    const domainMap = TYPOLOGIES_BY_DOMAIN[domainId];
+    return domainMap ? domainMap[typologyId] : undefined;
 }
 
 /**
