@@ -46,6 +46,26 @@ export const DOMAINS = {
         abbr: 'CUL',
         description: 'Cultural practices, social norms, and material culture distributions.',
         hatchDefault: 'horizontal'
+    },
+    MISCELLANEOUS: {
+        id: 'misc',
+        name: 'Miscellaneous & Media',
+        abbr: 'MSC',
+        description: 'Images, notes, media overlays, and other unclassified artifacts',
+        hatchDefault: 'solid'
+    }
+};
+
+// ============================================================================
+// LEVEL 2: MISC TYPOLOGY
+// ============================================================================
+export const MISC_TYPOLOGY = {
+    IMAGE: {
+        id: 'image',
+        label: 'Image Overlay',
+        abbr: 'IMG',
+        description: 'A raster image overlay used for tracing or reference.',
+        boundaryType: 'hard'
     }
 };
 
@@ -582,6 +602,7 @@ export function getTypologiesForDomain(domainId) {
         case 'religious': return RELIGIOUS_TYPOLOGY;
         case 'geographic': return GEOGRAPHIC_TYPOLOGY;
         case 'cultural': return CULTURAL_TYPOLOGY;
+        case 'misc': return MISC_TYPOLOGY;
         default: return {};
     }
 }

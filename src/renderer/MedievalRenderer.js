@@ -37,7 +37,6 @@ export default class MedievalRenderer {
         this.noisePattern = null;
         this.waterPattern = null;
         this.patternCache = {};
-        this.backgroundImage = null;
 
         this._cachedWaterEntities = [];
         this._cachedWorldEntities = [];
@@ -334,13 +333,16 @@ export default class MedievalRenderer {
                     this.drawPointMarker(ent, isHovered, isSelected, ctx);
                 } else if (ent.type === 'river') {
                     this.drawRiver(ent, isHovered, isSelected, ctx);
+                } else if (ent.type === 'image') {
+                    this.drawImageEntity(ent, isHovered, isSelected, ctx);
                 } else if (ent.type !== 'water') {
                     this.drawPolygon(ent, isHovered, isSelected, ctx);
                 }
             }
 
             // Draw Label (for all types, including water)
-            if (isSelected || isHovered || t.k > 0.5) {
+            // Skip labels for images
+            if (ent.type !== 'image' && (isSelected || isHovered || t.k > 0.5)) {
                 this.drawLabel(ent, isSelected);
             }
 
@@ -537,6 +539,28 @@ export default class MedievalRenderer {
                 ctx.restore();
             }
         });
+    }
+
+    drawImageEntity(ent, isHovered, isSelected, targetCtx = null) {
+        const ctx = targetCtx || this.ctx;
+        if (!ent.currentGeometry || !ent.image) return;
+
+        const bbox = getBoundingBox(ent.currentGeometry);
+
+        ctx.save();
+        ctx.globalAlpha = ent.opacity !== undefined ? ent.opacity : 0.5;
+        ctx.drawImage(ent.image, bbox.x, bbox.y, bbox.w, bbox.h);
+
+        // Selection/Hover outline
+        if (isSelected || isHovered) {
+            ctx.globalAlpha = 1.0;
+            ctx.strokeStyle = isSelected ? '#8a3324' : 'rgba(138, 51, 36, 0.5)';
+            ctx.lineWidth = (isSelected ? 2 : 1) / this.transform.k;
+            ctx.setLineDash([5 / this.transform.k, 5 / this.transform.k]);
+            ctx.strokeRect(bbox.x, bbox.y, bbox.w, bbox.h);
+        }
+
+        ctx.restore();
     }
 
     drawPolygon(ent, isHovered, isSelected, targetCtx = null) {
@@ -984,22 +1008,6 @@ export default class MedievalRenderer {
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.restore();
 
-        // Draw Background Image for Tracing
-        if (this.backgroundImage && this.backgroundImage.img) {
-            ctx.save();
-            ctx.translate(t.x, t.y);
-            ctx.scale(t.k, t.k);
-            ctx.globalAlpha = this.backgroundImage.opacity !== undefined ? this.backgroundImage.opacity : 0.5;
-            ctx.drawImage(
-                this.backgroundImage.img,
-                this.backgroundImage.x,
-                this.backgroundImage.y,
-                this.backgroundImage.width,
-                this.backgroundImage.height
-            );
-            ctx.restore();
-        }
-
         // 0. Optimize Layer Lookup
         const layerMap = layers ? new Map(layers.map(l => [l.id, l])) : new Map();
 
@@ -1056,6 +1064,7 @@ export default class MedievalRenderer {
                  if (!ent.currentGeometry) return;
                  if (this._isPointEntity(ent)) this.drawPointMarker(ent, false, false, ctx);
                  else if (ent.type === 'river') this.drawRiver(ent, false, false, ctx);
+                 else if (ent.type === 'image') this.drawImageEntity(ent, false, false, ctx);
                  else this.drawPolygon(ent, false, false, ctx);
             });
 

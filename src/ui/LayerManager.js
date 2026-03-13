@@ -354,6 +354,7 @@ export default class LayerManager {
         if (ent.type === 'water') return '🌊';
         if (ent.type === 'river') return '〰️';
         if (ent.type === 'polity') return '🏰'; // Or specific icon based on typology
+        if (ent.type === 'image') return '🖼️';
         if (ent.domain === 'linguistic') return '🗣';
         if (ent.domain === 'religious') return '⛩';
         return '📍';

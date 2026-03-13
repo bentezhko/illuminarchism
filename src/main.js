@@ -508,6 +508,9 @@ export default class IlluminarchismApp {
         // HATCH INPUT LISTENER
         this.safeAddListener('info-hatch-input', 'change', () => this.updateSelectedMetadata());
 
+        // OPACITY INPUT LISTENER
+        this.safeAddListener('info-opacity-input', 'input', () => this.updateSelectedMetadata());
+
         // Year INPUT LISTENERS
         this.safeAddListener('info-start-input', 'change', () => this.updateSelectedMetadata());
         this.safeAddListener('info-end-input', 'change', () => this.updateSelectedMetadata());
@@ -581,18 +584,38 @@ export default class IlluminarchismApp {
                         const scale = targetWidth / img.width;
                         const targetHeight = img.height * scale;
 
-                        this.renderer.backgroundImage = {
-                            img: img,
-                            x: centerX - targetWidth / 2,
-                            y: centerY - targetHeight / 2,
-                            width: targetWidth,
-                            height: targetHeight,
-                            opacity: IMAGE_OPACITY
-                        };
+                        const imgX = centerX - targetWidth / 2;
+                        const imgY = centerY - targetHeight / 2;
+
+                        // Create entity geometry (4 corners of the image)
+                        const geometry = [
+                            { x: imgX, y: imgY },
+                            { x: imgX + targetWidth, y: imgY },
+                            { x: imgX + targetWidth, y: imgY + targetHeight },
+                            { x: imgX, y: imgY + targetHeight }
+                        ];
+
+                        const entId = 'image_' + Date.now();
+                        const imageEntity = new HistoricalEntity(entId, file.name, {
+                            domain: 'misc',
+                            typology: 'image',
+                            opacity: IMAGE_OPACITY,
+                            imageSrc: event.target.result,
+                            layerId: this.activeLayerId || 'default'
+                        });
+
+                        imageEntity.addKeyframe(-10000, geometry, true); // Add for entire timeline
+                        imageEntity.validRange = { start: -10000, end: 10000 };
+
+                        this.entities.push(imageEntity);
+                        this.updateEntities();
 
                         this.renderer.invalidateWorldLayer();
+                        if (this.layerManager) this.layerManager.render();
                         this.render();
-                        this.showMessage("Image overlay loaded for tracing.");
+
+                        this.selectEntity(entId, true);
+                        this.showMessage("Image overlay loaded.");
                     };
                     img.onerror = () => {
                         this.showMessage("Failed to load image. Please use a valid PNG or JPEG file.", 5000);
@@ -1011,6 +1034,15 @@ export default class IlluminarchismApp {
                 document.getElementById('info-start-input').value = ent.validRange.start;
                 document.getElementById('info-end-input').value = ent.validRange.end;
 
+                const opacityRow = document.getElementById('info-opacity-row');
+                const opacityInput = document.getElementById('info-opacity-input');
+                if (ent.type === 'image') {
+                    opacityRow.style.display = 'flex';
+                    opacityInput.value = ent.opacity !== undefined ? ent.opacity : 0.5;
+                } else {
+                    opacityRow.style.display = 'none';
+                }
+
                 const parentRow = document.getElementById('info-parent-row');
                 if (ent.parentId) {
                     const parent = this.entitiesById.get(ent.parentId) || { name: 'Unknown' };
@@ -1038,6 +1070,10 @@ export default class IlluminarchismApp {
             ent.name = document.getElementById('info-name-input').value;
             ent.color = document.getElementById('info-color-input').value;
             ent.hatchStyle = document.getElementById('info-hatch-input').value;
+
+            if (ent.type === 'image') {
+                ent.opacity = parseFloat(document.getElementById('info-opacity-input').value);
+            }
 
             const startYear = parseInt(document.getElementById('info-start-input').value, 10);
             const endYear = parseInt(document.getElementById('info-end-input').value, 10);
