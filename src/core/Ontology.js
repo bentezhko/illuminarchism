@@ -557,21 +557,6 @@ export const POINT_RENDERING_ZOOM_THRESHOLD = 1.0;
 export const POINT_RENDERING_TYPOLOGIES = ['city', 'sacred-site'];
 
 // ============================================================================
-// LOOKUP INDEXES (For O(1) Performance)
-// ============================================================================
-
-const DOMAIN_BY_ID = Object.fromEntries(
-    Object.values(DOMAINS).map(d => [d.id, d])
-);
-
-const TYPOLOGIES_BY_DOMAIN = Object.fromEntries(
-    Object.values(DOMAINS).map(d => [
-        d.id,
-        Object.fromEntries(Object.values(getTypologiesForDomain(d.id)).map(t => [t.id, t]))
-    ])
-);
-
-// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -615,6 +600,21 @@ export function getTypology(domainId, typologyId) {
     const domainMap = TYPOLOGIES_BY_DOMAIN[domainId];
     return domainMap ? domainMap[typologyId] : undefined;
 }
+
+// ============================================================================
+// LOOKUP INDEXES (For O(1) Performance)
+// ============================================================================
+
+const DOMAIN_BY_ID = Object.fromEntries(
+    Object.values(DOMAINS).map(d => [d.id, d])
+);
+
+const TYPOLOGIES_BY_DOMAIN = Object.fromEntries(
+    Object.values(DOMAINS).map(d => [
+        d.id,
+        Object.fromEntries(Object.values(getTypologiesForDomain(d.id)).map(t => [t.id, t]))
+    ])
+);
 
 /**
  * Get HRAF OCM code information
