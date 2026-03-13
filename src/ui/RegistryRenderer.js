@@ -98,7 +98,8 @@ export default class RegistryRenderer {
                                     subExDiv.className = 'scroll-item';
                                     subExDiv.style.fontSize = '0.8em';
                                     subExDiv.style.whiteSpace = 'normal';
-                                    subExDiv.innerHTML = `<strong>Ex:</strong> ${subDef.examples}`;
+                                    subExDiv.innerHTML = `<strong>Ex:</strong> `;
+                                    subExDiv.appendChild(document.createTextNode(subDef.examples));
                                     subContent.appendChild(subExDiv);
                                 }
 
