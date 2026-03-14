@@ -161,12 +161,12 @@ export default class HistoricalEntity {
      * Derive legacy category from domain
      */
     _deriveCategoryFromDomain(domain) {
+        if (domain === 'misc') return 'misc';
         const mapping = {
             'political': 'political',
             'linguistic': 'linguistic',
             'religious': 'faith',
-            'geographic': 'geographical',
-            'misc': 'misc'
+            'geographic': 'geographical'
         };
         return mapping[domain] || 'political';
     }
@@ -175,6 +175,7 @@ export default class HistoricalEntity {
      * Derive legacy type from typology
      */
     _deriveTypeFromTypology(typology) {
+        if (typology === 'image') return 'image';
         // Map new typologies to legacy types for rendering compatibility
         const mapping = {
             // Political
@@ -218,9 +219,7 @@ export default class HistoricalEntity {
             'river': 'river',
             'mountain': 'polity',
             'coast': 'river',
-            'island': 'polity',
-            // Misc
-            'image': 'image'
+            'island': 'polity'
         };
         return mapping[typology] || 'polity';
     }

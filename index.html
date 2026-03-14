@@ -109,12 +109,12 @@
                     <span>Type:</span>
                     <span id="info-type" style="font-weight:bold;">Polity</span>
                 </div>
-                <div class="info-row">
+                <div class="info-row" id="info-pigment-row">
                     <span>Pigment:</span>
                     <input type="color" id="info-color-input" title="Change Color">
                 </div>
 
-                <div class="info-row">
+                <div class="info-row" id="info-texture-row">
                     <span>Texture:</span>
                     <select id="info-hatch-input">
                         <option value="solid">Solid</option>
@@ -290,7 +290,7 @@
                     <input type="number" id="ctx-end-year" class="ctx-input-year" title="End Year">
                 </div>
             </div>
-            <div class="menu-row" style="justify-content: center; gap: 10px;">
+            <div class="menu-row" id="ctx-style-row" style="justify-content: center; gap: 10px;">
                 <input type="color" id="ctx-color-input" title="Entity Color">
                 <select id="ctx-hatch-input" class="ctx-input" title="Texture Style" style="width: auto;">
                     <option value="solid">Solid</option>

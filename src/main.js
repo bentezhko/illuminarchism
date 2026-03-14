@@ -801,6 +801,12 @@ export default class IlluminarchismApp {
         if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : 2025;
         if (this.ctxColorInput) this.ctxColorInput.value = ent.color || '#000000';
         if (this.ctxHatchInput) this.ctxHatchInput.value = ent.hatchStyle || 'solid';
+
+        const ctxStyleRow = document.getElementById('ctx-style-row');
+        if (ctxStyleRow) {
+            ctxStyleRow.style.display = ent.type === 'image' ? 'none' : 'flex';
+        }
+
         this.ctxMenu.style.display = 'block';
     }
 
@@ -1007,7 +1013,7 @@ export default class IlluminarchismApp {
         this.selectedEntityId = id;
         const ent = this.entitiesById.get(id);
         if (ent) {
-            if (this.ontologyTaxonomy[ent.domain]) {
+            if (ent.type !== 'image' && this.ontologyTaxonomy[ent.domain]) {
                 this.drawDomain = ent.domain;
                 const domainData = this.ontologyTaxonomy[ent.domain];
                 const typeExists = domainData.types.some(t => t.value === ent.typology);
@@ -1036,11 +1042,21 @@ export default class IlluminarchismApp {
 
                 const opacityRow = document.getElementById('info-opacity-row');
                 const opacityInput = document.getElementById('info-opacity-input');
+                const pigmentRow = document.getElementById('info-pigment-row');
+                const textureRow = document.getElementById('info-texture-row');
+                const entityDial = document.getElementById('entity-dial');
+
                 if (ent.type === 'image') {
                     opacityRow.style.display = 'flex';
                     opacityInput.value = ent.opacity !== undefined ? ent.opacity : 0.5;
+                    if (pigmentRow) pigmentRow.style.display = 'none';
+                    if (textureRow) textureRow.style.display = 'none';
+                    if (entityDial) entityDial.style.display = 'none';
                 } else {
                     opacityRow.style.display = 'none';
+                    if (pigmentRow) pigmentRow.style.display = 'flex';
+                    if (textureRow) textureRow.style.display = 'flex';
+                    if (entityDial) entityDial.style.display = 'flex';
                 }
 
                 const parentRow = document.getElementById('info-parent-row');
