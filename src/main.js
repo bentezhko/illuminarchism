@@ -861,7 +861,7 @@ export default class IlluminarchismApp {
             document.body.classList.remove('view-map');
             document.body.classList.add('view-timeline');
 
-            const mapTools = ['draw', 'vertex-edit', 'transform'];
+            const mapTools = ['draw', 'vertex-edit', 'warp', 'transform'];
             if (mapTools.includes(this.activeTool)) {
                 this.toolbar.selectTool('pan');
             }
@@ -949,7 +949,7 @@ export default class IlluminarchismApp {
         if (name === 'pan') c.style.cursor = 'grab';
         else if (name === 'draw') c.style.cursor = 'crosshair';
         else if (name === 'erase') c.style.cursor = 'not-allowed';
-        else if (name === 'vertex-edit') c.style.cursor = 'crosshair';
+        else if (name === 'vertex-edit' || name === 'warp') c.style.cursor = 'crosshair';
         else if (name === 'transform') c.style.cursor = 'crosshair';
         else if (name === 'link') c.style.cursor = 'crosshair';
 
@@ -1003,6 +1003,13 @@ export default class IlluminarchismApp {
     deselect() {
         this.selectedEntityId = null;
         document.getElementById('info-panel').style.display = 'none';
+
+        const btnToolVertex = document.getElementById('btn-tool-vertex');
+        const btnToolWarp = document.getElementById('btn-tool-warp');
+        if (btnToolVertex) btnToolVertex.style.display = 'inline-block';
+        if (btnToolWarp) btnToolWarp.style.display = 'none';
+        if (this.activeTool === 'warp') this.setActiveTool('pan');
+
         this.hideContextMenu();
         this.renderTimelineNotches();
         if (this.activeTool === 'draw') this.setActiveTool('draw');
@@ -1046,17 +1053,34 @@ export default class IlluminarchismApp {
                 const textureRow = document.getElementById('info-texture-row');
                 const entityDial = document.getElementById('entity-dial');
 
+                const btnToolVertex = document.getElementById('btn-tool-vertex');
+                const btnToolWarp = document.getElementById('btn-tool-warp');
+
                 if (ent.type === 'image') {
                     opacityRow.style.display = 'flex';
                     opacityInput.value = ent.opacity !== undefined ? ent.opacity : 0.5;
                     if (pigmentRow) pigmentRow.style.display = 'none';
                     if (textureRow) textureRow.style.display = 'none';
                     if (entityDial) entityDial.style.display = 'none';
+
+                    if (btnToolVertex) btnToolVertex.style.display = 'none';
+                    if (btnToolWarp) btnToolWarp.style.display = 'inline-block';
+
+                    if (this.activeTool === 'vertex-edit') {
+                        this.setActiveTool('warp');
+                    }
                 } else {
                     opacityRow.style.display = 'none';
                     if (pigmentRow) pigmentRow.style.display = 'flex';
                     if (textureRow) textureRow.style.display = 'flex';
                     if (entityDial) entityDial.style.display = 'flex';
+
+                    if (btnToolVertex) btnToolVertex.style.display = 'inline-block';
+                    if (btnToolWarp) btnToolWarp.style.display = 'none';
+
+                    if (this.activeTool === 'warp') {
+                        this.setActiveTool('vertex-edit');
+                    }
                 }
 
                 const parentRow = document.getElementById('info-parent-row');
@@ -1240,7 +1264,7 @@ export default class IlluminarchismApp {
                     if (!this.selectedEntityId) {
                         this.renderer.canvas.style.cursor = fid ? 'pointer' : 'crosshair';
                     }
-                } else if (this.activeTool === 'vertex-edit') {
+                } else if (this.activeTool === 'vertex-edit' || this.activeTool === 'warp') {
                     if (!this.selectedEntityId) {
                         this.renderer.canvas.style.cursor = fid ? 'cell' : 'crosshair';
                     }
