@@ -71,6 +71,21 @@ export default class AtlasLoader {
         let maxId = 0;
         json.entities.forEach(data => {
             const ent = HistoricalEntity.fromJSON(data);
+
+            // Asynchronously load image if it exists
+            if (ent.imageSrc) {
+                const img = new Image();
+                img.onload = () => {
+                    ent.image = img;
+                    if (this.app.renderer) this.app.renderer.invalidateWorldLayer();
+                    this.app.render();
+                };
+                img.onerror = () => {
+                    console.warn(`Failed to load image for entity ${ent.id}`);
+                };
+                img.src = ent.imageSrc;
+            }
+
             this.app.entities.push(ent);
 
             // Track IDs to ensure uniqueness/counter

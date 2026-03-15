@@ -137,12 +137,8 @@ export default class HistoricalEntity {
 
         // Image-specific properties
         this.opacity = config.opacity !== undefined ? config.opacity : 0.5;
-        this.image = null;
-        if (config.imageSrc) {
-            const img = new Image();
-            img.src = config.imageSrc;
-            this.image = img;
-        }
+        this.image = config.image || null;
+        this.imageSrc = config.imageSrc || null;
 
         // Layer ID (defaults to 'default')
         this.layerId = config.layerId || 'default';
@@ -500,7 +496,7 @@ export default class HistoricalEntity {
 
             // Image data
             opacity: this.opacity,
-            imageSrc: this.image ? this.image.src : null
+            imageSrc: this.imageSrc
         };
     }
 

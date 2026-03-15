@@ -80,6 +80,9 @@ export default class IlluminarchismApp {
         this.lastRightClickUpTime = 0;
         this.rightClickDestructTimeout = null;
 
+        // Generate robust IDs for new entities
+        this.nextEntityId = 1;
+
         // Initial setup for toolbar sliding based on view
         document.body.classList.add('view-map');
 
@@ -217,6 +220,10 @@ export default class IlluminarchismApp {
         } else {
             this.isSelectionAnimating = false;
         }
+    }
+
+    generateEntityId(prefix = 'ent') {
+        return `${prefix}_${Date.now()}_${this.nextEntityId++}`;
     }
 
     // --- TRANSFORM LOGIC ---
@@ -595,12 +602,13 @@ export default class IlluminarchismApp {
                             { x: imgX, y: imgY + targetHeight }
                         ];
 
-                        const entId = 'image_' + Date.now();
+                        const entId = this.generateEntityId('image');
                         const imageEntity = new HistoricalEntity(entId, file.name, {
                             domain: 'misc',
                             typology: 'image',
                             opacity: IMAGE_OPACITY,
                             imageSrc: event.target.result,
+                            image: img,
                             layerId: this.activeLayerId || 'default'
                         });
 

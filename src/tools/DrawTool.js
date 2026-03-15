@@ -33,7 +33,7 @@ export default class DrawTool {
             const ent = this.app.entitiesById.get(this.app.selectedEntityId);
             if (ent) {
                 if (isAnnex) {
-                    const id = 'vassal_' + Date.now();
+                    const id = this.app.generateEntityId('vassal');
                     // Create vassal using new ontology config format
                     const newEnt = new HistoricalEntity(id, ent.name + " (Sub)", {
                         domain: this.app.drawDomain,
@@ -57,7 +57,7 @@ export default class DrawTool {
                 }
             }
         } else {
-            const id = 'ent_' + Date.now();
+            const id = this.app.generateEntityId('ent');
             const colors = ['#8a3324', '#264e86', '#c5a059', '#3a5f3a', '#5c3c92'];
             const color = colors[Math.floor(Math.random() * colors.length)];
 
