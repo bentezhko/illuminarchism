@@ -135,6 +135,15 @@ export default class HistoricalEntity {
         this.description = config.description || null;
         this.visible = config.visible !== undefined ? config.visible : true;
 
+        // Image-specific properties
+        this.opacity = config.opacity !== undefined ? config.opacity : 0.5;
+        this.image = null;
+        if (config.imageSrc) {
+            const img = new Image();
+            img.src = config.imageSrc;
+            this.image = img;
+        }
+
         // Layer ID (defaults to 'default')
         this.layerId = config.layerId || 'default';
     }
@@ -152,6 +161,7 @@ export default class HistoricalEntity {
      * Derive legacy category from domain
      */
     _deriveCategoryFromDomain(domain) {
+        if (domain === 'misc') return 'misc';
         const mapping = {
             'political': 'political',
             'linguistic': 'linguistic',
@@ -165,6 +175,7 @@ export default class HistoricalEntity {
      * Derive legacy type from typology
      */
     _deriveTypeFromTypology(typology) {
+        if (typology === 'image') return 'image';
         // Map new typologies to legacy types for rendering compatibility
         const mapping = {
             // Political
@@ -485,7 +496,11 @@ export default class HistoricalEntity {
             // Metadata
             description: this.description,
             visible: this.visible,
-            layerId: this.layerId
+            layerId: this.layerId,
+
+            // Image data
+            opacity: this.opacity,
+            imageSrc: this.image ? this.image.src : null
         };
     }
 
@@ -513,7 +528,9 @@ export default class HistoricalEntity {
                 externalRefs: data.externalRefs,
                 description: data.description,
                 visible: data.visible,
-                layerId: data.layerId
+                layerId: data.layerId,
+                opacity: data.opacity,
+                imageSrc: data.imageSrc
             });
 
             // Restore timeline and valid range

@@ -76,7 +76,8 @@
             <button class="tool-btn active" data-tool="pan" title="Navigate (Left: Pan | Right: Seek)">⌖</button>
             <div style="border-top: 1px solid var(--ink-faded); width: 100%; margin: 0.2rem 0;"></div>
             <button class="tool-btn tool-map" data-tool="draw" title="Quill (Draw)">✎</button>
-            <button class="tool-btn tool-map" data-tool="vertex-edit" title="Edit Points">⬡</button>
+            <button class="tool-btn tool-map" data-tool="vertex-edit" id="btn-tool-vertex" title="Edit Points">⬡</button>
+            <button class="tool-btn tool-map" data-tool="warp" id="btn-tool-warp" title="Warp Image" style="display: none;">⧉</button>
             <button class="tool-btn tool-map" data-tool="transform" title="Transform (Move/Scale)">⇱</button>
             <button class="tool-btn" data-tool="erase" title="Scrape (Erase)">⌫</button>
             <button class="tool-btn tool-timeline" data-tool="link" title="Link Entities (L)">🔗</button>
@@ -109,12 +110,12 @@
                     <span>Type:</span>
                     <span id="info-type" style="font-weight:bold;">Polity</span>
                 </div>
-                <div class="info-row">
+                <div class="info-row" id="info-pigment-row">
                     <span>Pigment:</span>
                     <input type="color" id="info-color-input" title="Change Color">
                 </div>
 
-                <div class="info-row">
+                <div class="info-row" id="info-texture-row">
                     <span>Texture:</span>
                     <select id="info-hatch-input">
                         <option value="solid">Solid</option>
@@ -127,6 +128,11 @@
                         <option value="stipple">Stipple (Dots)</option>
                         <option value="waves">Undy (Waves)</option>
                     </select>
+                </div>
+
+                <div class="info-row" id="info-opacity-row" style="display: none;">
+                    <span>Opacity:</span>
+                    <input type="range" id="info-opacity-input" min="0.1" max="1.0" step="0.1" value="0.5" style="width: 100px;">
                 </div>
 
                 <div class="info-row">
@@ -285,7 +291,7 @@
                     <input type="number" id="ctx-end-year" class="ctx-input-year" title="End Year">
                 </div>
             </div>
-            <div class="menu-row" style="justify-content: center; gap: 10px;">
+            <div class="menu-row" id="ctx-style-row" style="justify-content: center; gap: 10px;">
                 <input type="color" id="ctx-color-input" title="Entity Color">
                 <select id="ctx-hatch-input" class="ctx-input" title="Texture Style" style="width: auto;">
                     <option value="solid">Solid</option>

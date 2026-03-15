@@ -508,6 +508,9 @@ export default class IlluminarchismApp {
         // HATCH INPUT LISTENER
         this.safeAddListener('info-hatch-input', 'change', () => this.updateSelectedMetadata());
 
+        // OPACITY INPUT LISTENER
+        this.safeAddListener('info-opacity-input', 'input', () => this.updateSelectedMetadata());
+
         // Year INPUT LISTENERS
         this.safeAddListener('info-start-input', 'change', () => this.updateSelectedMetadata());
         this.safeAddListener('info-end-input', 'change', () => this.updateSelectedMetadata());
@@ -581,18 +584,38 @@ export default class IlluminarchismApp {
                         const scale = targetWidth / img.width;
                         const targetHeight = img.height * scale;
 
-                        this.renderer.backgroundImage = {
-                            img: img,
-                            x: centerX - targetWidth / 2,
-                            y: centerY - targetHeight / 2,
-                            width: targetWidth,
-                            height: targetHeight,
-                            opacity: IMAGE_OPACITY
-                        };
+                        const imgX = centerX - targetWidth / 2;
+                        const imgY = centerY - targetHeight / 2;
+
+                        // Create entity geometry (4 corners of the image)
+                        const geometry = [
+                            { x: imgX, y: imgY },
+                            { x: imgX + targetWidth, y: imgY },
+                            { x: imgX + targetWidth, y: imgY + targetHeight },
+                            { x: imgX, y: imgY + targetHeight }
+                        ];
+
+                        const entId = 'image_' + Date.now();
+                        const imageEntity = new HistoricalEntity(entId, file.name, {
+                            domain: 'misc',
+                            typology: 'image',
+                            opacity: IMAGE_OPACITY,
+                            imageSrc: event.target.result,
+                            layerId: this.activeLayerId || 'default'
+                        });
+
+                        imageEntity.addKeyframe(-10000, geometry, true); // Add for entire timeline
+                        imageEntity.validRange = { start: -10000, end: 10000 };
+
+                        this.entities.push(imageEntity);
+                        this.updateEntities();
 
                         this.renderer.invalidateWorldLayer();
+                        if (this.layerManager) this.layerManager.render();
                         this.render();
-                        this.showMessage("Image overlay loaded for tracing.");
+
+                        this.selectEntity(entId, true);
+                        this.showMessage("Image overlay loaded.");
                     };
                     img.onerror = () => {
                         this.showMessage("Failed to load image. Please use a valid PNG or JPEG file.", 5000);
@@ -778,6 +801,12 @@ export default class IlluminarchismApp {
         if (this.ctxEndYear) this.ctxEndYear.value = Number.isFinite(end) ? end : 2025;
         if (this.ctxColorInput) this.ctxColorInput.value = ent.color || '#000000';
         if (this.ctxHatchInput) this.ctxHatchInput.value = ent.hatchStyle || 'solid';
+
+        const ctxStyleRow = document.getElementById('ctx-style-row');
+        if (ctxStyleRow) {
+            ctxStyleRow.style.display = ent.type === 'image' ? 'none' : 'flex';
+        }
+
         this.ctxMenu.style.display = 'block';
     }
 
@@ -832,7 +861,7 @@ export default class IlluminarchismApp {
             document.body.classList.remove('view-map');
             document.body.classList.add('view-timeline');
 
-            const mapTools = ['draw', 'vertex-edit', 'transform'];
+            const mapTools = ['draw', 'vertex-edit', 'warp', 'transform'];
             if (mapTools.includes(this.activeTool)) {
                 this.toolbar.selectTool('pan');
             }
@@ -920,7 +949,7 @@ export default class IlluminarchismApp {
         if (name === 'pan') c.style.cursor = 'grab';
         else if (name === 'draw') c.style.cursor = 'crosshair';
         else if (name === 'erase') c.style.cursor = 'not-allowed';
-        else if (name === 'vertex-edit') c.style.cursor = 'crosshair';
+        else if (name === 'vertex-edit' || name === 'warp') c.style.cursor = 'crosshair';
         else if (name === 'transform') c.style.cursor = 'crosshair';
         else if (name === 'link') c.style.cursor = 'crosshair';
 
@@ -974,6 +1003,13 @@ export default class IlluminarchismApp {
     deselect() {
         this.selectedEntityId = null;
         document.getElementById('info-panel').style.display = 'none';
+
+        const btnToolVertex = document.getElementById('btn-tool-vertex');
+        const btnToolWarp = document.getElementById('btn-tool-warp');
+        if (btnToolVertex) btnToolVertex.style.display = 'inline-block';
+        if (btnToolWarp) btnToolWarp.style.display = 'none';
+        if (this.activeTool === 'warp') this.setActiveTool('pan');
+
         this.hideContextMenu();
         this.renderTimelineNotches();
         if (this.activeTool === 'draw') this.setActiveTool('draw');
@@ -984,7 +1020,7 @@ export default class IlluminarchismApp {
         this.selectedEntityId = id;
         const ent = this.entitiesById.get(id);
         if (ent) {
-            if (this.ontologyTaxonomy[ent.domain]) {
+            if (ent.type !== 'image' && this.ontologyTaxonomy[ent.domain]) {
                 this.drawDomain = ent.domain;
                 const domainData = this.ontologyTaxonomy[ent.domain];
                 const typeExists = domainData.types.some(t => t.value === ent.typology);
@@ -1010,6 +1046,42 @@ export default class IlluminarchismApp {
                 document.getElementById('info-hatch-input').value = ent.hatchStyle;
                 document.getElementById('info-start-input').value = ent.validRange.start;
                 document.getElementById('info-end-input').value = ent.validRange.end;
+
+                const opacityRow = document.getElementById('info-opacity-row');
+                const opacityInput = document.getElementById('info-opacity-input');
+                const pigmentRow = document.getElementById('info-pigment-row');
+                const textureRow = document.getElementById('info-texture-row');
+                const entityDial = document.getElementById('entity-dial');
+
+                const btnToolVertex = document.getElementById('btn-tool-vertex');
+                const btnToolWarp = document.getElementById('btn-tool-warp');
+
+                if (ent.type === 'image') {
+                    opacityRow.style.display = 'flex';
+                    opacityInput.value = ent.opacity !== undefined ? ent.opacity : 0.5;
+                    if (pigmentRow) pigmentRow.style.display = 'none';
+                    if (textureRow) textureRow.style.display = 'none';
+                    if (entityDial) entityDial.style.display = 'none';
+
+                    if (btnToolVertex) btnToolVertex.style.display = 'none';
+                    if (btnToolWarp) btnToolWarp.style.display = 'inline-block';
+
+                    if (this.activeTool === 'vertex-edit') {
+                        this.setActiveTool('warp');
+                    }
+                } else {
+                    opacityRow.style.display = 'none';
+                    if (pigmentRow) pigmentRow.style.display = 'flex';
+                    if (textureRow) textureRow.style.display = 'flex';
+                    if (entityDial) entityDial.style.display = 'flex';
+
+                    if (btnToolVertex) btnToolVertex.style.display = 'inline-block';
+                    if (btnToolWarp) btnToolWarp.style.display = 'none';
+
+                    if (this.activeTool === 'warp') {
+                        this.setActiveTool('vertex-edit');
+                    }
+                }
 
                 const parentRow = document.getElementById('info-parent-row');
                 if (ent.parentId) {
@@ -1038,6 +1110,10 @@ export default class IlluminarchismApp {
             ent.name = document.getElementById('info-name-input').value;
             ent.color = document.getElementById('info-color-input').value;
             ent.hatchStyle = document.getElementById('info-hatch-input').value;
+
+            if (ent.type === 'image') {
+                ent.opacity = parseFloat(document.getElementById('info-opacity-input').value);
+            }
 
             const startYear = parseInt(document.getElementById('info-start-input').value, 10);
             const endYear = parseInt(document.getElementById('info-end-input').value, 10);
@@ -1188,7 +1264,7 @@ export default class IlluminarchismApp {
                     if (!this.selectedEntityId) {
                         this.renderer.canvas.style.cursor = fid ? 'pointer' : 'crosshair';
                     }
-                } else if (this.activeTool === 'vertex-edit') {
+                } else if (this.activeTool === 'vertex-edit' || this.activeTool === 'warp') {
                     if (!this.selectedEntityId) {
                         this.renderer.canvas.style.cursor = fid ? 'cell' : 'crosshair';
                     }
