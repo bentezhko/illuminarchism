@@ -34,13 +34,19 @@ float noise(vec2 p) {
 
 void main() {
     // Calculate visibility based on temporal range
-    float yearDiff = abs(u_currentYear - a_validStart);
-    v_visibility = smoothstep(100.0, 0.0, yearDiff);
+    float vis = 1.0;
+    float fadeMargin = 100.0;
+    if (u_currentYear < a_validStart) {
+        vis = smoothstep(a_validStart - fadeMargin, a_validStart, u_currentYear);
+    } else if (u_currentYear > a_validEnd) {
+        vis = smoothstep(a_validEnd + fadeMargin, a_validEnd, u_currentYear);
+    }
+    v_visibility = vis;
     
     // Check if segment is active (optimized: discard inactive segments)
     // Use [start, end) interval for all segments except the very last one
     // But since end is usually > start, we can just use strict inequality for end
-    if (u_currentYear < a_yearStart || u_currentYear >= a_yearEnd) {
+    if (u_currentYear < a_yearStart || u_currentYear >= a_yearEnd || vis < 0.01) {
         gl_Position = vec4(0.0, 0.0, 2.0, 1.0); // Move outside clip space
         return;
     }

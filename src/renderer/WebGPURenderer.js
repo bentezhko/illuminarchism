@@ -6,6 +6,9 @@ import {
 } from '../core/math.js';
 import { WGSL_SHADER } from './shaders/MedievalWGSL.js';
 
+const DEFAULT_VALID_START_YEAR = -10000;
+const DEFAULT_VALID_END_YEAR = 10000;
+
 export default class WebGPURenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -89,14 +92,6 @@ export default class WebGPURenderer {
             code: WGSL_SHADER,
         });
 
-        shaderModule.getCompilationInfo().then((info) => {
-            if (info.messages.length > 0) {
-                console.error("WGSL Compilation Info:", info.messages);
-            }
-        });
-
-        this.device.pushErrorScope('validation');
-
         // Geometry Pipeline
         const vertexBuffers = [{
             arrayStride: 44, // 11 floats * 4 bytes
@@ -123,6 +118,16 @@ export default class WebGPURenderer {
                 entryPoint: 'fs_main',
                 targets: [{
                     format: presentationFormat,
+                    blend: {
+                        color: {
+                            srcFactor: 'one',
+                            dstFactor: 'one-minus-src-alpha',
+                        },
+                        alpha: {
+                            srcFactor: 'one',
+                            dstFactor: 'one-minus-src-alpha',
+                        },
+                    },
                 }],
             },
             primitive: {
@@ -155,12 +160,6 @@ export default class WebGPURenderer {
             entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }]
         });
 
-        this.device.popErrorScope().then((error) => {
-            if (error) {
-                console.error("WebGPU Pipeline Validation Error:", error.message);
-            }
-        });
-
         this.initialized = true;
         this.resize();
         this.updateThemeColors();
@@ -174,12 +173,9 @@ export default class WebGPURenderer {
         const displayWidth = this.canvas.clientWidth;
         const displayHeight = this.canvas.clientHeight;
 
-        console.log("WebGPU resize: w=", displayWidth, "h=", displayHeight);
-
         if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
             this.canvas.width = displayWidth;
             this.canvas.height = displayHeight;
-
         }
     }
 
@@ -269,8 +265,8 @@ export default class WebGPURenderer {
                              entity.typology === 'coast';
             const isClosed = !isLineType;
             const color = this.hexToRgb(entity.color);
-            const validStart = (entity.validRange && entity.validRange.start !== undefined) ? entity.validRange.start : -10000;
-            const validEnd = (entity.validRange && entity.validRange.end !== undefined) ? entity.validRange.end : 10000;
+            const validStart = (entity.validRange && entity.validRange.start !== undefined) ? entity.validRange.start : DEFAULT_VALID_START_YEAR;
+            const validEnd = (entity.validRange && entity.validRange.end !== undefined) ? entity.validRange.end : DEFAULT_VALID_END_YEAR;
 
             const t0 = entity.timeline[0];
             if (!t0.geometry) continue;
@@ -401,9 +397,6 @@ export default class WebGPURenderer {
         // padding
         uniformData.set(inkColorRgb, 24);    // 24-26
 
-        console.log("Uniform data matrix:", Array.from(matrix));
-        console.log("Uniform data flags:", currentYear, this.settings.wobble, time, this.settings.inkBleed, this.settings.paperRoughness);
-
         this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
         const commandEncoder = this.device.createCommandEncoder();
@@ -428,28 +421,15 @@ export default class WebGPURenderer {
         passEncoder.draw(6, 1, 0, 0);
 
         // 2. Draw Geometry
-        console.log("WebGPU draw: vertexCount=", vertexCount, "entities=", entities.length);
         if (vertexCount > 0 && this.geometryBuffer) {
-            this.device.pushErrorScope('validation');
             passEncoder.setPipeline(this.renderPipeline);
             passEncoder.setBindGroup(0, this.geometryBindGroup);
             passEncoder.setVertexBuffer(0, this.geometryBuffer);
             passEncoder.draw(vertexCount, 1, 0, 0);
-
-            // Note: popErrorScope cannot be called during a render pass
-            // We must do it after end() and submit()
         }
 
         passEncoder.end();
         this.device.queue.submit([commandEncoder.finish()]);
-
-        if (vertexCount > 0 && this.geometryBuffer) {
-            this.device.popErrorScope().then((error) => {
-                if (error) {
-                    console.error("WebGPU Draw Validation Error:", error.message);
-                }
-            });
-        }
     }
 
     pan(dx, dy) {

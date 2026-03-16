@@ -105,7 +105,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var finalColor = mix(PARCHMENT, inkColor, in.visibility * 0.4);
     finalColor = finalColor + vec3<f32>(bleed * 0.05);
 
-    return vec4<f32>(finalColor, in.visibility);
+    // Output premultiplied alpha
+    return vec4<f32>(finalColor * in.visibility, in.visibility);
 }
 
 // ------------------------------------
