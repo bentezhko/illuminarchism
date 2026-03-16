@@ -7,10 +7,8 @@ struct Uniforms {
     inkBleed: f32,
     paperRoughness: f32,
     padding1: vec3<f32>,
-    parchmentColor: vec3<f32>,
-    padding2: f32,
-    inkColor: vec3<f32>,
-    padding3: f32,
+    parchmentColor: vec4<f32>,
+    inkColor: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -37,8 +35,9 @@ struct VertexInput {
     @location(1) nextPosition: vec2<f32>,
     @location(2) color: vec3<f32>,
     @location(3) validStart: f32,
-    @location(4) yearStart: f32,
-    @location(5) yearEnd: f32,
+    @location(4) validEnd: f32,
+    @location(5) yearStart: f32,
+    @location(6) yearEnd: f32,
 };
 
 struct VertexOutput {
@@ -52,10 +51,20 @@ struct VertexOutput {
 fn vs_main(input: VertexInput) -> VertexOutput {
     var out: VertexOutput;
 
-    let yearDiff = abs(uniforms.currentYear - input.validStart);
-    out.visibility = smoothstep(100.0, 0.0, yearDiff);
+    // Smooth fade in and out based on validRange
+    let cy = uniforms.currentYear;
+    let fadeMargin = 100.0;
 
-    if (uniforms.currentYear < input.yearStart || uniforms.currentYear >= input.yearEnd) {
+    var vis = 1.0;
+    if (cy < input.validStart) {
+        vis = smoothstep(input.validStart - fadeMargin, input.validStart, cy);
+    } else if (cy > input.validEnd) {
+        vis = smoothstep(input.validEnd + fadeMargin, input.validEnd, cy);
+    }
+    out.visibility = vis;
+
+    if (uniforms.currentYear < input.yearStart || uniforms.currentYear >= input.yearEnd || vis < 0.01) {
+        // Discarding geometry outside of the current valid frame timeline
         out.clip_position = vec4<f32>(0.0, 0.0, 2.0, 1.0);
         return out;
     }
@@ -88,8 +97,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let PARCHMENT = uniforms.parchmentColor;
-    let INK_BASE = uniforms.inkColor;
+    let PARCHMENT = uniforms.parchmentColor.rgb;
+    let INK_BASE = uniforms.inkColor.rgb;
 
     let inkColor = in.color * INK_BASE;
     let bleed = noise(in.texCoord.x * 10.0, in.texCoord.y * 10.0) * uniforms.inkBleed * 0.1;
@@ -131,7 +140,7 @@ fn vs_parchment(@builtin(vertex_index) vertex_index: u32) -> ParchmentOutput {
 
 @fragment
 fn fs_parchment(in: ParchmentOutput) -> @location(0) vec4<f32> {
-    let parchment = uniforms.parchmentColor;
+    let parchment = uniforms.parchmentColor.rgb;
     let uv = in.uv * 1000.0;
 
     var grain = noise(uv.x * 1.0, uv.y * 1.0) * 0.5;
