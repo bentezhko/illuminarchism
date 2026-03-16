@@ -6,7 +6,6 @@ struct Uniforms {
     time: f32,
     inkBleed: f32,
     paperRoughness: f32,
-    padding1: vec3<f32>,
     parchmentColor: vec4<f32>,
     inkColor: vec4<f32>,
 };

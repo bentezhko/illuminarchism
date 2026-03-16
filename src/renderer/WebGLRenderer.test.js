@@ -25,8 +25,9 @@ const mockGl = {
             'a_nextPosition': 1,
             'a_color': 2,
             'a_validStart': 3,
-            'a_yearStart': 4,
-            'a_yearEnd': 5
+            'a_validEnd': 4,
+            'a_yearStart': 5,
+            'a_yearEnd': 6
         };
         return map[name] ?? -1;
     }),
@@ -149,35 +150,35 @@ describe('WebGLRenderer Performance', () => {
 
         // Check vertexAttribPointer calls
         // Signature: (index, size, type, normalized, stride, offset)
-        // Stride should be 40 (10 floats * 4 bytes)
+        // Stride should be 44 (11 floats * 4 bytes)
 
         const calls = mockGl.vertexAttribPointer.mock.calls;
 
-        // Verify we have calls for all 6 attributes
-        expect(calls.length).toBeGreaterThanOrEqual(6);
+        // Verify we have calls for all 7 attributes
+        expect(calls.length).toBeGreaterThanOrEqual(7);
 
-        // Check stride for main attributes (indices 0-5 from our mock)
-        // We only care about the calls related to the main program (stride 40)
+        // Check stride for main attributes (indices 0-6 from our mock)
+        // We only care about the calls related to the main program (stride 44)
         // Parchment program uses stride 0.
 
-        const mainProgramCalls = calls.filter(c => c[4] === 40);
-        // Expect at least 6 calls (one per attribute)
+        const mainProgramCalls = calls.filter(c => c[4] === 44);
+        // Expect at least 7 calls (one per attribute)
         // Note: It might be called multiple times per frame if we render multiple times
-        expect(mainProgramCalls.length).toBeGreaterThanOrEqual(6);
+        expect(mainProgramCalls.length).toBeGreaterThanOrEqual(7);
 
         // Verify specific attributes
-        // index 4 is a_yearStart (mocked above)
-        // index 5 is a_yearEnd (mocked above)
+        // index 5 is a_yearStart (mocked above)
+        // index 6 is a_yearEnd (mocked above)
 
-        const yearStartCall = mainProgramCalls.find(c => c[0] === 4);
+        const yearStartCall = mainProgramCalls.find(c => c[0] === 5);
         expect(yearStartCall).toBeDefined();
         expect(yearStartCall[1]).toBe(1); // size 1
-        expect(yearStartCall[5]).toBe(32); // offset 32
+        expect(yearStartCall[5]).toBe(36); // offset 36
 
-        const yearEndCall = mainProgramCalls.find(c => c[0] === 5);
+        const yearEndCall = mainProgramCalls.find(c => c[0] === 6);
         expect(yearEndCall).toBeDefined();
         expect(yearEndCall[1]).toBe(1); // size 1
-        expect(yearEndCall[5]).toBe(36); // offset 36
+        expect(yearEndCall[5]).toBe(40); // offset 40
     });
 
     it('should upload correct data structure to buffer', () => {
@@ -200,8 +201,8 @@ describe('WebGLRenderer Performance', () => {
 
         expect(data).toBeInstanceOf(Float32Array);
 
-        // Check if data length is multiple of 10
-        expect(data.length % 10).toBe(0);
+        // Check if data length is multiple of 11
+        expect(data.length % 11).toBe(0);
 
         // Inspect first vertex to see if yearStart/yearEnd are populated
         // The first segment is "before first keyframe" (static T0)
@@ -209,9 +210,9 @@ describe('WebGLRenderer Performance', () => {
 
         let foundT0Segment = false;
 
-        for (let i = 0; i < data.length; i += 10) {
-            const yStart = data[i+8];
-            const yEnd = data[i+9];
+        for (let i = 0; i < data.length; i += 11) {
+            const yStart = data[i+9];
+            const yEnd = data[i+10];
 
             // Check for roughly -1e9 (float precision might vary slightly)
             if (yStart < -1e8 && yEnd === 1000) {

@@ -242,23 +242,24 @@ export default class WebGLRenderer {
             const isClosed = !isLineType;
             const color = this.hexToRgb(entity.color);
             const validStart = entity.validRange.start;
+            const validEnd = entity.validRange.end !== undefined ? entity.validRange.end : 10000;
 
             // 1. Before first keyframe: Static geometry of T0
             // Range: [YEAR_MIN, T0.year]
             const t0 = entity.timeline[0];
-            this.addSegment(vertices, t0.geometry, t0.geometry, color, validStart, YEAR_MIN, t0.year, isClosed);
+            this.addSegment(vertices, t0.geometry, t0.geometry, color, validStart, validEnd, YEAR_MIN, t0.year, isClosed);
 
             // 2. Between keyframes: Interpolated geometry
             for (let i = 0; i < entity.timeline.length - 1; i++) {
                 const cur = entity.timeline[i];
                 const next = entity.timeline[i+1];
-                this.addSegment(vertices, cur.geometry, next.geometry, color, validStart, cur.year, next.year, isClosed);
+                this.addSegment(vertices, cur.geometry, next.geometry, color, validStart, validEnd, cur.year, next.year, isClosed);
             }
 
             // 3. After last keyframe: Static geometry of Tn
             // Range: [Tn.year, YEAR_MAX]
             const tn = entity.timeline[entity.timeline.length - 1];
-            this.addSegment(vertices, tn.geometry, tn.geometry, color, validStart, tn.year, YEAR_MAX, isClosed);
+            this.addSegment(vertices, tn.geometry, tn.geometry, color, validStart, validEnd, tn.year, YEAR_MAX, isClosed);
         }
         
         // Upload to GPU
@@ -272,12 +273,12 @@ export default class WebGLRenderer {
         
         // Update cache state
         this.lastRenderState.entities = entities;
-        this.lastRenderState.vertexCount = vertices.length / 10; // 10 floats per vertex
+        this.lastRenderState.vertexCount = vertices.length / 11; // 11 floats per vertex
 
         return this.lastRenderState.vertexCount;
     }
 
-    addSegment(vertices, startGeoOriginal, endGeoOriginal, color, validStart, yearStart, yearEnd, isClosed) {
+    addSegment(vertices, startGeoOriginal, endGeoOriginal, color, validStart, validEnd, yearStart, yearEnd, isClosed) {
         let startGeo = startGeoOriginal;
         let endGeo = endGeoOriginal;
 
@@ -302,24 +303,26 @@ export default class WebGLRenderer {
                     startGeo[i+1], endGeo[i+1],
                     color,
                     validStart,
+                    validEnd,
                     yearStart, yearEnd
                 );
              }
         }
     }
 
-    addTriangle(vertices, p1Start, p1End, p2Start, p2End, p3Start, p3End, color, validStart, yearStart, yearEnd) {
-        this.pushVertex(vertices, p1Start, p1End, color, validStart, yearStart, yearEnd);
-        this.pushVertex(vertices, p2Start, p2End, color, validStart, yearStart, yearEnd);
-        this.pushVertex(vertices, p3Start, p3End, color, validStart, yearStart, yearEnd);
+    addTriangle(vertices, p1Start, p1End, p2Start, p2End, p3Start, p3End, color, validStart, validEnd, yearStart, yearEnd) {
+        this.pushVertex(vertices, p1Start, p1End, color, validStart, validEnd, yearStart, yearEnd);
+        this.pushVertex(vertices, p2Start, p2End, color, validStart, validEnd, yearStart, yearEnd);
+        this.pushVertex(vertices, p3Start, p3End, color, validStart, validEnd, yearStart, yearEnd);
     }
     
-    pushVertex(vertices, pStart, pEnd, color, validStart, yearStart, yearEnd) {
+    pushVertex(vertices, pStart, pEnd, color, validStart, validEnd, yearStart, yearEnd) {
         vertices.push(
             pStart.x, pStart.y,     // a_position (Start)
             pEnd.x, pEnd.y,         // a_nextPosition (End)
             color[0], color[1], color[2], // a_color
             validStart,             // a_validStart
+            validEnd,               // a_validEnd
             yearStart,              // a_yearStart
             yearEnd                 // a_yearEnd
         );
@@ -460,11 +463,12 @@ export default class WebGLRenderer {
             gl.uniform1f(paperLocation, this.settings.paperRoughness);
             
             // Set vertex attributes
-            const stride = 10 * 4; // 10 floats * 4 bytes
+            const stride = 11 * 4; // 11 floats * 4 bytes
             const positionLocation = gl.getAttribLocation(this.mainProgram, 'a_position');
             const nextPosLocation = gl.getAttribLocation(this.mainProgram, 'a_nextPosition');
             const colorLocation = gl.getAttribLocation(this.mainProgram, 'a_color');
             const validStartLocation = gl.getAttribLocation(this.mainProgram, 'a_validStart');
+            const validEndLocation = gl.getAttribLocation(this.mainProgram, 'a_validEnd');
             const yearStartLocation = gl.getAttribLocation(this.mainProgram, 'a_yearStart');
             const yearEndLocation = gl.getAttribLocation(this.mainProgram, 'a_yearEnd');
             
@@ -479,14 +483,25 @@ export default class WebGLRenderer {
             gl.enableVertexAttribArray(colorLocation);
             gl.vertexAttribPointer(colorLocation, 3, gl.FLOAT, false, stride, 16);
 
-            gl.enableVertexAttribArray(validStartLocation);
-            gl.vertexAttribPointer(validStartLocation, 1, gl.FLOAT, false, stride, 28);
+            if (validStartLocation !== -1) {
+                gl.enableVertexAttribArray(validStartLocation);
+                gl.vertexAttribPointer(validStartLocation, 1, gl.FLOAT, false, stride, 28);
+            }
 
-            gl.enableVertexAttribArray(yearStartLocation);
-            gl.vertexAttribPointer(yearStartLocation, 1, gl.FLOAT, false, stride, 32);
+            if (validEndLocation !== -1) {
+                gl.enableVertexAttribArray(validEndLocation);
+                gl.vertexAttribPointer(validEndLocation, 1, gl.FLOAT, false, stride, 32);
+            }
 
-            gl.enableVertexAttribArray(yearEndLocation);
-            gl.vertexAttribPointer(yearEndLocation, 1, gl.FLOAT, false, stride, 36);
+            if (yearStartLocation !== -1) {
+                gl.enableVertexAttribArray(yearStartLocation);
+                gl.vertexAttribPointer(yearStartLocation, 1, gl.FLOAT, false, stride, 36);
+            }
+
+            if (yearEndLocation !== -1) {
+                gl.enableVertexAttribArray(yearEndLocation);
+                gl.vertexAttribPointer(yearEndLocation, 1, gl.FLOAT, false, stride, 40);
+            }
             
             // Draw
             gl.drawArrays(gl.TRIANGLES, 0, vertexCount);

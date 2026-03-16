@@ -11,6 +11,7 @@ in vec2 a_position;      // Start position (Keyframe 1)
 in vec2 a_nextPosition;  // End position (Keyframe 2)
 in vec3 a_color;
 in float a_validStart;   // Entity valid start year (for visibility)
+in float a_validEnd;     // Entity valid end year
 in float a_yearStart;    // Keyframe 1 year
 in float a_yearEnd;      // Keyframe 2 year
 
