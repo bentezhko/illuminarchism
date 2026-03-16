@@ -426,10 +426,8 @@ export default class IlluminarchismApp {
             }
             if (this.renderer) {
                 this.renderer.updateThemeColors();
-                if (this.renderer instanceof MedievalRenderer) {
-                    MedievalRenderer.cachedParchmentCanvas = null; // force texture regen
-                    this.renderer.createParchmentTexture();
-                    this.renderer.createWaterTexture();
+                if (typeof this.renderer.onThemeUpdate === 'function') {
+                    this.renderer.onThemeUpdate();
                 }
                 this.renderer.invalidateWorldLayer();
                 this.render();

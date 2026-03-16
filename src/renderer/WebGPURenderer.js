@@ -81,7 +81,7 @@ export default class WebGPURenderer {
         // u_matrix (9 floats), u_currentYear (1), u_wobble (1), u_time (1), u_inkBleed (1), u_paperRough (1)
         // WGSL mat3x3 takes 12 floats (padded). Total 16 floats = 64 bytes.
         this.uniformBuffer = this.device.createBuffer({
-            size: 64,
+            size: 128,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
 
@@ -148,6 +148,16 @@ export default class WebGPURenderer {
             primitive: { topology: 'triangle-list' },
         });
 
+        this.parchmentBindGroup = this.device.createBindGroup({
+            layout: this.parchmentPipeline.getBindGroupLayout(0),
+            entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }]
+        });
+
+        this.geometryBindGroup = this.device.createBindGroup({
+            layout: this.renderPipeline.getBindGroupLayout(0),
+            entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }]
+        });
+
         this.initialized = true;
         this.resize();
         this.updateThemeColors();
@@ -164,8 +174,7 @@ export default class WebGPURenderer {
         if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
             this.canvas.width = displayWidth;
             this.canvas.height = displayHeight;
-            this.width = displayWidth;
-            this.height = displayHeight;
+
         }
     }
 
@@ -175,6 +184,10 @@ export default class WebGPURenderer {
             this.themeColors.inkPrimary = style.getPropertyValue('--ink-primary').trim() || '#2b2118';
             this.themeColors.parchmentBg = style.getPropertyValue('--parchment-bg').trim() || '#f3e9d2';
         }
+    }
+
+    onThemeUpdate() {
+        this.updateThemeColors();
     }
 
     createParchmentTexture() {
@@ -203,7 +216,10 @@ export default class WebGPURenderer {
     }
 
     get width() { return this.canvas ? this.canvas.width : window.innerWidth; }
+    set width(val) { if(this.canvas) this.canvas.width = val; }
+
     get height() { return this.canvas ? this.canvas.height : window.innerHeight; }
+    set height(val) { if(this.canvas) this.canvas.height = val; }
 
     createTransformMatrix() {
         const w = this.canvas.width;
@@ -297,7 +313,7 @@ export default class WebGPURenderer {
             endGeo = alignPolylineOpen(startGeo, endGeo);
         }
 
-        if (startGeo.length >= 3) {
+        if (startGeo && startGeo.length >= 3 && endGeo && endGeo.length >= 3) {
              for (let i = 1; i < startGeo.length - 1; i++) {
                 this.addTriangle(vertices,
                     startGeo[0], endGeo[0],
@@ -330,9 +346,9 @@ export default class WebGPURenderer {
 
     hexToRgb(hex) {
         if (!hex) return [0,0,0];
-        const r = parseInt(hex.substr(1, 2), 16) / 255;
-        const g = parseInt(hex.substr(3, 2), 16) / 255;
-        const b = parseInt(hex.substr(5, 2), 16) / 255;
+        const r = parseInt(hex.slice(1, 3), 16) / 255;
+        const g = parseInt(hex.slice(3, 5), 16) / 255;
+        const b = parseInt(hex.slice(5, 7), 16) / 255;
         return [r, g, b];
     }
 
@@ -356,17 +372,20 @@ export default class WebGPURenderer {
         const matrix = this.createTransformMatrix();
         const time = (Date.now() - this.startTime) * 0.001;
 
-        // Uniform layout:
-        // matrix (12 floats)
-        // u_currentYear (1), u_wobble (1), u_time (1), u_inkBleed (1)
-        // u_paperRough (1), pad (3)
-        const uniformData = new Float32Array(16);
-        uniformData.set(matrix, 0);
+        const parchmentColorRgb = this.hexToRgb(this.themeColors.parchmentBg || '#f3e9d2');
+        const inkColorRgb = this.hexToRgb(this.themeColors.inkPrimary || '#2b2118');
+
+        const uniformData = new Float32Array(32);
+        uniformData.set(matrix, 0);          // 0-11
         uniformData[12] = currentYear;
         uniformData[13] = this.settings.wobble;
         uniformData[14] = time;
         uniformData[15] = this.settings.inkBleed;
-        // uniformData[16] = this.settings.paperRoughness; // if we extend uniform buffer
+        uniformData[16] = this.settings.paperRoughness;
+        // padding
+        uniformData.set(parchmentColorRgb, 20); // 20-22
+        // padding
+        uniformData.set(inkColorRgb, 24);    // 24-26
 
         this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 
@@ -377,7 +396,7 @@ export default class WebGPURenderer {
             colorAttachments: [
                 {
                     view: textureView,
-                    clearValue: { r: 0.953, g: 0.914, b: 0.824, a: 1.0 },
+                    clearValue: { r: parchmentColorRgb[0], g: parchmentColorRgb[1], b: parchmentColorRgb[2], a: 1.0 },
                     loadOp: 'clear',
                     storeOp: 'store',
                 },
@@ -388,23 +407,13 @@ export default class WebGPURenderer {
 
         // 1. Draw Parchment
         passEncoder.setPipeline(this.parchmentPipeline);
-        const parchmentBindGroup = this.device.createBindGroup({
-            layout: this.parchmentPipeline.getBindGroupLayout(0),
-            entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }]
-        });
-        passEncoder.setBindGroup(0, parchmentBindGroup);
+        passEncoder.setBindGroup(0, this.parchmentBindGroup);
         passEncoder.draw(6, 1, 0, 0);
 
         // 2. Draw Geometry
         if (vertexCount > 0 && this.geometryBuffer) {
             passEncoder.setPipeline(this.renderPipeline);
-
-            const bindGroup = this.device.createBindGroup({
-                layout: this.renderPipeline.getBindGroupLayout(0),
-                entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }]
-            });
-
-            passEncoder.setBindGroup(0, bindGroup);
+            passEncoder.setBindGroup(0, this.geometryBindGroup);
             passEncoder.setVertexBuffer(0, this.geometryBuffer);
             passEncoder.draw(vertexCount, 1, 0, 0);
         }

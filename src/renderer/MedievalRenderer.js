@@ -71,6 +71,12 @@ export default class MedievalRenderer {
         }
     }
 
+    onThemeUpdate() {
+        MedievalRenderer.cachedParchmentCanvas = null;
+        this.createParchmentTexture();
+        this.createWaterTexture();
+    }
+
     _getPatternTransformMatrix(transform) {
         const { x, y, k } = transform;
         return new DOMMatrix().translate(x, y).scale(1 / k, 1 / k);

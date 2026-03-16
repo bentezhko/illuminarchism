@@ -5,6 +5,12 @@ struct Uniforms {
     wobble: f32,
     time: f32,
     inkBleed: f32,
+    paperRoughness: f32,
+    padding1: vec3<f32>,
+    parchmentColor: vec3<f32>,
+    padding2: f32,
+    inkColor: vec3<f32>,
+    padding3: f32,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: Uniforms;
@@ -82,8 +88,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    let PARCHMENT = vec3<f32>(0.953, 0.914, 0.824);
-    let INK_BASE = vec3<f32>(0.169, 0.125, 0.094);
+    let PARCHMENT = uniforms.parchmentColor;
+    let INK_BASE = uniforms.inkColor;
 
     let inkColor = in.color * INK_BASE;
     let bleed = noise(in.texCoord.x * 10.0, in.texCoord.y * 10.0) * uniforms.inkBleed * 0.1;
@@ -125,12 +131,12 @@ fn vs_parchment(@builtin(vertex_index) vertex_index: u32) -> ParchmentOutput {
 
 @fragment
 fn fs_parchment(in: ParchmentOutput) -> @location(0) vec4<f32> {
-    let parchment = vec3<f32>(0.953, 0.914, 0.824);
+    let parchment = uniforms.parchmentColor;
     let uv = in.uv * 1000.0;
 
     var grain = noise(uv.x * 1.0, uv.y * 1.0) * 0.5;
     grain = grain + noise(uv.x * 2.0, uv.y * 2.0) * 0.25;
-    grain = (grain - 0.5) * 20.0 * 0.1; // u_paperRoughness hardcoded for MVP
+    grain = (grain - 0.5) * uniforms.paperRoughness * 0.1;
 
     let finalColor = parchment + vec3<f32>(grain);
     return vec4<f32>(finalColor, 1.0);
