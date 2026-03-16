@@ -53,6 +53,10 @@ export default class WebGPURenderer {
         // For compatibility with main.js
         this.worldLayerValid = false;
 
+        // GPU Cache for entities to avoid rebuilding unchanged geometry
+        this._gpuCache = new Map();
+        this._gpuCacheDirty = true;
+
         // Start init process
         this.init();
     }
@@ -201,6 +205,7 @@ export default class WebGPURenderer {
 
     invalidateWorldLayer() {
         this.worldLayerValid = false;
+        this._gpuCacheDirty = true;
         // Trigger geometry rebuild
         this.lastRenderState.entities = null;
     }
@@ -255,10 +260,31 @@ export default class WebGPURenderer {
 
         const YEAR_MIN = -1e9;
         const YEAR_MAX = 1e9;
-        const vertices = [];
+
+        let totalVertices = 0;
+        const entityArrays = [];
+
+        // Find which entity is currently being transformed
+        const selectedId = window.illuminarchismApp ? window.illuminarchismApp.selectedEntityId : null;
+
+        const currentEntityIds = new Set();
 
         for (const entity of entities) {
             if (!entity || !entity.timeline || entity.timeline.length === 0) continue;
+            currentEntityIds.add(entity.id);
+
+            const isBeingEdited = entity.id === selectedId && entity.currentGeometry;
+
+            // Check if we can reuse the cached Float32Array for this entity
+            if (!this._gpuCacheDirty && !isBeingEdited && this._gpuCache.has(entity.id)) {
+                const cachedArray = this._gpuCache.get(entity.id);
+                entityArrays.push(cachedArray);
+                totalVertices += cachedArray.length;
+                continue;
+            }
+
+            // Generate vertices for this entity
+            let entityVertices = [];
 
             const isLineType = entity.type === 'river' ||
                              entity.typology === 'river' ||
@@ -270,22 +296,52 @@ export default class WebGPURenderer {
 
             const t0 = entity.timeline[0];
             if (!t0.geometry) continue;
-            this.addSegment(vertices, t0.geometry, t0.geometry, color, validStart, validEnd, YEAR_MIN, t0.year, isClosed);
+
+            this.addSegment(entityVertices, t0.geometry, t0.geometry, color, validStart, validEnd, YEAR_MIN, t0.year, isClosed);
 
             for (let i = 0; i < entity.timeline.length - 1; i++) {
                 const cur = entity.timeline[i];
                 const next = entity.timeline[i+1];
                 if (!cur.geometry || !next.geometry) continue;
-                this.addSegment(vertices, cur.geometry, next.geometry, color, validStart, validEnd, cur.year, next.year, isClosed);
+                this.addSegment(entityVertices, cur.geometry, next.geometry, color, validStart, validEnd, cur.year, next.year, isClosed);
             }
 
             const tn = entity.timeline[entity.timeline.length - 1];
             if (!tn.geometry) continue;
-            this.addSegment(vertices, tn.geometry, tn.geometry, color, validStart, validEnd, tn.year, YEAR_MAX, isClosed);
+
+            // If the entity is being dragged/modified, its currentGeometry reflects the drag state.
+            // We use it as the final keyframe so the drag is visible dynamically in WebGPU.
+            // In a real bitemporal model we'd build a dynamic buffer just for currentGeometry,
+            // but for MVP this ensures the dragging polygon moves smoothly.
+            const lastGeo = isBeingEdited ? entity.currentGeometry : tn.geometry;
+            this.addSegment(entityVertices, tn.geometry, lastGeo, color, validStart, validEnd, tn.year, YEAR_MAX, isClosed);
+
+            const floatArray = new Float32Array(entityVertices);
+
+            // Only cache if we aren't actively editing it to avoid caching intermediate drag states
+            if (!isBeingEdited) {
+                this._gpuCache.set(entity.id, floatArray);
+            }
+
+            entityArrays.push(floatArray);
+            totalVertices += floatArray.length;
         }
 
+        // Cleanup deleted entities from cache
+        for (const id of this._gpuCache.keys()) {
+            if (!currentEntityIds.has(id)) {
+                this._gpuCache.delete(id);
+            }
+        }
 
-        const vertexData = new Float32Array(vertices);
+        this._gpuCacheDirty = false;
+
+        const vertexData = new Float32Array(totalVertices);
+        let offset = 0;
+        for (const arr of entityArrays) {
+            vertexData.set(arr, offset);
+            offset += arr.length;
+        }
 
         if (this.geometryBuffer) {
             this.geometryBuffer.destroy();
@@ -300,7 +356,7 @@ export default class WebGPURenderer {
         }
 
         this.lastRenderState.entities = entities;
-        this.lastRenderState.vertexCount = vertices.length / 11;
+        this.lastRenderState.vertexCount = totalVertices / 11;
         this.worldLayerValid = true;
 
         return this.lastRenderState.vertexCount;
