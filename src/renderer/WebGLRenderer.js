@@ -294,7 +294,7 @@ export default class WebGLRenderer {
         }
 
         // Triangulate and add vertices
-        if (startGeo.length >= 3) {
+        if (startGeo && startGeo.length >= 3 && endGeo && endGeo.length >= 3) {
              for (let i = 1; i < startGeo.length - 1; i++) {
                 this.addTriangle(vertices,
                     startGeo[0], endGeo[0],

@@ -1,4 +1,5 @@
-import MedievalRenderer from './renderer/MedievalRenderer.js';
+import WebGPURenderer from './renderer/WebGPURenderer.js';
+import MedievalRenderer from './renderer/MedievalRenderer.js'; // Fallback if needed
 import InputController from './ui/InputController.js';
 import HistoricalEntity from './core/Entity.js';
 import { distance, getCentroid, getRepresentativePoint, distanceToSegment, isPointInPolygon, getBoundingBox } from './core/math.js';
@@ -21,8 +22,13 @@ export default class IlluminarchismApp {
         // Build taxonomy from Ontology module (4-domain, 3-level hierarchy)
         this.ontologyTaxonomy = buildTaxonomyForUI();
 
+        if (navigator.gpu) {
+            this.renderer = new WebGPURenderer('map-canvas');
+        } else {
+            console.warn("WebGPU not supported, falling back to MedievalRenderer");
+            this.renderer = new MedievalRenderer('map-canvas');
+        }
 
-        this.renderer = new MedievalRenderer('map-canvas');
         this.input = new InputController(this);
 
         // Modules
@@ -420,9 +426,11 @@ export default class IlluminarchismApp {
             }
             if (this.renderer) {
                 this.renderer.updateThemeColors();
-                MedievalRenderer.cachedParchmentCanvas = null; // force texture regen
-                this.renderer.createParchmentTexture();
-                this.renderer.createWaterTexture();
+                if (this.renderer instanceof MedievalRenderer) {
+                    MedievalRenderer.cachedParchmentCanvas = null; // force texture regen
+                    this.renderer.createParchmentTexture();
+                    this.renderer.createWaterTexture();
+                }
                 this.renderer.invalidateWorldLayer();
                 this.render();
             }
