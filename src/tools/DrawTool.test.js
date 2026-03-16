@@ -33,6 +33,7 @@ describe("DrawTool", () => {
             renderRegistry: mock(() => {}),
             updateInfoPanel: mock(() => {}),
             setActiveTool: mock(() => {}),
+            generateEntityId: mock((prefix) => `${prefix}_12345`),
             toolbar: {
                 selectTool: mock(() => {})
             }

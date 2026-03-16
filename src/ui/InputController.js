@@ -138,8 +138,8 @@ export default class InputController {
                     }
                 }
 
-                // Priority 1: Vertex Edit Mode
-                if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId) {
+                // Priority 1: Vertex Edit / Warp Mode
+                if ((this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'warp') && this.app.selectedEntityId) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
                         const hitIdx = this._findHitVertex(ent.currentGeometry, wp);
@@ -291,7 +291,7 @@ export default class InputController {
             }
 
             // Handle Dragging Vertex
-            if (this.isDragging && this.app.activeTool === 'vertex-edit' && this.dragVertexIndex !== null) {
+            if (this.isDragging && (this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'warp') && this.dragVertexIndex !== null) {
                 this.app.editVertex(this.dragVertexIndex, wp);
                 return;
             }
@@ -299,7 +299,7 @@ export default class InputController {
             // Handle Panning - CRITICAL: Don't call checkHover during pan drag!
             const isPanDrag = this.app.activeTool === 'pan' ||
                 (this.app.activeTool === 'transform' && !this.transformMode) ||
-                (this.app.activeTool === 'vertex-edit' && this.dragVertexIndex === null) ||
+                ((this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'warp') && this.dragVertexIndex === null) ||
                 (this.app.activeTool === 'erase' && !this.wasHoveringOnDown);
 
             if (this.isDragging && isPanDrag) {
@@ -358,7 +358,7 @@ export default class InputController {
 
                 // Handle Vertex Hover Effect
                 // Needs to be here so it takes precedence over the default hover cursor from checkHover
-                if (this.app.activeTool === 'vertex-edit' && this.app.selectedEntityId && !this.isDragging) {
+                if ((this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'warp') && this.app.selectedEntityId && !this.isDragging) {
                     const ent = this.app.entitiesById.get(this.app.selectedEntityId);
                     if (ent && ent.currentGeometry) {
                         const hitIdx = this._findHitVertex(ent.currentGeometry, wp);
@@ -415,7 +415,7 @@ export default class InputController {
             }
 
             // Check for Click-to-Deselect (if not dragged significantly)
-            const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'erase'];
+            const deselectOnClickEmptyTools = ['pan', 'transform', 'vertex-edit', 'warp', 'erase'];
 
             if (this.isDragging && deselectOnClickEmptyTools.includes(this.app.activeTool) && !this.wasHoveringOnDown) {
                 const dist = distance({ x: e.clientX, y: e.clientY }, { x: this.interactionStartX, y: this.interactionStartY });
@@ -424,7 +424,7 @@ export default class InputController {
                 }
             }
 
-            if (this.isDragging && (this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'transform')) {
+            if (this.isDragging && (this.app.activeTool === 'vertex-edit' || this.app.activeTool === 'warp' || this.app.activeTool === 'transform')) {
                 // Finish Edit - Commit Keyframe
                 this.app.finishVertexEdit();
             }

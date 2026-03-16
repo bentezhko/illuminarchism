@@ -37,7 +37,6 @@ export default class MedievalRenderer {
         this.noisePattern = null;
         this.waterPattern = null;
         this.patternCache = {};
-        this.backgroundImage = null;
 
         this._cachedWaterEntities = [];
         this._cachedWorldEntities = [];
@@ -334,13 +333,16 @@ export default class MedievalRenderer {
                     this.drawPointMarker(ent, isHovered, isSelected, ctx);
                 } else if (ent.type === 'river') {
                     this.drawRiver(ent, isHovered, isSelected, ctx);
+                } else if (ent.type === 'image') {
+                    this.drawImageEntity(ent, isHovered, isSelected, ctx);
                 } else if (ent.type !== 'water') {
                     this.drawPolygon(ent, isHovered, isSelected, ctx);
                 }
             }
 
             // Draw Label (for all types, including water)
-            if (isSelected || isHovered || t.k > 0.5) {
+            // Skip labels for images
+            if (ent.type !== 'image' && (isSelected || isHovered || t.k > 0.5)) {
                 this.drawLabel(ent, isSelected);
             }
 
@@ -358,7 +360,7 @@ export default class MedievalRenderer {
         });
 
         // Editor Overlays
-        if (activeTool === 'vertex-edit' && selectedId) {
+        if ((activeTool === 'vertex-edit' || activeTool === 'warp') && selectedId) {
             const ent = entities.find(e => e && e.id === selectedId);
             if (ent && ent.currentGeometry) this.drawVertices(ent.currentGeometry, vertexHighlightIndex);
         }
@@ -537,6 +539,82 @@ export default class MedievalRenderer {
                 ctx.restore();
             }
         });
+    }
+
+    _getAffineTransform(x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2) {
+        const det = x0 * (y1 - y2) - y0 * (x1 - x2) + x1 * y2 - x2 * y1;
+        if (Math.abs(det) < 1e-6) return null;
+
+        const a = (u0 * (y1 - y2) - y0 * (u1 - u2) + u1 * y2 - u2 * y1) / det;
+        const c = (x0 * (u1 - u2) - u0 * (x1 - x2) + x1 * u2 - x2 * u1) / det;
+        const e = (x0 * (y1 * u2 - y2 * u1) - y0 * (x1 * u2 - x2 * u1) + u0 * (x1 * y2 - x2 * y1)) / det;
+
+        const b = (v0 * (y1 - y2) - y0 * (v1 - v2) + v1 * y2 - v2 * y1) / det;
+        const d = (x0 * (v1 - v2) - v0 * (x1 - x2) + x1 * v2 - x2 * v1) / det;
+        const f = (x0 * (y1 * v2 - y2 * v1) - y0 * (x1 * v2 - x2 * v1) + v0 * (x1 * y2 - x2 * y1)) / det;
+
+        return [a, b, c, d, e, f];
+    }
+
+    _drawAffineTriangle(ctx, img, sx0, sy0, sx1, sy1, sx2, sy2, dx0, dy0, dx1, dy1, dx2, dy2) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(dx0, dy0);
+        ctx.lineTo(dx1, dy1);
+        ctx.lineTo(dx2, dy2);
+        ctx.closePath();
+        ctx.clip();
+
+        const transform = this._getAffineTransform(sx0, sy0, sx1, sy1, sx2, sy2, dx0, dy0, dx1, dy1, dx2, dy2);
+        if (transform) {
+            ctx.transform(transform[0], transform[1], transform[2], transform[3], transform[4], transform[5]);
+            ctx.drawImage(img, 0, 0);
+        }
+        ctx.restore();
+    }
+
+    drawImageEntity(ent, isHovered, isSelected, targetCtx = null) {
+        const ctx = targetCtx || this.ctx;
+        if (!ent.currentGeometry || ent.currentGeometry.length < 4 || !ent.image) return;
+
+        const pts = ent.currentGeometry;
+        const img = ent.image;
+        const w = img.width;
+        const h = img.height;
+
+        ctx.save();
+        ctx.globalAlpha = ent.opacity !== undefined ? ent.opacity : 0.5;
+
+        // Draw image using a 2-triangle affine warp to support individual corner movement
+        // Triangle 1: Top-Left, Top-Right, Bottom-Left
+        this._drawAffineTriangle(ctx, img,
+            0, 0, w, 0, 0, h,
+            pts[0].x, pts[0].y, pts[1].x, pts[1].y, pts[3].x, pts[3].y
+        );
+
+        // Triangle 2: Bottom-Right, Bottom-Left, Top-Right
+        this._drawAffineTriangle(ctx, img,
+            w, h, 0, h, w, 0,
+            pts[2].x, pts[2].y, pts[3].x, pts[3].y, pts[1].x, pts[1].y
+        );
+
+        // Selection/Hover outline
+        if (isSelected || isHovered) {
+            ctx.globalAlpha = 1.0;
+            ctx.strokeStyle = isSelected ? '#8a3324' : 'rgba(138, 51, 36, 0.5)';
+            ctx.lineWidth = (isSelected ? 2 : 1) / this.transform.k;
+            ctx.setLineDash([5 / this.transform.k, 5 / this.transform.k]);
+
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        ctx.restore();
     }
 
     drawPolygon(ent, isHovered, isSelected, targetCtx = null) {
@@ -984,22 +1062,6 @@ export default class MedievalRenderer {
         ctx.fillRect(0, 0, this.width, this.height);
         ctx.restore();
 
-        // Draw Background Image for Tracing
-        if (this.backgroundImage && this.backgroundImage.img) {
-            ctx.save();
-            ctx.translate(t.x, t.y);
-            ctx.scale(t.k, t.k);
-            ctx.globalAlpha = this.backgroundImage.opacity !== undefined ? this.backgroundImage.opacity : 0.5;
-            ctx.drawImage(
-                this.backgroundImage.img,
-                this.backgroundImage.x,
-                this.backgroundImage.y,
-                this.backgroundImage.width,
-                this.backgroundImage.height
-            );
-            ctx.restore();
-        }
-
         // 0. Optimize Layer Lookup
         const layerMap = layers ? new Map(layers.map(l => [l.id, l])) : new Map();
 
@@ -1056,6 +1118,7 @@ export default class MedievalRenderer {
                  if (!ent.currentGeometry) return;
                  if (this._isPointEntity(ent)) this.drawPointMarker(ent, false, false, ctx);
                  else if (ent.type === 'river') this.drawRiver(ent, false, false, ctx);
+                 else if (ent.type === 'image') this.drawImageEntity(ent, false, false, ctx);
                  else this.drawPolygon(ent, false, false, ctx);
             });
 

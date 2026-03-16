@@ -674,6 +674,14 @@ body.view-map .tool-timeline {
     /* Integrated into header controls */
 }
 
+#info-opacity-row {
+    display: none;
+}
+
+#info-opacity-input {
+    width: 100px;
+}
+
 /* Info Panel - Simplified */
 #info-panel {
     position: absolute;
