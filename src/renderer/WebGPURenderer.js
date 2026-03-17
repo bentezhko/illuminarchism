@@ -13,10 +13,14 @@ export default class WebGPURenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
 
+        // Use actual layout dimensions if available, otherwise defer to first resize
+        const w = this.canvas.clientWidth || window.innerWidth;
+        const h = this.canvas.clientHeight || window.innerHeight;
+
         // Rendering state
         this.transform = {
-            x: this.canvas.clientWidth / 2,
-            y: this.canvas.clientHeight / 2,
+            x: w / 2,
+            y: h / 2,
             zoom: 1,
             k: 1
         };
@@ -49,6 +53,7 @@ export default class WebGPURenderer {
 
         this.startTime = Date.now();
         this.initialized = false;
+        this._transformInitialized = false;
 
         // For compatibility with main.js
         this.worldLayerValid = false;
@@ -56,6 +61,15 @@ export default class WebGPURenderer {
         // GPU Cache for entities to avoid rebuilding unchanged geometry
         this._gpuCache = new Map();
         this._gpuCacheDirty = true;
+
+        // Window resize handler
+        this._onResize = () => {
+            this.resize();
+            if (this.initialized && window.illuminarchismApp) {
+                window.illuminarchismApp.render();
+            }
+        };
+        window.addEventListener('resize', this._onResize);
 
         // Start init process
         this.init();
@@ -178,10 +192,31 @@ export default class WebGPURenderer {
         if (!this.canvas) return;
         const displayWidth = this.canvas.clientWidth;
         const displayHeight = this.canvas.clientHeight;
+        if (displayWidth === 0 || displayHeight === 0) return;
 
-        if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
+        const oldWidth = this.canvas.width;
+        const oldHeight = this.canvas.height;
+
+        if (oldWidth !== displayWidth || oldHeight !== displayHeight) {
             this.canvas.width = displayWidth;
             this.canvas.height = displayHeight;
+
+            if (this.context && this.device) {
+                this.context.configure({
+                    device: this.device,
+                    format: navigator.gpu.getPreferredCanvasFormat(),
+                    alphaMode: 'premultiplied',
+                });
+            }
+        }
+
+        // On first resize (or if transform was never properly initialized),
+        // center the view using real canvas dimensions
+        if (!this._transformInitialized) {
+            this.transform.x = displayWidth / 2;
+            this.transform.y = displayHeight / 2;
+            this._transformInitialized = true;
+            this.invalidateWorldLayer();
         }
     }
 

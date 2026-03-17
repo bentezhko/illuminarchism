@@ -105,15 +105,17 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     let PARCHMENT = uniforms.parchmentColor.rgb;
-    let INK_BASE = uniforms.inkColor.rgb;
 
-    let inkColor = in.color * INK_BASE;
+    // Use the per-entity color directly as the ink color.
+    // For entities with black (#000000), fall back to the theme ink color.
+    let entityBrightness = dot(in.color, vec3<f32>(0.299, 0.587, 0.114));
+    let inkColor = select(in.color, uniforms.inkColor.rgb, entityBrightness < 0.01);
+
     let bleed = noise(in.texCoord.x * 10.0, in.texCoord.y * 10.0) * uniforms.inkBleed * 0.1;
 
-    // Proper premultiplied alpha formulation for WebGPU
-    // Blend the ink on top of a base layer using alpha
+    // Blend ink over parchment with opacity for the medieval manuscript look
     const INK_OPACITY: f32 = 0.7;
-    let baseColor = mix(vec3<f32>(1.0), inkColor, INK_OPACITY);
+    let baseColor = mix(PARCHMENT, inkColor, INK_OPACITY);
     var finalColor = baseColor + vec3<f32>(bleed * 0.05);
 
     // Output premultiplied alpha: (color.rgb * alpha, alpha)
