@@ -230,8 +230,14 @@ export default class WebGPURenderer {
     set height(val) { if(this.canvas) this.canvas.height = val; }
 
     createTransformMatrix() {
-        const w = this.canvas.width;
-        const h = this.canvas.height;
+        const w = this.canvas.width || this.canvas.clientWidth || window.innerWidth;
+        const h = this.canvas.height || this.canvas.clientHeight || window.innerHeight;
+
+        if (w === 0 || h === 0) {
+            // Return identity-ish matrix that maps to center, prevents NaN
+            return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0]);
+        }
+
         const k = this.transform.k;
         const x = this.transform.x;
         const y = this.transform.y;
@@ -424,6 +430,8 @@ export default class WebGPURenderer {
     draw(entities, hoveredId, selectedId, activeTool, vertexHighlightIndex, layers = null) {
         if (!this.initialized || !this.device) return;
 
+        this.resize();
+
         // We sync transform.zoom with transform.k in MedievalRenderer
         this.transform.zoom = this.transform.k;
 
@@ -444,16 +452,17 @@ export default class WebGPURenderer {
         const inkColorRgb = this.hexToRgb(this.themeColors.inkPrimary || '#2b2118');
 
         const uniformData = new Float32Array(32);
-        uniformData.set(matrix, 0);          // 0-11
+        uniformData.set(matrix, 0);          // 0-11 (matCol0, matCol1, matCol2)
         uniformData[12] = currentYear;
         uniformData[13] = this.settings.wobble;
         uniformData[14] = time;
         uniformData[15] = this.settings.inkBleed;
         uniformData[16] = this.settings.paperRoughness;
-        // padding
+        // float 17-19 padding
         uniformData.set(parchmentColorRgb, 20); // 20-22
-        // padding
-        uniformData.set(inkColorRgb, 24);    // 24-26
+        uniformData[23] = 1.0;                  // parchmentColor.a
+        uniformData.set(inkColorRgb, 24);       // 24-26
+        uniformData[27] = 1.0;                  // inkColor.a
 
         this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
 

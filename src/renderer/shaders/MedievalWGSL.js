@@ -1,6 +1,8 @@
 export const WGSL_SHADER = `
 struct Uniforms {
-    matrix: mat3x3<f32>,
+    matCol0: vec4<f32>,
+    matCol1: vec4<f32>,
+    matCol2: vec4<f32>,
     currentYear: f32,
     wobble: f32,
     time: f32,
@@ -81,9 +83,15 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     let wobble = vec2<f32>(wobbleX, wobbleY);
 
     let position = basePosition + wobble * 0.001;
-    let transformed = uniforms.matrix * vec3<f32>(position, 1.0);
 
-    out.clip_position = vec4<f32>(transformed.x, transformed.y, 0.0, 1.0);
+    // 2D affine transformation with matCol vectors.
+    // uniforms.matCol0.xyz is (scaleX, 0, 0)
+    // uniforms.matCol1.xyz is (0, scaleY, 0)
+    // uniforms.matCol2.xyz is (tx, ty, 1)
+    let transformedX = uniforms.matCol0.x * position.x + uniforms.matCol1.x * position.y + uniforms.matCol2.x;
+    let transformedY = uniforms.matCol0.y * position.x + uniforms.matCol1.y * position.y + uniforms.matCol2.y;
+
+    out.clip_position = vec4<f32>(transformedX, transformedY, 0.0, 1.0);
     out.texCoord = basePosition;
     out.color = input.color;
 
@@ -102,10 +110,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let inkColor = in.color * INK_BASE;
     let bleed = noise(in.texCoord.x * 10.0, in.texCoord.y * 10.0) * uniforms.inkBleed * 0.1;
 
-    var finalColor = mix(PARCHMENT, inkColor, in.visibility * 0.4);
-    finalColor = finalColor + vec3<f32>(bleed * 0.05);
+    // Proper premultiplied alpha formulation for WebGPU
+    // Blend the ink on top of a base layer using alpha
+    let baseColor = mix(vec3<f32>(1.0), inkColor, 0.7);
+    var finalColor = baseColor + vec3<f32>(bleed * 0.05);
 
-    // Output premultiplied alpha
+    // Output premultiplied alpha: (color.rgb * alpha, alpha)
     return vec4<f32>(finalColor * in.visibility, in.visibility);
 }
 
