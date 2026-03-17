@@ -1366,11 +1366,19 @@ export default class IlluminarchismApp {
             try {
                 const tl = this.renderer.toWorld(0, 0);
                 const br = this.renderer.toWorld(this.renderer.width, this.renderer.height);
+
+                // Ensure width and height are strictly positive for correct bounding box calculations.
+                // Depending on the Y-axis inversion of the renderer projection, br.y could be less than tl.y.
+                const minX = Math.min(tl.x, br.x);
+                const maxX = Math.max(tl.x, br.x);
+                const minY = Math.min(tl.y, br.y);
+                const maxY = Math.max(tl.y, br.y);
+
                 const viewportBox = {
-                    x: tl.x,
-                    y: tl.y,
-                    w: br.x - tl.x,
-                    h: br.y - tl.y
+                    x: minX,
+                    y: minY,
+                    w: maxX - minX,
+                    h: maxY - minY
                 };
 
                 const visibleNodes = this.spatialIndex.retrieve(viewportBox);

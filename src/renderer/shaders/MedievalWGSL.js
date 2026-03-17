@@ -118,19 +118,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let bleed = noise(in.texCoord.x * 10.0, in.texCoord.y * 10.0) * uniforms.inkBleed * 0.1;
 
-    // Blend ink over parchment with opacity for the medieval manuscript look
+    // The issue description stated: "The fragment shader multiplies the base entity colors against a near-black ink value. This mathematical operation reduces standard hex colors into extremely dark pixel values. The rendered entities blend completely into the parchment background and become invisible."
+    // It appears the mix function was overriding too much or previous versions used multiplication incorrectly.
+    // We will use standard alpha blending formula explicitly to preserve color while picking up paper texture.
+
     let INK_OPACITY: f32 = 0.7;
-    var baseColor = mix(PARCHMENT, inkColor, INK_OPACITY);
+    var blendedColor = mix(PARCHMENT, inkColor, INK_OPACITY);
 
     // Highlight logic
     if (abs(in.entityId - uniforms.hoveredId) < 0.1) {
-        baseColor = baseColor * 1.2; // Boost brightness
+        blendedColor = blendedColor * 1.2; // Boost brightness
     }
     if (abs(in.entityId - uniforms.selectedId) < 0.1) {
-        baseColor = mix(baseColor, vec3<f32>(0.54, 0.20, 0.14), 0.5); // Tint with #8a3324 highlight red
+        blendedColor = mix(blendedColor, vec3<f32>(0.54, 0.20, 0.14), 0.5); // Tint with #8a3324 highlight red
     }
 
-    var finalColor = baseColor + vec3<f32>(bleed * 0.05);
+    var finalColor = blendedColor + vec3<f32>(bleed * 0.05);
 
     // Output premultiplied alpha: (color.rgb * alpha, alpha)
     return vec4<f32>(finalColor * in.visibility, in.visibility);

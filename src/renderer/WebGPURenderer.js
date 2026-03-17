@@ -5,6 +5,7 @@ import {
     alignPolylineOpen,
     getRepresentativePoint
 } from '../core/math.js';
+import earcut from '../core/earcut.js';
 import { WGSL_SHADER } from './shaders/MedievalWGSL.js';
 
 const GRID_CONFIG = {
@@ -357,12 +358,13 @@ export default class WebGPURenderer {
     set height(val) { if(this.canvas) this.canvas.height = val; }
 
     createTransformMatrix() {
-        const w = this.canvas.width || this.canvas.clientWidth || window.innerWidth;
-        const h = this.canvas.height || this.canvas.clientHeight || window.innerHeight;
+        let w = this.canvas.width || this.canvas.clientWidth;
+        let h = this.canvas.height || this.canvas.clientHeight;
 
+        // If zero (e.g. initial load before layout), fallback to window to avoid NaN
         if (w === 0 || h === 0) {
-            // Return identity-ish matrix that maps to center, prevents NaN
-            return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0]);
+            w = window.innerWidth || 800;
+            h = window.innerHeight || 600;
         }
 
         const k = this.transform.k;
@@ -602,15 +604,23 @@ export default class WebGPURenderer {
 
         if (startGeo && startGeo.length >= 2 && endGeo && endGeo.length >= 2) {
             if (isClosed && startGeo.length >= 3 && endGeo.length >= 3) {
-                for (let i = 1; i < startGeo.length - 1; i++) {
+                // Use Earcut for robust concave triangulation
+                const flatData = [];
+                for (let i = 0; i < startGeo.length; i++) {
+                    flatData.push(startGeo[i].x, startGeo[i].y);
+                }
+                const indices = earcut(flatData);
+
+                for (let i = 0; i < indices.length; i += 3) {
+                    const idx0 = indices[i];
+                    const idx1 = indices[i+1];
+                    const idx2 = indices[i+2];
+
                     this.addTriangle(vertices,
-                        startGeo[0], endGeo[0],
-                        startGeo[i], endGeo[i],
-                        startGeo[i+1], endGeo[i+1],
-                        color,
-                        validStart,
-                        validEnd,
-                        yearStart, yearEnd, entityId
+                        startGeo[idx0], endGeo[idx0],
+                        startGeo[idx1], endGeo[idx1],
+                        startGeo[idx2], endGeo[idx2],
+                        color, validStart, validEnd, yearStart, yearEnd, entityId
                     );
                 }
             } else if (!isClosed) {
