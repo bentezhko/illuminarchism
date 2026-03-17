@@ -6,7 +6,6 @@ struct Uniforms {
     time: f32,
     inkBleed: f32,
     paperRoughness: f32,
-    padding1: vec3<f32>,
     parchmentColor: vec4<f32>,
     inkColor: vec4<f32>,
 };
@@ -106,7 +105,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var finalColor = mix(PARCHMENT, inkColor, in.visibility * 0.4);
     finalColor = finalColor + vec3<f32>(bleed * 0.05);
 
-    return vec4<f32>(finalColor, in.visibility);
+    // Output premultiplied alpha
+    return vec4<f32>(finalColor * in.visibility, in.visibility);
 }
 
 // ------------------------------------

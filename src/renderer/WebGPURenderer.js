@@ -6,6 +6,9 @@ import {
 } from '../core/math.js';
 import { WGSL_SHADER } from './shaders/MedievalWGSL.js';
 
+const DEFAULT_VALID_START_YEAR = -10000;
+const DEFAULT_VALID_END_YEAR = 10000;
+
 export default class WebGPURenderer {
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -50,6 +53,10 @@ export default class WebGPURenderer {
         // For compatibility with main.js
         this.worldLayerValid = false;
 
+        // GPU Cache for entities to avoid rebuilding unchanged geometry
+        this._gpuCache = new Map();
+        this._gpuCacheDirty = true;
+
         // Start init process
         this.init();
     }
@@ -91,14 +98,15 @@ export default class WebGPURenderer {
 
         // Geometry Pipeline
         const vertexBuffers = [{
-            arrayStride: 40, // 10 floats * 4 bytes
+            arrayStride: 44, // 11 floats * 4 bytes
             attributes: [
                 { shaderLocation: 0, offset: 0, format: 'float32x2' }, // a_position
                 { shaderLocation: 1, offset: 8, format: 'float32x2' }, // a_nextPosition
                 { shaderLocation: 2, offset: 16, format: 'float32x3' }, // a_color
                 { shaderLocation: 3, offset: 28, format: 'float32' },   // a_validStart
-                { shaderLocation: 4, offset: 32, format: 'float32' },   // a_yearStart
-                { shaderLocation: 5, offset: 36, format: 'float32' }    // a_yearEnd
+                { shaderLocation: 4, offset: 32, format: 'float32' },   // a_validEnd
+                { shaderLocation: 5, offset: 36, format: 'float32' },   // a_yearStart
+                { shaderLocation: 6, offset: 40, format: 'float32' }    // a_yearEnd
             ]
         }];
 
@@ -116,7 +124,7 @@ export default class WebGPURenderer {
                     format: presentationFormat,
                     blend: {
                         color: {
-                            srcFactor: 'src-alpha',
+                            srcFactor: 'one',
                             dstFactor: 'one-minus-src-alpha',
                             operation: 'add',
                         },
@@ -174,7 +182,6 @@ export default class WebGPURenderer {
         if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
             this.canvas.width = displayWidth;
             this.canvas.height = displayHeight;
-
         }
     }
 
@@ -200,6 +207,7 @@ export default class WebGPURenderer {
 
     invalidateWorldLayer() {
         this.worldLayerValid = false;
+        this._gpuCacheDirty = true;
         // Trigger geometry rebuild
         this.lastRenderState.entities = null;
     }
@@ -237,6 +245,11 @@ export default class WebGPURenderer {
         // [c0r0, c0r1, c0r2, pad]
         // [c1r0, c1r1, c1r2, pad]
         // [c2r0, c2r1, c2r2, pad]
+        // Note: WGSL expects uniform arrays/structs to be 16-byte aligned.
+        // A mat3x3 is treated as 3 vec3s, but each vec3 is padded to vec4 (16 bytes)
+        // c0: scaleX, 0, 0, pad
+        // c1: 0, scaleY, 0, pad
+        // c2: tx, ty, 1, pad
         return new Float32Array([
             scaleX, 0, 0, 0,
             0, scaleY, 0, 0,
@@ -249,35 +262,88 @@ export default class WebGPURenderer {
 
         const YEAR_MIN = -1e9;
         const YEAR_MAX = 1e9;
-        const vertices = [];
+
+        let totalVertices = 0;
+        const entityArrays = [];
+
+        // Find which entity is currently being transformed
+        const selectedId = window.illuminarchismApp ? window.illuminarchismApp.selectedEntityId : null;
+
+        const currentEntityIds = new Set();
 
         for (const entity of entities) {
             if (!entity || !entity.timeline || entity.timeline.length === 0) continue;
+            currentEntityIds.add(entity.id);
+
+            const isBeingEdited = entity.id === selectedId && entity.currentGeometry;
+
+            // Check if we can reuse the cached Float32Array for this entity
+            if (!this._gpuCacheDirty && !isBeingEdited && this._gpuCache.has(entity.id)) {
+                const cachedArray = this._gpuCache.get(entity.id);
+                entityArrays.push(cachedArray);
+                totalVertices += cachedArray.length;
+                continue;
+            }
+
+            // Generate vertices for this entity
+            let entityVertices = [];
 
             const isLineType = entity.type === 'river' ||
                              entity.typology === 'river' ||
                              entity.typology === 'coast';
             const isClosed = !isLineType;
             const color = this.hexToRgb(entity.color);
-            const validStart = entity.validRange ? entity.validRange.start : -10000;
+            const validStart = (entity.validRange && entity.validRange.start !== undefined) ? entity.validRange.start : DEFAULT_VALID_START_YEAR;
+            const validEnd = (entity.validRange && entity.validRange.end !== undefined) ? entity.validRange.end : DEFAULT_VALID_END_YEAR;
 
             const t0 = entity.timeline[0];
             if (!t0.geometry) continue;
-            this.addSegment(vertices, t0.geometry, t0.geometry, color, validStart, YEAR_MIN, t0.year, isClosed);
+
+            this.addSegment(entityVertices, t0.geometry, t0.geometry, color, validStart, validEnd, YEAR_MIN, t0.year, isClosed);
 
             for (let i = 0; i < entity.timeline.length - 1; i++) {
                 const cur = entity.timeline[i];
                 const next = entity.timeline[i+1];
                 if (!cur.geometry || !next.geometry) continue;
-                this.addSegment(vertices, cur.geometry, next.geometry, color, validStart, cur.year, next.year, isClosed);
+                this.addSegment(entityVertices, cur.geometry, next.geometry, color, validStart, validEnd, cur.year, next.year, isClosed);
             }
 
             const tn = entity.timeline[entity.timeline.length - 1];
             if (!tn.geometry) continue;
-            this.addSegment(vertices, tn.geometry, tn.geometry, color, validStart, tn.year, YEAR_MAX, isClosed);
+
+            // If the entity is being dragged/modified, its currentGeometry reflects the drag state.
+            // We use it as the final keyframe so the drag is visible dynamically in WebGPU.
+            // In a real bitemporal model we'd build a dynamic buffer just for currentGeometry,
+            // but for MVP this ensures the dragging polygon moves smoothly.
+            const lastGeo = isBeingEdited ? entity.currentGeometry : tn.geometry;
+            this.addSegment(entityVertices, tn.geometry, lastGeo, color, validStart, validEnd, tn.year, YEAR_MAX, isClosed);
+
+            const floatArray = new Float32Array(entityVertices);
+
+            // Only cache if we aren't actively editing it to avoid caching intermediate drag states
+            if (!isBeingEdited) {
+                this._gpuCache.set(entity.id, floatArray);
+            }
+
+            entityArrays.push(floatArray);
+            totalVertices += floatArray.length;
         }
 
-        const vertexData = new Float32Array(vertices);
+        // Cleanup deleted entities from cache
+        for (const id of this._gpuCache.keys()) {
+            if (!currentEntityIds.has(id)) {
+                this._gpuCache.delete(id);
+            }
+        }
+
+        this._gpuCacheDirty = false;
+
+        const vertexData = new Float32Array(totalVertices);
+        let offset = 0;
+        for (const arr of entityArrays) {
+            vertexData.set(arr, offset);
+            offset += arr.length;
+        }
 
         if (this.geometryBuffer) {
             this.geometryBuffer.destroy();
@@ -292,13 +358,13 @@ export default class WebGPURenderer {
         }
 
         this.lastRenderState.entities = entities;
-        this.lastRenderState.vertexCount = vertices.length / 10;
+        this.lastRenderState.vertexCount = totalVertices / 11;
         this.worldLayerValid = true;
 
         return this.lastRenderState.vertexCount;
     }
 
-    addSegment(vertices, startGeoOriginal, endGeoOriginal, color, validStart, yearStart, yearEnd, isClosed) {
+    addSegment(vertices, startGeoOriginal, endGeoOriginal, color, validStart, validEnd, yearStart, yearEnd, isClosed) {
         let startGeo = startGeoOriginal;
         let endGeo = endGeoOriginal;
 
@@ -321,24 +387,26 @@ export default class WebGPURenderer {
                     startGeo[i+1], endGeo[i+1],
                     color,
                     validStart,
+                    validEnd,
                     yearStart, yearEnd
                 );
              }
         }
     }
 
-    addTriangle(vertices, p1Start, p1End, p2Start, p2End, p3Start, p3End, color, validStart, yearStart, yearEnd) {
-        this.pushVertex(vertices, p1Start, p1End, color, validStart, yearStart, yearEnd);
-        this.pushVertex(vertices, p2Start, p2End, color, validStart, yearStart, yearEnd);
-        this.pushVertex(vertices, p3Start, p3End, color, validStart, yearStart, yearEnd);
+    addTriangle(vertices, p1Start, p1End, p2Start, p2End, p3Start, p3End, color, validStart, validEnd, yearStart, yearEnd) {
+        this.pushVertex(vertices, p1Start, p1End, color, validStart, validEnd, yearStart, yearEnd);
+        this.pushVertex(vertices, p2Start, p2End, color, validStart, validEnd, yearStart, yearEnd);
+        this.pushVertex(vertices, p3Start, p3End, color, validStart, validEnd, yearStart, yearEnd);
     }
 
-    pushVertex(vertices, pStart, pEnd, color, validStart, yearStart, yearEnd) {
+    pushVertex(vertices, pStart, pEnd, color, validStart, validEnd, yearStart, yearEnd) {
         vertices.push(
             pStart.x, pStart.y,
             pEnd.x, pEnd.y,
             color[0], color[1], color[2],
             validStart,
+            validEnd,
             yearStart,
             yearEnd
         );
