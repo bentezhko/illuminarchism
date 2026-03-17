@@ -112,7 +112,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // Proper premultiplied alpha formulation for WebGPU
     // Blend the ink on top of a base layer using alpha
-    let baseColor = mix(vec3<f32>(1.0), inkColor, 0.7);
+    const INK_OPACITY: f32 = 0.7;
+    let baseColor = mix(vec3<f32>(1.0), inkColor, INK_OPACITY);
     var finalColor = baseColor + vec3<f32>(bleed * 0.05);
 
     // Output premultiplied alpha: (color.rgb * alpha, alpha)
