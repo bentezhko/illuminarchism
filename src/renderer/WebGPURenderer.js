@@ -22,12 +22,18 @@ const ANIMATION_CONFIG = {
     FLASH_OPACITY_AMP: 0.5
 };
 
+const GEOMETRY_CONFIG = {
+    POINT_SIZE: 10,
+    POLYLINE_STROKE_WIDTH: 3
+};
+
 const DEFAULT_VALID_START_YEAR = -10000;
 const DEFAULT_VALID_END_YEAR = 10000;
 
 export default class WebGPURenderer {
-    constructor(canvasId) {
+    constructor(canvasId, onNeedRedraw = null) {
         this.canvas = document.getElementById(canvasId);
+        this.onNeedRedraw = onNeedRedraw;
 
         // Setup Overlay Canvas
         this.overlayCanvas = document.createElement('canvas');
@@ -93,8 +99,8 @@ export default class WebGPURenderer {
         // Window resize handler
         this._onResize = () => {
             this.resize();
-            if (this.initialized && window.illuminarchismApp) {
-                window.illuminarchismApp.render();
+            if (this.initialized && this.onNeedRedraw) {
+                this.onNeedRedraw();
             }
         };
         window.addEventListener('resize', this._onResize);
@@ -187,6 +193,11 @@ export default class WebGPURenderer {
             },
         });
 
+        this.imageUniformBindGroup = this.device.createBindGroup({
+            layout: this.imagePipeline.getBindGroupLayout(0),
+            entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }]
+        });
+
         // Parchment Pipeline
         this.parchmentPipeline = this.device.createRenderPipeline({
             layout: 'auto',
@@ -262,8 +273,8 @@ export default class WebGPURenderer {
         this.initialized = true;
         this.resize();
         this.updateThemeColors();
-        if (window.illuminarchismApp) {
-            window.illuminarchismApp.render();
+        if (this.onNeedRedraw) {
+            this.onNeedRedraw();
         }
     }
 
@@ -425,7 +436,7 @@ export default class WebGPURenderer {
 
             entity._gpuTextureBindGroup = bindGroup;
             // Force redraw since texture just loaded asynchronously
-            if (window.illuminarchismApp) window.illuminarchismApp.render();
+            if (this.onNeedRedraw) this.onNeedRedraw();
             return bindGroup;
         } catch (e) {
             console.error('Failed to load WebGPU image texture', e);
@@ -489,12 +500,12 @@ export default class WebGPURenderer {
             const t0 = entity.timeline[0];
             if (!t0.geometry) continue;
 
+            let geoFn, isClosedForSegment;
             if (t0.geometry.length === 1) {
                 // Point entity - expand to a small diamond quad
-                // We use a fixed scale since points remain same size relative to view, but geometry must be built with a size.
-                // An arbitrary world size (e.g. 10) will be scaled down when zooming out, but it's an MVP fix.
+                const s = GEOMETRY_CONFIG.POINT_SIZE;
                 const generatePointGeo = (pt) => {
-                    const s = 10;
+                    if (!pt) return [];
                     return [
                         {x: pt.x, y: pt.y - s},
                         {x: pt.x + s, y: pt.y},
@@ -502,40 +513,30 @@ export default class WebGPURenderer {
                         {x: pt.x - s, y: pt.y}
                     ];
                 };
-
-                this.addSegment(entityVertices, generatePointGeo(t0.geometry[0]), generatePointGeo(t0.geometry[0]), color, validStart, validEnd, YEAR_MIN, t0.year, true, entityIdNum);
-
-                for (let i = 0; i < entity.timeline.length - 1; i++) {
-                    const cur = entity.timeline[i];
-                    const next = entity.timeline[i+1];
-                    if (!cur.geometry || !next.geometry) continue;
-                    this.addSegment(entityVertices, generatePointGeo(cur.geometry[0]), generatePointGeo(next.geometry[0]), color, validStart, validEnd, cur.year, next.year, true, entityIdNum);
-                }
-
-                const tn = entity.timeline[entity.timeline.length - 1];
-                if (tn.geometry) {
-                    const lastGeo = isBeingEdited ? entity.currentGeometry : tn.geometry;
-                    this.addSegment(entityVertices, generatePointGeo(tn.geometry[0]), generatePointGeo(lastGeo[0]), color, validStart, validEnd, tn.year, YEAR_MAX, true, entityIdNum);
-                }
+                geoFn = (geometry) => generatePointGeo(geometry[0]);
+                isClosedForSegment = true;
             } else {
-                this.addSegment(entityVertices, t0.geometry, t0.geometry, color, validStart, validEnd, YEAR_MIN, t0.year, isClosed, entityIdNum);
+                geoFn = (geometry) => geometry;
+                isClosedForSegment = isClosed;
+            }
 
-                for (let i = 0; i < entity.timeline.length - 1; i++) {
-                    const cur = entity.timeline[i];
-                    const next = entity.timeline[i+1];
-                    if (!cur.geometry || !next.geometry) continue;
-                    this.addSegment(entityVertices, cur.geometry, next.geometry, color, validStart, validEnd, cur.year, next.year, isClosed, entityIdNum);
-                }
+            this.addSegment(entityVertices, geoFn(t0.geometry), geoFn(t0.geometry), color, validStart, validEnd, YEAR_MIN, t0.year, isClosedForSegment, entityIdNum);
 
-                const tn = entity.timeline[entity.timeline.length - 1];
-                if (tn.geometry) {
-                    // If the entity is being dragged/modified, its currentGeometry reflects the drag state.
-                    // We use it as the final keyframe so the drag is visible dynamically in WebGPU.
-                    // In a real bitemporal model we'd build a dynamic buffer just for currentGeometry,
-                    // but for MVP this ensures the dragging polygon moves smoothly.
-                    const lastGeo = isBeingEdited ? entity.currentGeometry : tn.geometry;
-                    this.addSegment(entityVertices, tn.geometry, lastGeo, color, validStart, validEnd, tn.year, YEAR_MAX, isClosed, entityIdNum);
-                }
+            for (let i = 0; i < entity.timeline.length - 1; i++) {
+                const cur = entity.timeline[i];
+                const next = entity.timeline[i+1];
+                if (!cur.geometry || !next.geometry) continue;
+                this.addSegment(entityVertices, geoFn(cur.geometry), geoFn(next.geometry), color, validStart, validEnd, cur.year, next.year, isClosedForSegment, entityIdNum);
+            }
+
+            const tn = entity.timeline[entity.timeline.length - 1];
+            if (tn.geometry) {
+                // If the entity is being dragged/modified, its currentGeometry reflects the drag state.
+                // We use it as the final keyframe so the drag is visible dynamically in WebGPU.
+                // In a real bitemporal model we'd build a dynamic buffer just for currentGeometry,
+                // but for MVP this ensures the dragging polygon moves smoothly.
+                const lastGeo = isBeingEdited ? entity.currentGeometry : tn.geometry;
+                this.addSegment(entityVertices, geoFn(tn.geometry), geoFn(lastGeo), color, validStart, validEnd, tn.year, YEAR_MAX, isClosedForSegment, entityIdNum);
             }
 
             const floatArray = new Float32Array(entityVertices);
@@ -614,7 +615,7 @@ export default class WebGPURenderer {
                 }
             } else if (!isClosed) {
                 // Polylines (e.g., rivers) - stroke expansion
-                const strokeWidth = 3; // Fixed width for MVP
+                const strokeWidth = GEOMETRY_CONFIG.POLYLINE_STROKE_WIDTH;
                 for (let i = 0; i < startGeo.length - 1; i++) {
                     let s0 = startGeo[i];
                     let s1 = startGeo[i+1];
@@ -926,7 +927,7 @@ export default class WebGPURenderer {
 
                 if (!imageUniformsBound) {
                     passEncoder.setPipeline(this.imagePipeline);
-                    passEncoder.setBindGroup(0, this.geometryBindGroup);
+                    passEncoder.setBindGroup(0, this.imageUniformBindGroup);
                     imageUniformsBound = true;
                 }
 

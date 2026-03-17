@@ -23,7 +23,7 @@ export default class IlluminarchismApp {
         this.ontologyTaxonomy = buildTaxonomyForUI();
 
         if (navigator.gpu) {
-            this.renderer = new WebGPURenderer('map-canvas');
+            this.renderer = new WebGPURenderer('map-canvas', () => this.render());
         } else {
             console.warn("WebGPU not supported, falling back to MedievalRenderer");
             this.renderer = new MedievalRenderer('map-canvas');
