@@ -8,6 +8,8 @@ struct Uniforms {
     time: f32,
     inkBleed: f32,
     paperRoughness: f32,
+    hoveredId: f32,
+    selectedId: f32,
     parchmentColor: vec4<f32>,
     inkColor: vec4<f32>,
 };
@@ -39,6 +41,7 @@ struct VertexInput {
     @location(4) validEnd: f32,
     @location(5) yearStart: f32,
     @location(6) yearEnd: f32,
+    @location(7) entityId: f32,
 };
 
 struct VertexOutput {
@@ -46,6 +49,7 @@ struct VertexOutput {
     @location(0) color: vec3<f32>,
     @location(1) visibility: f32,
     @location(2) texCoord: vec2<f32>,
+    @location(3) entityId: f32,
 };
 
 @vertex
@@ -94,6 +98,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     out.clip_position = vec4<f32>(transformedX, transformedY, 0.0, 1.0);
     out.texCoord = basePosition;
     out.color = input.color;
+    out.entityId = input.entityId;
 
     return out;
 }
@@ -114,12 +119,57 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let bleed = noise(in.texCoord.x * 10.0, in.texCoord.y * 10.0) * uniforms.inkBleed * 0.1;
 
     // Blend ink over parchment with opacity for the medieval manuscript look
-    const INK_OPACITY: f32 = 0.7;
-    let baseColor = mix(PARCHMENT, inkColor, INK_OPACITY);
+    let INK_OPACITY: f32 = 0.7;
+    var baseColor = mix(PARCHMENT, inkColor, INK_OPACITY);
+
+    // Highlight logic
+    if (abs(in.entityId - uniforms.hoveredId) < 0.1) {
+        baseColor = baseColor * 1.2; // Boost brightness
+    }
+    if (abs(in.entityId - uniforms.selectedId) < 0.1) {
+        baseColor = mix(baseColor, vec3<f32>(0.54, 0.20, 0.14), 0.5); // Tint with #8a3324 highlight red
+    }
+
     var finalColor = baseColor + vec3<f32>(bleed * 0.05);
 
     // Output premultiplied alpha: (color.rgb * alpha, alpha)
     return vec4<f32>(finalColor * in.visibility, in.visibility);
+}
+
+// ------------------------------------
+// Image Texture Pipeline
+// ------------------------------------
+
+@group(1) @binding(0) var imgSampler: sampler;
+@group(1) @binding(1) var imgTexture: texture_2d<f32>;
+
+struct ImageVertexInput {
+    @location(0) position: vec2<f32>,
+    @location(1) uv: vec2<f32>,
+    @location(2) opacity: f32,
+};
+
+struct ImageVertexOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+    @location(1) opacity: f32,
+};
+
+@vertex
+fn vs_image(input: ImageVertexInput) -> ImageVertexOutput {
+    var out: ImageVertexOutput;
+    let transformedX = uniforms.matCol0.x * input.position.x + uniforms.matCol1.x * input.position.y + uniforms.matCol2.x;
+    let transformedY = uniforms.matCol0.y * input.position.x + uniforms.matCol1.y * input.position.y + uniforms.matCol2.y;
+    out.clip_position = vec4<f32>(transformedX, transformedY, 0.0, 1.0);
+    out.uv = input.uv;
+    out.opacity = input.opacity;
+    return out;
+}
+
+@fragment
+fn fs_image(in: ImageVertexOutput) -> @location(0) vec4<f32> {
+    let color = textureSample(imgTexture, imgSampler, in.uv);
+    return vec4<f32>(color.rgb * in.opacity, color.a * in.opacity);
 }
 
 // ------------------------------------
