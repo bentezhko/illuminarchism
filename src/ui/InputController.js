@@ -345,7 +345,7 @@ export default class InputController {
             if (!this.isDragging && this.app.activeTool !== 'draw') {
                 const now = Date.now();
 
-                if (now - this.hoverThrottle > 32) { // Increased throttle to 32ms (approx 30fps)
+                if (now - this.hoverThrottle > 32) { // Reduced throttle delay to 32ms (approx 30fps)
                     this.hoverThrottle = now;
                     try {
                         this.app.checkHover(wp);
