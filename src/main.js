@@ -475,7 +475,8 @@ export default class IlluminarchismApp {
         });
 
         // Scale Measurement Unit Buttons in Modal
-        document.querySelectorAll('.scale-unit-btn').forEach(btn => {
+        this.uiRefs.scaleButtons = Array.from(document.querySelectorAll('.scale-unit-btn'));
+        this.uiRefs.scaleButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const unit = e.target.dataset.unit;
                 if (this.renderer) {
@@ -486,20 +487,15 @@ export default class IlluminarchismApp {
                 }
 
                 // Update UI active state
-                document.querySelectorAll('.scale-unit-btn').forEach(b => {
-                    b.style.color = '';
-                    b.style.fontWeight = '';
-                });
-                e.target.style.color = 'var(--rubric-red)';
-                e.target.style.fontWeight = 'bold';
+                this.uiRefs.scaleButtons.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
             });
         });
 
         // Initialize active scale unit button on load
-        const initScaleBtn = document.querySelector(`.scale-unit-btn[data-unit="leagues"]`);
+        const initScaleBtn = this.uiRefs.scaleButtons.find(b => b.dataset.unit === 'leagues');
         if (initScaleBtn) {
-             initScaleBtn.style.color = 'var(--rubric-red)';
-             initScaleBtn.style.fontWeight = 'bold';
+             initScaleBtn.classList.add('active');
         }
 
         // Ontology Button — toggles modal open/closed

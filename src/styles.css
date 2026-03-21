@@ -157,6 +157,11 @@ h1 {
     box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
+.scale-unit-btn.active {
+    color: var(--rubric-red);
+    font-weight: bold;
+}
+
 /* Scroll Dropdown Menu */
 .scroll-dropdown {
     position: relative;
