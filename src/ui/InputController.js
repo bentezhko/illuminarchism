@@ -345,7 +345,7 @@ export default class InputController {
             if (!this.isDragging && this.app.activeTool !== 'draw') {
                 const now = Date.now();
 
-                if (now - this.hoverThrottle > 50) { // Increased throttle to 50ms
+                if (now - this.hoverThrottle > 32) { // Increased throttle to 32ms (approx 30fps)
                     this.hoverThrottle = now;
                     try {
                         this.app.checkHover(wp);
@@ -436,8 +436,9 @@ export default class InputController {
             this.originalGeometry = null;
 
             if (this.app.activeTool === 'pan') {
-                const c = document.getElementById('map-canvas');
-                if (c) c.style.cursor = 'grab';
+                const rect = this.renderer.canvas.getBoundingClientRect();
+                const wp = this.renderer.toWorld(e.clientX - rect.left, e.clientY - rect.top);
+                this.app.checkHover(wp);
             }
         });
 
