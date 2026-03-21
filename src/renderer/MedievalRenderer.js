@@ -59,8 +59,33 @@ export default class MedievalRenderer {
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
-        this.createParchmentTexture();
-        this.createWaterTexture();
+        // initialization deferred to async create()
+    }
+
+    static async create(canvasId) {
+        const renderer = new MedievalRenderer(canvasId);
+        await renderer._initWebGPU();
+        await renderer.createParchmentTexture();
+        renderer.createWaterTexture();
+        return renderer;
+    }
+
+    async _initWebGPU() {
+        if (!navigator.gpu) {
+            this.gpuDevice = null;
+            return;
+        }
+        try {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) {
+                this.gpuDevice = null;
+                return;
+            }
+            this.gpuDevice = await adapter.requestDevice();
+        } catch (e) {
+            console.warn("WebGPU initialization failed:", e);
+            this.gpuDevice = null;
+        }
     }
 
     updateThemeColors() {
@@ -173,54 +198,207 @@ export default class MedievalRenderer {
         return pattern;
     }
 
-    createParchmentTexture() {
+    async createParchmentTexture() {
         if (!MedievalRenderer.cachedParchmentCanvas) {
-            const size = 512;
-            const c = document.createElement('canvas');
-            c.width = size; c.height = size;
-            const ctx = c.getContext('2d');
+            if (this.gpuDevice) {
+                await this._generateParchmentGPU();
+            } else {
+                const size = 512;
+                const c = document.createElement('canvas');
+                c.width = size; c.height = size;
+                const ctx = c.getContext('2d');
 
-            const imageData = ctx.createImageData(size, size);
-            const data = imageData.data;
+                const imageData = ctx.createImageData(size, size);
+                const data = imageData.data;
 
-            let baseColor = { r: 243, g: 233, b: 210 };
-            const val = this.themeColors.parchmentBg;
-            if (val.startsWith('#') && val.length === 7) {
-                baseColor = {
-                    r: parseInt(val.slice(1, 3), 16),
-                    g: parseInt(val.slice(3, 5), 16),
-                    b: parseInt(val.slice(5, 7), 16)
-                };
-            }
-
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < size; x++) {
-                    // Generate FBM noise for "cloudy" paper texture
-                    // Scale coordinate to get good frequency
-                    const n = fbm(x / 150, y / 150, 4, 0.5, 2);
-
-                    // Map noise -1..1 to brightness variation
-                    const brightness = 1 + (n * 0.15); // +/- 15% variation
-
-                    // Add some high-frequency grain
-                    const grain = (Math.random() - 0.5) * 0.05;
-
-                    const i = (y * size + x) * 4;
-                    const mod = brightness + grain;
-
-                    data[i] = Math.min(255, Math.max(0, baseColor.r * mod));
-                    data[i + 1] = Math.min(255, Math.max(0, baseColor.g * mod));
-                    data[i + 2] = Math.min(255, Math.max(0, baseColor.b * mod));
-                    data[i + 3] = 255;
+                let baseColor = { r: 243, g: 233, b: 210 };
+                const val = this.themeColors.parchmentBg;
+                if (val.startsWith('#') && val.length === 7) {
+                    baseColor = {
+                        r: parseInt(val.slice(1, 3), 16),
+                        g: parseInt(val.slice(3, 5), 16),
+                        b: parseInt(val.slice(5, 7), 16)
+                    };
                 }
-            }
 
-            ctx.putImageData(imageData, 0, 0);
-            MedievalRenderer.cachedParchmentCanvas = c;
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        // Generate FBM noise for "cloudy" paper texture
+                        // Scale coordinate to get good frequency
+                        const n = fbm(x / 150, y / 150, 4, 0.5, 2);
+
+                        // Map noise -1..1 to brightness variation
+                        const brightness = 1 + (n * 0.15); // +/- 15% variation
+
+                        // Add some high-frequency grain
+                        const grain = (Math.random() - 0.5) * 0.05;
+
+                        const i = (y * size + x) * 4;
+                        const mod = brightness + grain;
+
+                        data[i] = Math.min(255, Math.max(0, baseColor.r * mod));
+                        data[i + 1] = Math.min(255, Math.max(0, baseColor.g * mod));
+                        data[i + 2] = Math.min(255, Math.max(0, baseColor.b * mod));
+                        data[i + 3] = 255;
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                MedievalRenderer.cachedParchmentCanvas = c;
+            }
         }
 
         this.noisePattern = this.ctx.createPattern(MedievalRenderer.cachedParchmentCanvas, 'repeat');
     }
+
+    async _generateParchmentGPU() {
+        const size = 512;
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const ctx = c.getContext('2d');
+
+        let baseColor = [243 / 255, 233 / 255, 210 / 255];
+        const val = this.themeColors.parchmentBg;
+        if (val.startsWith('#') && val.length === 7) {
+            baseColor = [
+                parseInt(val.slice(1, 3), 16) / 255,
+                parseInt(val.slice(3, 5), 16) / 255,
+                parseInt(val.slice(5, 7), 16) / 255
+            ];
+        }
+
+        const wgslCode = `
+struct Uniforms {
+    baseColor: vec3<f32>,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var outTexture: texture_storage_2d<rgba8unorm, write>;
+
+// Simple pseudo-random hash for value noise
+fn hash(p: vec2<f32>) -> f32 {
+    let p3 = fract(vec3<f32>(p.xyx) * 0.1313);
+    let dp = dot(p3, p3.yzx + 3.333);
+    return fract((dp + p3.x) * p3.y);
+}
+
+// 2D Value Noise
+fn valueNoise(p: vec2<f32>) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+
+    // quintic interpolation
+    let u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+
+    let a = hash(i + vec2<f32>(0.0, 0.0));
+    let b = hash(i + vec2<f32>(1.0, 0.0));
+    let c = hash(i + vec2<f32>(0.0, 1.0));
+    let d = hash(i + vec2<f32>(1.0, 1.0));
+
+    // Maps 0..1 to -1..1 to match the JS perlin noise behavior approximately
+    let res = mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+    return res * 2.0 - 1.0;
+}
+
+fn fbm(p: vec2<f32>, octaves: u32, persistence: f32, lacunarity: f32) -> f32 {
+    var total = 0.0;
+    var frequency = 1.0;
+    var amplitude = 1.0;
+    var maxValue = 0.0;
+    for (var i = 0u; i < octaves; i = i + 1u) {
+        total = total + valueNoise(p * frequency) * amplitude;
+        maxValue = maxValue + amplitude;
+        amplitude = amplitude * persistence;
+        frequency = frequency * lacunarity;
+    }
+    return total / maxValue;
+}
+
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let x = global_id.x;
+    let y = global_id.y;
+    if (x >= 512u || y >= 512u) { return; }
+
+    let coords = vec2<f32>(f32(x), f32(y));
+    let n = fbm(coords / 150.0, 4u, 0.5, 2.0);
+
+    let brightness = 1.0 + (n * 0.15);
+
+    var color = uniforms.baseColor * brightness;
+    color = clamp(color, vec3<f32>(0.0), vec3<f32>(1.0));
+
+    textureStore(outTexture, vec2<i32>(i32(x), i32(y)), vec4<f32>(color, 1.0));
+}
+        `;
+
+        const device = this.gpuDevice;
+        const texture = device.createTexture({
+            size: [size, size, 1],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC
+        });
+
+        // 16 bytes for a vec3
+        const uniformBuffer = device.createBuffer({
+            size: 16,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+        const uniformData = new Float32Array([...baseColor, 0]);
+        device.queue.writeBuffer(uniformBuffer, 0, uniformData);
+
+        const shaderModule = device.createShaderModule({ code: wgslCode });
+        const pipeline = device.createComputePipeline({
+            layout: 'auto',
+            compute: { module: shaderModule, entryPoint: 'main' }
+        });
+
+        const bindGroup = device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: uniformBuffer } },
+                { binding: 1, resource: texture.createView() }
+            ]
+        });
+
+        // Copy buffer needs to be a multiple of 256 bytes per row
+        const bytesPerPixel = 4;
+        const bytesPerRow = size * bytesPerPixel; // 512 * 4 = 2048, which is multiple of 256
+        const readBuffer = device.createBuffer({
+            size: bytesPerRow * size,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginComputePass();
+        pass.setPipeline(pipeline);
+        pass.setBindGroup(0, bindGroup);
+        pass.dispatchWorkgroups(Math.ceil(size / 16), Math.ceil(size / 16));
+        pass.end();
+
+        encoder.copyTextureToBuffer(
+            { texture },
+            { buffer: readBuffer, bytesPerRow },
+            [size, size, 1]
+        );
+
+        device.queue.submit([encoder.finish()]);
+
+        await readBuffer.mapAsync(GPUMapMode.READ);
+        const arrayBuffer = readBuffer.getMappedRange();
+        const uint8Array = new Uint8ClampedArray(arrayBuffer);
+        const imageData = new ImageData(uint8Array, size, size);
+
+        ctx.putImageData(imageData, 0, 0);
+        MedievalRenderer.cachedParchmentCanvas = c;
+
+        readBuffer.unmap();
+        texture.destroy();
+        uniformBuffer.destroy();
+        readBuffer.destroy();
+    }
+
 
     invalidateWorldLayer() {
         this.worldLayerValid = false;

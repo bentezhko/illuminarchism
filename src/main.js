@@ -18,15 +18,25 @@ import { initialEntities } from './data/initialEntities.js';
 import DrawTool from './tools/DrawTool.js';
 
 export default class IlluminarchismApp {
+    static async create() {
+        const app = new IlluminarchismApp();
+        await app._init();
+        return app;
+    }
+
     constructor() {
         // Build taxonomy from Ontology module (4-domain, 3-level hierarchy)
         this.ontologyTaxonomy = buildTaxonomyForUI();
 
+        // Initialization deferred to async _init
+    }
+
+    async _init() {
         if (navigator.gpu) {
             this.renderer = new WebGPURenderer('map-canvas');
         } else {
             console.warn("WebGPU not supported, falling back to MedievalRenderer");
-            this.renderer = new MedievalRenderer('map-canvas');
+            this.renderer = await MedievalRenderer.create('map-canvas');
         }
 
         this.input = new InputController(this);
@@ -92,12 +102,7 @@ export default class IlluminarchismApp {
         // Initial setup for toolbar sliding based on view
         document.body.classList.add('view-map');
 
-        this.initData();
-        this.initUI();
-        this.initAnimation();
-        this.updateEntities();
-        this.renderRegistry();
-        this.render();
+        // Note: the rest of initialization is handled by async _init()
     }
 
     initAnimation() {
@@ -1485,9 +1490,9 @@ export default class IlluminarchismApp {
 
 // Global hook
 if (typeof window !== 'undefined') {
-    window.onload = () => {
+    window.onload = async () => {
         try {
-            window.illuminarchismApp = new IlluminarchismApp();
+            window.illuminarchismApp = await IlluminarchismApp.create();
             const overlay = document.getElementById('loading-overlay');
             if (overlay) overlay.style.display = 'none';
         } catch (e) {
