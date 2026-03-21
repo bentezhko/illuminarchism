@@ -59,8 +59,32 @@ export default class MedievalRenderer {
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
-        this.createParchmentTexture();
-        this.createWaterTexture();
+    }
+
+    static async create(canvasId) {
+        const renderer = new MedievalRenderer(canvasId);
+        await renderer._initWebGPU();
+        renderer.createParchmentTexture();
+        renderer.createWaterTexture();
+        return renderer;
+    }
+
+    async _initWebGPU() {
+        if (!navigator.gpu) {
+            this.gpuDevice = null;
+            return;
+        }
+        try {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (!adapter) {
+                this.gpuDevice = null;
+                return;
+            }
+            this.gpuDevice = await adapter.requestDevice();
+        } catch (e) {
+            console.error("WebGPU init failed:", e);
+            this.gpuDevice = null;
+        }
     }
 
     updateThemeColors() {
@@ -167,7 +191,195 @@ export default class MedievalRenderer {
         return pattern;
     }
 
+    async _generateParchmentGPU() {
+        const size = 512;
+        let baseColor = { r: 243, g: 233, b: 210 };
+        const val = this.themeColors.parchmentBg;
+        if (val.startsWith('#') && val.length === 7) {
+            baseColor = {
+                r: parseInt(val.slice(1, 3), 16),
+                g: parseInt(val.slice(3, 5), 16),
+                b: parseInt(val.slice(5, 7), 16)
+            };
+        }
+
+        const device = this.gpuDevice;
+
+        const wgslCode = `
+struct Params {
+    baseColor: vec4<f32>
+};
+
+@group(0) @binding(0) var<uniform> params: Params;
+@group(0) @binding(1) var outTex: texture_storage_2d<rgba8unorm, write>;
+
+// 2D Random gradient vector
+fn random2(p: vec2<f32>) -> vec2<f32> {
+    let q = vec2<f32>(
+        dot(p, vec2<f32>(127.1, 311.7)),
+        dot(p, vec2<f32>(269.5, 183.3))
+    );
+    return -1.0 + 2.0 * fract(sin(q) * 43758.5453123);
+}
+
+// 2D Perlin (Gradient) Noise
+fn noise2D(p: vec2<f32>) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+
+    // Gradients
+    let a = random2(i);
+    let b = random2(i + vec2<f32>(1.0, 0.0));
+    let c = random2(i + vec2<f32>(0.0, 1.0));
+    let d = random2(i + vec2<f32>(1.0, 1.0));
+
+    // Smooth Interpolation
+    let u = f * f * (3.0 - 2.0 * f);
+
+    // Mix gradient dot products
+    return mix(
+        mix(dot(a, f),
+            dot(b, f - vec2<f32>(1.0, 0.0)), u.x),
+        mix(dot(c, f - vec2<f32>(0.0, 1.0)),
+            dot(d, f - vec2<f32>(1.0, 1.0)), u.x),
+        u.y
+    );
+}
+
+// Perlin noise naturally returns approximately -1.0 to 1.0
+fn remapNoise2D(p: vec2<f32>) -> f32 {
+    return noise2D(p);
+}
+
+fn fbm(x: f32, y: f32, octaves: u32, persistence: f32, lacunarity: f32) -> f32 {
+    var total = 0.0;
+    var frequency = 1.0;
+    var amplitude = 1.0;
+    var maxValue = 0.0;
+
+    for (var i = 0u; i < octaves; i = i + 1u) {
+        total = total + remapNoise2D(vec2<f32>(x * frequency, y * frequency)) * amplitude;
+        maxValue = maxValue + amplitude;
+        amplitude = amplitude * persistence;
+        frequency = frequency * lacunarity;
+    }
+    return total / maxValue;
+}
+
+@compute @workgroup_size(16, 16)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+    let x = global_id.x;
+    let y = global_id.y;
+
+    if (x >= ${size}u || y >= ${size}u) {
+        return;
+    }
+
+    let fx = f32(x) / 150.0;
+    let fy = f32(y) / 150.0;
+
+    let n = fbm(fx, fy, 4u, 0.5, 2.0);
+
+    let brightness = 1.0 + (n * 0.15);
+
+    let modColor = params.baseColor.rgb * brightness;
+
+    let finalColor = clamp(modColor, vec3<f32>(0.0), vec3<f32>(1.0));
+
+    textureStore(outTex, vec2<i32>(i32(x), i32(y)), vec4<f32>(finalColor, 1.0));
+}
+        `;
+
+        const shaderModule = device.createShaderModule({ code: wgslCode });
+
+        const pipeline = device.createComputePipeline({
+            layout: 'auto',
+            compute: {
+                module: shaderModule,
+                entryPoint: 'main',
+            },
+        });
+
+        // Parameters buffer
+        const paramsBuffer = device.createBuffer({
+            size: 16, // vec4<f32>
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        const baseColorArray = new Float32Array([baseColor.r / 255.0, baseColor.g / 255.0, baseColor.b / 255.0, 1.0]);
+        device.queue.writeBuffer(paramsBuffer, 0, baseColorArray);
+
+        // Output Texture
+        const texture = device.createTexture({
+            size: [size, size, 1],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC,
+        });
+
+        const bindGroup = device.createBindGroup({
+            layout: pipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: paramsBuffer } },
+                { binding: 1, resource: texture.createView() }
+            ]
+        });
+
+        const commandEncoder = device.createCommandEncoder();
+        const passEncoder = commandEncoder.beginComputePass();
+        passEncoder.setPipeline(pipeline);
+        passEncoder.setBindGroup(0, bindGroup);
+        passEncoder.dispatchWorkgroups(Math.ceil(size / 16), Math.ceil(size / 16));
+        passEncoder.end();
+
+        // Readback buffer
+        const bytesPerRow = Math.ceil((size * 4) / 256) * 256;
+        const readbackBuffer = device.createBuffer({
+            size: bytesPerRow * size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+
+        commandEncoder.copyTextureToBuffer(
+            { texture: texture },
+            { buffer: readbackBuffer, bytesPerRow: bytesPerRow, rowsPerImage: size },
+            [size, size, 1]
+        );
+
+        device.queue.submit([commandEncoder.finish()]);
+
+        await readbackBuffer.mapAsync(GPUMapMode.READ);
+        const mappedArray = new Uint8Array(readbackBuffer.getMappedRange());
+
+        // We must unpack it because bytesPerRow might be larger than size * 4
+        const imageData = new ImageData(size, size);
+        for (let y = 0; y < size; y++) {
+            const srcOffset = y * bytesPerRow;
+            const dstOffset = y * size * 4;
+            imageData.data.set(mappedArray.subarray(srcOffset, srcOffset + size * 4), dstOffset);
+        }
+
+        readbackBuffer.unmap();
+        paramsBuffer.destroy();
+        texture.destroy();
+
+        if (!MedievalRenderer.cachedParchmentCanvas) {
+            const c = document.createElement('canvas');
+            c.width = size; c.height = size;
+            MedievalRenderer.cachedParchmentCanvas = c;
+        }
+
+        const ctx = MedievalRenderer.cachedParchmentCanvas.getContext('2d');
+        ctx.putImageData(imageData, 0, 0);
+
+        this.noisePattern = this.ctx.createPattern(MedievalRenderer.cachedParchmentCanvas, 'repeat');
+        this.invalidateWorldLayer();
+        if (window.illuminarchismApp) window.illuminarchismApp.render();
+    }
+
     createParchmentTexture() {
+        if (this.gpuDevice) {
+            this._generateParchmentGPU();
+            return;
+        }
+
         if (!MedievalRenderer.cachedParchmentCanvas) {
             const size = 512;
             const c = document.createElement('canvas');

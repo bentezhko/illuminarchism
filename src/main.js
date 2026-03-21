@@ -17,12 +17,12 @@ import { initialEntities } from './data/initialEntities.js';
 import DrawTool from './tools/DrawTool.js';
 
 export default class IlluminarchismApp {
-    constructor() {
+    constructor(renderer) {
         // Build taxonomy from Ontology module (4-domain, 3-level hierarchy)
         this.ontologyTaxonomy = buildTaxonomyForUI();
 
 
-        this.renderer = new MedievalRenderer('map-canvas');
+        this.renderer = renderer;
         this.input = new InputController(this);
 
         // Modules
@@ -1479,9 +1479,10 @@ export default class IlluminarchismApp {
 
 // Global hook
 if (typeof window !== 'undefined') {
-    window.onload = () => {
+    window.onload = async () => {
         try {
-            window.illuminarchismApp = new IlluminarchismApp();
+            const renderer = await MedievalRenderer.create('map-canvas');
+            window.illuminarchismApp = new IlluminarchismApp(renderer);
             const overlay = document.getElementById('loading-overlay');
             if (overlay) overlay.style.display = 'none';
         } catch (e) {
