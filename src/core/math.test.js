@@ -1,5 +1,50 @@
 import { expect, test, describe } from "bun:test";
-import { escapeHTML, resampleGeometry, alignPolygonClosed, getBoundingBox, enforceClockwise } from "./math.js";
+import { escapeHTML, resampleGeometry, alignPolygonClosed, getBoundingBox, enforceClockwise, distance, distSq, distanceToSegment } from "./math.js";
+
+describe("distance", () => {
+    test("calculates distance between two points", () => {
+        expect(distance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
+        expect(distance({ x: -1, y: -1 }, { x: 2, y: 3 })).toBe(5);
+    });
+
+    test("returns zero for the same point", () => {
+        expect(distance({ x: 10, y: 10 }, { x: 10, y: 10 })).toBe(0);
+    });
+});
+
+describe("distSq", () => {
+    test("calculates squared distance between two points", () => {
+        expect(distSq({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(25);
+    });
+});
+
+describe("distanceToSegment", () => {
+    const v = { x: 0, y: 0 };
+    const w = { x: 10, y: 0 };
+
+    test("point on the segment returns 0", () => {
+        expect(distanceToSegment({ x: 5, y: 0 }, v, w)).toBe(0);
+    });
+
+    test("point projecting onto the segment returns perpendicular distance", () => {
+        expect(distanceToSegment({ x: 5, y: 5 }, v, w)).toBe(5);
+        expect(distanceToSegment({ x: 5, y: -3 }, v, w)).toBe(3);
+    });
+
+    test("point projecting before the start returns distance to start", () => {
+        expect(distanceToSegment({ x: -5, y: 0 }, v, w)).toBe(5);
+        expect(distanceToSegment({ x: -3, y: 4 }, v, w)).toBe(5);
+    });
+
+    test("point projecting after the end returns distance to end", () => {
+        expect(distanceToSegment({ x: 15, y: 0 }, v, w)).toBe(5);
+        expect(distanceToSegment({ x: 13, y: 4 }, v, w)).toBe(5);
+    });
+
+    test("handles zero-length segments", () => {
+        expect(distanceToSegment({ x: 3, y: 4 }, v, v)).toBe(5);
+    });
+});
 
 describe("alignPolygonClosed", () => {
     test("returns second polygon as-is if lengths differ", () => {
