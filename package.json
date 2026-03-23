@@ -13,6 +13,7 @@
   "author": "bentezhko",
   "license": "MIT",
   "dependencies": {
+    "earcut": "^3.0.2",
     "playwright": "^1.58.2",
     "puppeteer": "^24.38.0"
   }

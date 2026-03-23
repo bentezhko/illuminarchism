@@ -1,6 +1,7 @@
 import { getCentroid, getRepresentativePoint, getBoundingBox } from '../core/math.js';
 import { fbm, perturbPoint } from './filters.js';
 import { isRenderedAsPoint } from '../core/Ontology.js';
+import earcut from 'earcut';
 
 const GRID_CONFIG = {
     CELL_SIZE: 100,
@@ -81,10 +82,78 @@ export default class MedievalRenderer {
                 return;
             }
             this.gpuDevice = await adapter.requestDevice();
+            this._initPolygonPipeline();
         } catch (e) {
             console.error("WebGPU init failed:", e);
             this.gpuDevice = null;
         }
+    }
+
+    _initPolygonPipeline() {
+        this.gpuCanvas = document.createElement('canvas');
+        this.gpuCanvas.width = this.width;
+        this.gpuCanvas.height = this.height;
+        this.gpuCtx = this.gpuCanvas.getContext('webgpu');
+        this.gpuCtx.configure({
+            device: this.gpuDevice,
+            format: navigator.gpu.getPreferredCanvasFormat(),
+            alphaMode: 'premultiplied'
+        });
+
+        const wgsl = `
+struct Uniforms {
+  transform: mat4x4f,
+  color: vec4f,
+}
+@group(0) @binding(0) var<uniform> u: Uniforms;
+
+@vertex fn vs(@location(0) pos: vec2f) -> @builtin(position) vec4f {
+  let p = u.transform * vec4f(pos, 0.0, 1.0);
+  return p;
+}
+
+@fragment fn fs() -> @location(0) vec4f {
+  return u.color;
+}
+        `;
+        const module = this.gpuDevice.createShaderModule({ code: wgsl });
+
+        this.polygonPipeline = this.gpuDevice.createRenderPipeline({
+            layout: 'auto',
+            vertex: {
+                module,
+                entryPoint: 'vs',
+                buffers: [{
+                    arrayStride: 8,
+                    attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }]
+                }]
+            },
+            fragment: {
+                module,
+                entryPoint: 'fs',
+                targets: [{
+                    format: navigator.gpu.getPreferredCanvasFormat(),
+                    blend: {
+                        color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+                        alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }
+                    }
+                }]
+            },
+            primitive: { topology: 'triangle-list' }
+        });
+
+        this.polygonUniformBuffer = this.gpuDevice.createBuffer({
+            size: 80, // mat4x4f (64 bytes) + vec4f (16 bytes)
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+        });
+
+        this.polygonBindGroup = this.gpuDevice.createBindGroup({
+            layout: this.polygonPipeline.getBindGroupLayout(0),
+            entries: [{
+                binding: 0,
+                resource: { buffer: this.polygonUniformBuffer }
+            }]
+        });
     }
 
     updateThemeColors() {
@@ -189,6 +258,24 @@ export default class MedievalRenderer {
         const pattern = this.ctx.createPattern(canvas, 'repeat');
         this.patternCache[key] = pattern;
         return pattern;
+    }
+
+    _buildWorldToNDC(t) {
+        const mat = new Float32Array(16);
+        const cw = this.gpuCanvas.width;
+        const ch = this.gpuCanvas.height;
+
+        // Scale
+        mat[0] = 2.0 * t.k / cw;
+        mat[5] = -2.0 * t.k / ch; // Flip Y for WebGPU NDC
+        mat[10] = 1.0;
+        mat[15] = 1.0;
+
+        // Translate
+        mat[12] = (2.0 * t.x / cw) - 1.0;
+        mat[13] = -(2.0 * t.y / ch) + 1.0;
+
+        return mat;
     }
 
     async _generateParchmentGPU() {
@@ -521,6 +608,22 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         ctx.restore();
 
         // 4. DRAW LABELS & UI OVERLAYS (Dynamic)
+
+        // Clear GPU Canvas for dynamic highlights
+        if (this.gpuDevice && this.gpuCtx) {
+            const commandEncoder = this.gpuDevice.createCommandEncoder();
+            const passEncoder = commandEncoder.beginRenderPass({
+                colorAttachments: [{
+                    view: this.gpuCtx.getCurrentTexture().createView(),
+                    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+                    loadOp: 'clear',
+                    storeOp: 'store'
+                }]
+            });
+            passEncoder.end();
+            this.gpuDevice.queue.submit([commandEncoder.finish()]);
+        }
+
         ctx.save();
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
@@ -588,6 +691,14 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
 
         ctx.restore();
+
+        // Composite dynamic GPU layer
+        if (this.gpuDevice && this.gpuCanvas) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.drawImage(this.gpuCanvas, 0, 0);
+            ctx.restore();
+        }
 
         // Draw Scale
         this.drawScale();
@@ -865,24 +976,28 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         const pattern = this.getHatchPattern(ent.color, ent.hatchStyle);
 
         if (ent.category !== 'cultural') {
-            ctx.beginPath();
-            this.traceRoughPath(pts, true, ctx);
+            if (this.gpuDevice) {
+                this._drawPolygonGPU(pts, ctx.fillStyle);
+            } else {
+                ctx.beginPath();
+                this.traceRoughPath(pts, true, ctx);
 
-            // Land Shadow / Glow
-            if (ent.type === 'polity') {
-                ctx.shadowColor = 'rgba(0,0,0,0.3)';
-                ctx.shadowBlur = 10;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 2;
+                // Land Shadow / Glow
+                if (ent.type === 'polity') {
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                    ctx.shadowBlur = 10;
+                    ctx.shadowOffsetX = 2;
+                    ctx.shadowOffsetY = 2;
+                }
+
+                ctx.fill();
+
+                // Reset shadow
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
             }
-
-            ctx.fill();
-
-            // Reset shadow
-            ctx.shadowColor = 'transparent';
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
         }
 
         // Apply Pattern on top of wash
@@ -1051,6 +1166,73 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
         this.ctx.fillText(ent.name, cx, cy);
         this.ctx.shadowBlur = 0;
+    }
+
+    _drawPolygonGPU(pts, colorRGBA) {
+        if (!pts || pts.length < 3) return;
+
+        // Flatten points for earcut
+        const flatPts = new Float32Array(pts.length * 2);
+        for (let i = 0; i < pts.length; i++) {
+            flatPts[i * 2] = pts[i].x;
+            flatPts[i * 2 + 1] = pts[i].y;
+        }
+
+        const indices = earcut(flatPts);
+        if (!indices || indices.length === 0) return;
+
+        // Create GPU buffers
+        const vertexBuffer = this.gpuDevice.createBuffer({
+            size: flatPts.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+        this.gpuDevice.queue.writeBuffer(vertexBuffer, 0, flatPts);
+
+        const indexArray = new Uint32Array(indices);
+        const indexBuffer = this.gpuDevice.createBuffer({
+            size: indexArray.byteLength,
+            usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        });
+        this.gpuDevice.queue.writeBuffer(indexBuffer, 0, indexArray);
+
+        // Update uniforms
+        const transformMat = this._buildWorldToNDC(this.transform);
+        this.gpuDevice.queue.writeBuffer(this.polygonUniformBuffer, 0, transformMat);
+
+        // Parse RGBA color and premultiply alpha
+        const m = colorRGBA.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+        let colorVec = new Float32Array([0, 0, 0, 1]);
+        if (m) {
+            const r = parseFloat(m[1]) / 255.0;
+            const g = parseFloat(m[2]) / 255.0;
+            const b = parseFloat(m[3]) / 255.0;
+            const a = m[4] !== undefined ? parseFloat(m[4]) : 1.0;
+            colorVec = new Float32Array([r * a, g * a, b * a, a]);
+        }
+        this.gpuDevice.queue.writeBuffer(this.polygonUniformBuffer, 64, colorVec);
+
+        // Render pass
+        const commandEncoder = this.gpuDevice.createCommandEncoder();
+        const passEncoder = commandEncoder.beginRenderPass({
+            colorAttachments: [{
+                view: this.gpuCtx.getCurrentTexture().createView(),
+                loadOp: 'load',
+                storeOp: 'store'
+            }]
+        });
+
+        passEncoder.setPipeline(this.polygonPipeline);
+        passEncoder.setBindGroup(0, this.polygonBindGroup);
+        passEncoder.setVertexBuffer(0, vertexBuffer);
+        passEncoder.setIndexBuffer(indexBuffer, 'uint32');
+        passEncoder.drawIndexed(indices.length);
+        passEncoder.end();
+
+        this.gpuDevice.queue.submit([commandEncoder.finish()]);
+
+        // Cleanup buffers to prevent leak
+        vertexBuffer.destroy();
+        indexBuffer.destroy();
     }
 
     drawDraft(points, cursor, transform, type, options = {}) {
@@ -1305,6 +1487,21 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         ctx.translate(t.x, t.y);
         ctx.scale(t.k, t.k);
 
+        // Clear the GPU canvas before rendering world entities
+        if (this.gpuDevice && this.gpuCtx) {
+            const commandEncoder = this.gpuDevice.createCommandEncoder();
+            const passEncoder = commandEncoder.beginRenderPass({
+                colorAttachments: [{
+                    view: this.gpuCtx.getCurrentTexture().createView(),
+                    clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
+                    loadOp: 'clear',
+                    storeOp: 'store'
+                }]
+            });
+            passEncoder.end();
+            this.gpuDevice.queue.submit([commandEncoder.finish()]);
+        }
+
         sortedLayerIds.forEach(lid => {
             const groupEntities = layerGroups[lid];
             if (!groupEntities || groupEntities.length === 0) return;
@@ -1341,5 +1538,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         });
 
         ctx.restore();
+
+        // Draw GPU Canvas onto the World Layer
+        if (this.gpuDevice && this.gpuCanvas) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.drawImage(this.gpuCanvas, 0, 0);
+            ctx.restore();
+        }
     }
 }
